@@ -7,6 +7,7 @@ from app.api.main_router import api_router
 from app.api.middleware import CorrelationIdMiddleware
 from app.api.openapi import custom_openapi
 from app.api.rate_limit import register_rate_limiting
+from app.api.seed import router as seed_router
 from app.bootstrap.lifespan import lifespan
 from app.config.settings import get_settings
 from app.shared.infrastructure.logging import configure_logging
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     register_rate_limiting(app)
 
     app.include_router(health_router)
+    app.include_router(seed_router)
     app.include_router(api_router)
 
     # Documented FastAPI pattern for a custom OpenAPI schema; mypy flags

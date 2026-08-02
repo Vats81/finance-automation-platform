@@ -102,6 +102,10 @@ class Settings(BaseSettings):
     # real key — this default is just a reasonable starting point.
     anthropic_model: str = Field(default="claude-sonnet-5", alias="ANTHROPIC_MODEL")
 
+    # --- One-time demo-account seeding (free-tier hosts with no shell access) ---
+    # Blank by default, which disables the endpoint entirely (see api/seed.py).
+    seed_secret: str = Field(default="", alias="SEED_SECRET")
+
     @model_validator(mode="after")
     def _dev_auth_only_in_local(self) -> "Settings":
         if self.auth_dev_mode and self.app_env != "local":
