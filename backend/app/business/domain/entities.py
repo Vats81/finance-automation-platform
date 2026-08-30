@@ -45,6 +45,8 @@ class Business(AggregateRoot):
         onboarding_completed: bool = False,
         status: BusinessStatus = BusinessStatus.ACTIVE,
         plan: BusinessPlan = BusinessPlan.FREE,
+        stripe_customer_id: str | None = None,
+        stripe_subscription_id: str | None = None,
         created_at: datetime | None = None,
     ) -> None:
         super().__init__(entity_id)
@@ -63,6 +65,8 @@ class Business(AggregateRoot):
         self.onboarding_completed = onboarding_completed
         self.status = status
         self.plan = plan
+        self.stripe_customer_id = stripe_customer_id
+        self.stripe_subscription_id = stripe_subscription_id
         self.created_at = created_at or datetime.now(timezone.utc)
 
     @classmethod
@@ -128,6 +132,20 @@ class Business(AggregateRoot):
         self._record_event(
             BusinessPlanChanged(aggregate_id=self.id, old_plan=old_plan.value, new_plan=plan.value)
         )
+
+    def attach_stripe_customer(self, *, customer_id: str) -> None:
+        """Purely a bookkeeping/reference update — no event, same
+        non-event precedent as reactivate() below.
+        """
+        self.stripe_customer_id = customer_id
+
+    def activate_subscription(self, *, subscription_id: str, plan: BusinessPlan) -> None:
+        self.stripe_subscription_id = subscription_id
+        self.change_plan(plan=plan)
+
+    def cancel_subscription(self) -> None:
+        self.stripe_subscription_id = None
+        self.change_plan(plan=BusinessPlan.FREE)
 
     def suspend(self) -> None:
         """Same simple-toggle precedent as Product.deactivate()/reactivate()

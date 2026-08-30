@@ -8,4 +8,5 @@ export interface IntegrationsStatusResponse {
   whatsapp: ProviderStatus;
   ai_assistant: ProviderStatus;
   document_storage: ProviderStatus;
+  billing: ProviderStatus;
 }

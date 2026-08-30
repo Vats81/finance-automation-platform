@@ -130,3 +130,53 @@ class IAiClient(ABC):
 
     @abstractmethod
     async def send(self, *, system: str, messages: list[dict], tools: list[dict]) -> AiResponse: ...
+
+
+@dataclass(frozen=True)
+class StripeEvent:
+    type: str
+    data: dict
+
+
+class IPaymentGateway(ABC):
+    """Abstraction over Stripe billing. No Console/no-op fallback exists
+    here (unlike IEmailSender/IWhatsAppSender/IAiClient) — there's no
+    meaningful fake version of taking payment; instead the frontend hides
+    billing UI entirely when settings.stripe_configured is false (see
+    integrations/application/queries/get_integration_status.py). The real
+    adapter (StripeGateway) lives in shared/infrastructure/stripe_gateway.py.
+    Checkout/portal are Stripe's own hosted pages — the app never touches
+    card data.
+    """
+
+    @abstractmethod
+    async def create_checkout_session(
+        self,
+        *,
+        customer_id: str | None,
+        customer_email: str,
+        price_id: str,
+        client_reference_id: str,
+        success_url: str,
+        cancel_url: str,
+    ) -> str:
+        """`client_reference_id` is opaque to this port — the caller
+        (StartCheckoutSessionUseCase) packs `f"{business_id}:{plan}"` into
+        it so the webhook can resolve both without a second Stripe API
+        call or a separate metadata field.
+
+        Returns the checkout URL to redirect the browser to.
+        """
+        ...
+
+    @abstractmethod
+    async def create_billing_portal_session(self, *, customer_id: str, return_url: str) -> str:
+        """Returns the Customer Portal URL to redirect the browser to."""
+        ...
+
+    @abstractmethod
+    def construct_webhook_event(self, *, payload: bytes, signature: str) -> StripeEvent:
+        """Verifies the webhook signature and parses the event. Raises on a
+        bad/missing signature — callers must not trust an unverified payload.
+        """
+        ...

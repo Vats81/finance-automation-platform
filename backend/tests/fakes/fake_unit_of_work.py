@@ -60,6 +60,11 @@ class FakeBusinessRepository(IBusinessRepository):
         items = sorted(self._store.values(), key=lambda b: b.created_at, reverse=True)
         return items[offset : offset + limit], len(items)
 
+    async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
+        return next(
+            (b for b in self._store.values() if b.stripe_subscription_id == subscription_id), None
+        )
+
     def add(self, business: Business) -> None:
         self._store[business.id] = business
         business.pull_domain_events()

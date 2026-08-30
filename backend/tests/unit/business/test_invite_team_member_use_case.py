@@ -21,6 +21,7 @@ from app.business.domain.exceptions import (
     UserAlreadyMemberException,
 )
 from app.business.domain.value_objects import BusinessPlan, BusinessRole
+from app.config.settings import Settings
 from app.identity.domain.entities import User
 from app.identity.domain.value_objects import EmailAddress
 from tests.fakes.fake_ports import FakeEmailSender, FakePasswordHasher
@@ -119,7 +120,7 @@ async def test_invite_blocked_when_already_an_active_member() -> None:
     business = await RegisterBusinessUseCase(uow).execute(
         RegisterBusinessCommand(owner_user_id=owner_id, name="Acme")
     )
-    await ChangeBusinessPlanUseCase(uow).execute(
+    await ChangeBusinessPlanUseCase(uow, Settings()).execute(
         ChangeBusinessPlanCommand(business_id=business.id, plan=BusinessPlan.PRO)
     )
     seed_user(uow, "teammate@example.com")

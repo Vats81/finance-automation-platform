@@ -37,6 +37,12 @@ class SqlAlchemyBusinessRepository(IBusinessRepository):
         businesses = [business_model_to_domain(m) for m in result.scalars().all()]
         return businesses, total
 
+    async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
+        stmt = select(BusinessModel).where(BusinessModel.stripe_subscription_id == subscription_id)
+        result = await self._session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return business_model_to_domain(model) if model else None
+
     def add(self, business: Business) -> None:
         self._session.add(business_domain_to_model(business))
         self._uow.collect_events(business)

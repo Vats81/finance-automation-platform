@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { startBillingPortalSession, startCheckoutSession } from "@/lib/api/billing";
 import { changeBusinessPlan, completeOnboarding } from "@/lib/api/business";
+import { getIntegrationsStatus } from "@/lib/api/integrations";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import {
@@ -45,6 +47,43 @@ export default function SettingsPage() {
   const [selectedPlan, setSelectedPlan] = useState<BusinessPlan>("free");
   const [isChangingPlan, setIsChangingPlan] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [billingConnected, setBillingConnected] = useState(false);
+  const [isRedirectingToBilling, setIsRedirectingToBilling] = useState(false);
+
+  useEffect(() => {
+    getIntegrationsStatus(getAccessToken())
+      .then((status) => setBillingConnected(status.billing.connected))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleUpgrade(plan: BusinessPlan) {
+    if (!currentBusiness) return;
+    setIsRedirectingToBilling(true);
+    setPlanError(null);
+    try {
+      const { checkout_url } = await startCheckoutSession(getAccessToken(), currentBusiness.business.id, {
+        plan,
+      });
+      window.location.href = checkout_url;
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : "Failed to start checkout");
+      setIsRedirectingToBilling(false);
+    }
+  }
+
+  async function handleManageBilling() {
+    if (!currentBusiness) return;
+    setIsRedirectingToBilling(true);
+    setPlanError(null);
+    try {
+      const { portal_url } = await startBillingPortalSession(getAccessToken(), currentBusiness.business.id);
+      window.location.href = portal_url;
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : "Failed to open billing portal");
+      setIsRedirectingToBilling(false);
+    }
+  }
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<BusinessRole>("viewer");
@@ -225,27 +264,50 @@ export default function SettingsPage() {
         </p>
         {planError && <p className="mb-3 text-sm text-red-600">{planError}</p>}
         {isOwner ? (
-          <div className="flex items-end gap-3">
-            <FormField label="Change plan">
-              <Select value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value as BusinessPlan)}>
-                {BUSINESS_PLANS.map((plan) => (
-                  <option key={plan} value={plan}>
-                    {PLAN_LIMITS[plan].label} ({PLAN_LIMITS[plan].maxTeamMembers} members)
-                  </option>
+          billingConnected ? (
+            currentBusiness.business.plan === "free" ? (
+              <div className="flex gap-3">
+                {(["starter", "pro"] as BusinessPlan[]).map((plan) => (
+                  <Button key={plan} onClick={() => handleUpgrade(plan)} disabled={isRedirectingToBilling}>
+                    {isRedirectingToBilling ? "Redirecting…" : `Upgrade to ${PLAN_LIMITS[plan].label}`}
+                  </Button>
                 ))}
-              </Select>
-            </FormField>
-            <Button
-              onClick={handleChangePlan}
-              disabled={isChangingPlan || selectedPlan === currentBusiness.business.plan}
-            >
-              {isChangingPlan ? "Saving…" : "Change plan"}
-            </Button>
-          </div>
+              </div>
+            ) : (
+              <Button onClick={handleManageBilling} disabled={isRedirectingToBilling}>
+                {isRedirectingToBilling ? "Redirecting…" : "Manage billing"}
+              </Button>
+            )
+          ) : (
+            <div className="flex items-end gap-3">
+              <FormField label="Change plan">
+                <Select
+                  value={selectedPlan}
+                  onChange={(e) => setSelectedPlan(e.target.value as BusinessPlan)}
+                >
+                  {BUSINESS_PLANS.map((plan) => (
+                    <option key={plan} value={plan}>
+                      {PLAN_LIMITS[plan].label} ({PLAN_LIMITS[plan].maxTeamMembers} members)
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <Button
+                onClick={handleChangePlan}
+                disabled={isChangingPlan || selectedPlan === currentBusiness.business.plan}
+              >
+                {isChangingPlan ? "Saving…" : "Change plan"}
+              </Button>
+            </div>
+          )
         ) : (
           <p className="text-xs text-slate-400">Only the business owner can change the plan.</p>
         )}
-        <p className="mt-2 text-xs text-slate-400">No payment required — plans are modeled, not billed, yet.</p>
+        {!billingConnected && (
+          <p className="mt-2 text-xs text-slate-400">
+            No payment required — plans are modeled, not billed, yet.
+          </p>
+        )}
       </Card>
 
       <Card className="mt-6 max-w-2xl">

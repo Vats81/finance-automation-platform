@@ -21,6 +21,8 @@ def business_model_to_domain(model: BusinessModel) -> Business:
         onboarding_completed=model.onboarding_completed,
         status=BusinessStatus(model.status),
         plan=BusinessPlan(model.plan),
+        stripe_customer_id=model.stripe_customer_id,
+        stripe_subscription_id=model.stripe_subscription_id,
         created_at=model.created_at,
     )
 
@@ -43,6 +45,8 @@ def business_domain_to_model(business: Business) -> BusinessModel:
         onboarding_completed=business.onboarding_completed,
         status=business.status.value,
         plan=business.plan.value,
+        stripe_customer_id=business.stripe_customer_id,
+        stripe_subscription_id=business.stripe_subscription_id,
         created_at=business.created_at,
     )
 
@@ -62,6 +66,8 @@ def apply_business_domain_to_existing_model(business: Business, model: BusinessM
     model.onboarding_completed = business.onboarding_completed
     model.status = business.status.value
     model.plan = business.plan.value
+    model.stripe_customer_id = business.stripe_customer_id
+    model.stripe_subscription_id = business.stripe_subscription_id
 
 
 def membership_model_to_domain(model: BusinessMembershipModel) -> BusinessMembership:

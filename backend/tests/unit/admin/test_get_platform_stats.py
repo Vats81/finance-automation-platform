@@ -10,6 +10,7 @@ from app.business.application.commands.register_business import (
     RegisterBusinessUseCase,
 )
 from app.business.domain.value_objects import BusinessPlan
+from app.config.settings import Settings
 from app.identity.domain.entities import User
 from app.identity.domain.value_objects import EmailAddress
 from tests.fakes.fake_ports import FakePasswordHasher
@@ -44,7 +45,7 @@ async def test_platform_stats_tally_plan_breakdown_and_verification_split() -> N
     pro_business = await RegisterBusinessUseCase(uow).execute(
         RegisterBusinessCommand(owner_user_id=pro_owner.id, name="Pro Co")
     )
-    await ChangeBusinessPlanUseCase(uow).execute(
+    await ChangeBusinessPlanUseCase(uow, Settings()).execute(
         ChangeBusinessPlanCommand(business_id=pro_business.id, plan=BusinessPlan.PRO)
     )
 

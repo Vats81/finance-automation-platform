@@ -15,6 +15,7 @@ class IntegrationsStatus:
     whatsapp: ProviderStatus
     ai_assistant: ProviderStatus
     document_storage: ProviderStatus
+    billing: ProviderStatus
 
 
 class GetIntegrationStatusUseCase:
@@ -36,6 +37,7 @@ class GetIntegrationStatusUseCase:
             whatsapp=self._whatsapp_status(),
             ai_assistant=self._ai_assistant_status(),
             document_storage=self._document_storage_status(),
+            billing=self._billing_status(),
         )
 
     def _email_status(self) -> ProviderStatus:
@@ -78,4 +80,14 @@ class GetIntegrationStatusUseCase:
         return ProviderStatus(
             connected=False,
             detail="Not configured — set AZURE_STORAGE_CONNECTION_STRING to enable document uploads.",
+        )
+
+    def _billing_status(self) -> ProviderStatus:
+        if self._settings.stripe_configured:
+            return ProviderStatus(connected=True, detail="Real subscription billing is live via Stripe.")
+        return ProviderStatus(
+            connected=False,
+            detail="Not configured — set STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, "
+            "STRIPE_PRICE_ID_STARTER, and STRIPE_PRICE_ID_PRO to enable real billing. Plan changes are "
+            "currently a free, unpaid field flip.",
         )

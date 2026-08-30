@@ -8,7 +8,7 @@ import { getIntegrationsStatus } from "@/lib/api/integrations";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { IntegrationsStatusResponse, ProviderStatus } from "@/types/integrations";
 
-const COMING_LATER = ["QuickBooks", "Zoho Books", "Tally", "Live Google Sheets sync", "Payment gateways"];
+const COMING_LATER = ["QuickBooks", "Zoho Books", "Tally", "Live Google Sheets sync"];
 
 function StatusCard({ name, status }: { name: string; status: ProviderStatus }) {
   return (
@@ -49,6 +49,7 @@ export default function IntegrationsPage() {
             <StatusCard name="WhatsApp" status={status.whatsapp} />
             <StatusCard name="AI Assistant" status={status.ai_assistant} />
             <StatusCard name="Document storage" status={status.document_storage} />
+            <StatusCard name="Billing" status={status.billing} />
           </div>
         ) : (
           <p className="text-sm text-slate-500">Loading...</p>

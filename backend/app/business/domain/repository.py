@@ -16,6 +16,14 @@ class IBusinessRepository(ABC):
         ...
 
     @abstractmethod
+    async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
+        """Resolves the business a Stripe webhook is about, for event types
+        (customer.subscription.updated/.deleted) that don't carry the
+        client_reference_id set at checkout time.
+        """
+        ...
+
+    @abstractmethod
     def add(self, business: Business) -> None: ...
 
     @abstractmethod

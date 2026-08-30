@@ -11,6 +11,8 @@ def include_context_routers() -> None:
     from app.ai_assistant.api.routes import router as ai_assistant_router
     from app.approvals.api.routes import router as approvals_router
     from app.audit.api.routes import router as audit_router
+    from app.business.api.billing_routes import router as billing_router
+    from app.business.api.billing_routes import webhook_router as billing_webhook_router
     from app.business.api.routes import router as business_router
     from app.business.api.team_member_routes import router as team_member_router
     from app.customers.api.routes import router as customers_router
@@ -36,6 +38,8 @@ def include_context_routers() -> None:
     api_router.include_router(ai_assistant_router)
     api_router.include_router(business_router)
     api_router.include_router(team_member_router)
+    api_router.include_router(billing_router)
+    api_router.include_router(billing_webhook_router)
     api_router.include_router(customers_router)
     api_router.include_router(dashboard_router)
     api_router.include_router(data_import_router)

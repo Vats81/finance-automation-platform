@@ -111,6 +111,6 @@ async def change_business_plan(
     _actor: User = Depends(require_business_role(BusinessRole.OWNER)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> BusinessResponse:
-    use_case = ChangeBusinessPlanUseCase(uow)
+    use_case = ChangeBusinessPlanUseCase(uow, settings)
     business = await use_case.execute(ChangeBusinessPlanCommand(business_id=business_id, plan=body.plan))
     return BusinessResponse.from_domain(business)

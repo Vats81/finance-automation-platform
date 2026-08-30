@@ -15,8 +15,10 @@ from app.shared.application.ports import (
     IEventPublisher,
     IFileStorage,
     IPasswordHasher,
+    IPaymentGateway,
     ITaskQueue,
     IWhatsAppSender,
+    StripeEvent,
 )
 
 
@@ -117,3 +119,47 @@ class FakeAiClient(IAiClient):
         if not self._responses:
             raise AssertionError("FakeAiClient ran out of scripted responses")
         return self._responses.pop(0)
+
+
+class FakePaymentGateway(IPaymentGateway):
+    """Records every call instead of hitting real Stripe, and returns a
+    scripted StripeEvent from construct_webhook_event() (set via
+    `next_event`) so HandleStripeWebhookUseCase tests can drive each event
+    type deterministically without a real signed payload.
+    """
+
+    def __init__(self) -> None:
+        self.checkout_calls: list[dict] = []
+        self.portal_calls: list[dict] = []
+        self.next_event: StripeEvent | None = None
+
+    async def create_checkout_session(
+        self,
+        *,
+        customer_id: str | None,
+        customer_email: str,
+        price_id: str,
+        client_reference_id: str,
+        success_url: str,
+        cancel_url: str,
+    ) -> str:
+        self.checkout_calls.append(
+            {
+                "customer_id": customer_id,
+                "customer_email": customer_email,
+                "price_id": price_id,
+                "client_reference_id": client_reference_id,
+                "success_url": success_url,
+                "cancel_url": cancel_url,
+            }
+        )
+        return f"https://checkout.stripe.com/fake/{client_reference_id}"
+
+    async def create_billing_portal_session(self, *, customer_id: str, return_url: str) -> str:
+        self.portal_calls.append({"customer_id": customer_id, "return_url": return_url})
+        return f"https://billing.stripe.com/fake/{customer_id}"
+
+    def construct_webhook_event(self, *, payload: bytes, signature: str) -> StripeEvent:
+        if self.next_event is None:
+            raise AssertionError("FakePaymentGateway.next_event was not set before the webhook call")
+        return self.next_event

@@ -81,6 +81,18 @@ class ChangePlanRequest(BaseModel):
     plan: BusinessPlan
 
 
+class StartCheckoutSessionRequest(BaseModel):
+    plan: BusinessPlan
+
+
+class CheckoutSessionResponse(BaseModel):
+    checkout_url: str
+
+
+class BillingPortalSessionResponse(BaseModel):
+    portal_url: str
+
+
 class InviteTeamMemberRequest(BaseModel):
     email: EmailStr
     role: BusinessRole

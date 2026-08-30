@@ -106,6 +106,16 @@ class Settings(BaseSettings):
     # Blank by default, which disables the endpoint entirely (see api/seed.py).
     seed_secret: str = Field(default="", alias="SEED_SECRET")
 
+    # --- Stripe billing ---
+    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    stripe_price_id_starter: str = Field(default="", alias="STRIPE_PRICE_ID_STARTER")
+    stripe_price_id_pro: str = Field(default="", alias="STRIPE_PRICE_ID_PRO")
+
+    @property
+    def stripe_configured(self) -> bool:
+        return bool(self.stripe_secret_key)
+
     @model_validator(mode="after")
     def _dev_auth_only_in_local(self) -> "Settings":
         if self.auth_dev_mode and self.app_env != "local":

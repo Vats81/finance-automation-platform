@@ -17,6 +17,7 @@ from app.business.application.commands.register_business import (
     RegisterBusinessUseCase,
 )
 from app.business.domain.value_objects import BusinessPlan, BusinessRole
+from app.config.settings import Settings
 from app.identity.domain.entities import User
 from app.identity.domain.value_objects import EmailAddress
 from tests.fakes.fake_ports import FakeEmailSender, FakePasswordHasher
@@ -42,7 +43,7 @@ async def test_list_businesses_overview_resolves_plan_owner_and_member_count() -
     business = await RegisterBusinessUseCase(uow).execute(
         RegisterBusinessCommand(owner_user_id=owner.id, name="Acme")
     )
-    await ChangeBusinessPlanUseCase(uow).execute(
+    await ChangeBusinessPlanUseCase(uow, Settings()).execute(
         ChangeBusinessPlanCommand(business_id=business.id, plan=BusinessPlan.PRO)
     )
     seed_user(uow, "teammate@example.com")

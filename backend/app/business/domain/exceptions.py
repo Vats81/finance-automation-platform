@@ -46,3 +46,30 @@ class CannotModifyOwnerMembershipException(ValidationException):
     """
 
     error_code = "cannot_modify_owner_membership"
+
+
+class DirectPlanChangeNotAllowedException(ValidationException):
+    """Once Stripe is configured, paid plans can only be reached through a
+    real checkout — the direct-flip endpoint may still set FREE, but never
+    STARTER/PRO. See ChangeBusinessPlanUseCase.
+    """
+
+    error_code = "direct_plan_change_not_allowed"
+
+
+class ActiveSubscriptionExistsException(ConflictException):
+    """Refuses a direct flip back to FREE while a live Stripe subscription
+    still exists — the business would keep being charged while the app
+    silently thinks it's on the free plan. Cancel via the billing portal
+    instead, which syncs back through the webhook.
+    """
+
+    error_code = "active_subscription_exists"
+
+
+class NoStripeCustomerException(NotFoundException):
+    """Raised when a business tries to open the billing portal before ever
+    completing a checkout — there's no Stripe customer to manage yet.
+    """
+
+    error_code = "no_stripe_customer"

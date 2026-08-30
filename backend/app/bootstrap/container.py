@@ -32,6 +32,7 @@ from app.shared.application.ports import (
     IEmailSender,
     IFileStorage,
     IPasswordHasher,
+    IPaymentGateway,
     ITaskQueue,
     IWhatsAppSender,
 )
@@ -43,6 +44,7 @@ from app.shared.infrastructure.db.session import create_engine, create_session_f
 from app.shared.infrastructure.email_sender import ConsoleEmailSender, SmtpEmailSender
 from app.shared.infrastructure.event_bus import InProcessEventBus
 from app.shared.infrastructure.password_hasher import BcryptPasswordHasher
+from app.shared.infrastructure.stripe_gateway import StripeGateway
 from app.shared.infrastructure.whatsapp_sender import ConsoleWhatsAppSender, TwilioWhatsAppSender
 
 
@@ -161,3 +163,13 @@ def get_ai_client() -> IAiClient:
     if settings.ai_provider == "anthropic":
         return AnthropicAiClient(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
     return ConsoleAiClient()
+
+
+@lru_cache
+def get_payment_gateway() -> IPaymentGateway:
+    """Only constructed when actually depended on, so a blank
+    STRIPE_SECRET_KEY never breaks app startup — routes that need billing
+    are the only things that pull this in.
+    """
+    settings = get_settings()
+    return StripeGateway(secret_key=settings.stripe_secret_key, webhook_secret=settings.stripe_webhook_secret)

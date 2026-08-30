@@ -9,6 +9,7 @@ async def test_all_defaults_are_not_connected() -> None:
     assert status.whatsapp.connected is False
     assert status.ai_assistant.connected is False
     assert status.document_storage.connected is False
+    assert status.billing.connected is False
 
 
 async def test_smtp_host_set_marks_email_connected() -> None:
@@ -41,3 +42,9 @@ async def test_azure_storage_connection_string_marks_document_storage_connected(
     ).execute()
 
     assert status.document_storage.connected is True
+
+
+async def test_stripe_secret_key_marks_billing_connected() -> None:
+    status = GetIntegrationStatusUseCase(Settings(STRIPE_SECRET_KEY="sk_test_dummy")).execute()
+
+    assert status.billing.connected is True

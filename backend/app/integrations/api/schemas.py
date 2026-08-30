@@ -17,6 +17,7 @@ class IntegrationsStatusResponse(BaseModel):
     whatsapp: ProviderStatusResponse
     ai_assistant: ProviderStatusResponse
     document_storage: ProviderStatusResponse
+    billing: ProviderStatusResponse
 
     @classmethod
     def from_domain(cls, status: IntegrationsStatus) -> "IntegrationsStatusResponse":
@@ -25,4 +26,5 @@ class IntegrationsStatusResponse(BaseModel):
             whatsapp=ProviderStatusResponse.from_domain(status.whatsapp),
             ai_assistant=ProviderStatusResponse.from_domain(status.ai_assistant),
             document_storage=ProviderStatusResponse.from_domain(status.document_storage),
+            billing=ProviderStatusResponse.from_domain(status.billing),
         )
