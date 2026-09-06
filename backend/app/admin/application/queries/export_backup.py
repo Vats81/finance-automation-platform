@@ -31,6 +31,19 @@ _TABLES: dict[str, type] = {
     "expenses": ExpenseModel,
 }
 
+# Fields excluded per table, regardless of how harmless they look — a
+# bcrypt hash can't be reversed, but it (and raw token hashes) still has
+# no business being copied into a downloadable file. This is a backup of
+# business records, not of credentials, which have their own separate
+# security lifecycle.
+_EXCLUDED_FIELDS: dict[str, set[str]] = {
+    "users": {
+        "password_hash",
+        "email_verification_token_hash",
+        "password_reset_token_hash",
+    },
+}
+
 
 def _json_safe(value: Any) -> Any:
     if isinstance(value, uuid.UUID):
@@ -42,9 +55,13 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def _row_to_dict(instance: Any) -> dict[str, Any]:
+def _row_to_dict(instance: Any, *, excluded_fields: set[str]) -> dict[str, Any]:
     mapper = inspect(instance).mapper
-    return {column.key: _json_safe(getattr(instance, column.key)) for column in mapper.columns}
+    return {
+        column.key: _json_safe(getattr(instance, column.key))
+        for column in mapper.columns
+        if column.key not in excluded_fields
+    }
 
 
 class ExportBackupUseCase:
@@ -64,6 +81,9 @@ class ExportBackupUseCase:
     async def execute(self) -> dict[str, list[dict[str, Any]]]:
         backup: dict[str, list[dict[str, Any]]] = {}
         for table_name, model in _TABLES.items():
+            excluded = _EXCLUDED_FIELDS.get(table_name, set())
             result: Any = await self._session.execute(select(model))
-            backup[table_name] = [_row_to_dict(row) for row in result.scalars().all()]
+            backup[table_name] = [
+                _row_to_dict(row, excluded_fields=excluded) for row in result.scalars().all()
+            ]
         return backup

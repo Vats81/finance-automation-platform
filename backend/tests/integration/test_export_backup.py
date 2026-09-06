@@ -16,6 +16,9 @@ from app.business.application.commands.register_business import (
     RegisterBusinessCommand,
     RegisterBusinessUseCase,
 )
+from app.identity.application.commands.register_user import RegisterUserCommand, RegisterUserUseCase
+from app.shared.infrastructure.clock import SystemClock
+from app.shared.infrastructure.password_hasher import BcryptPasswordHasher
 
 pytestmark = pytest.mark.integration
 
@@ -54,3 +57,19 @@ async def test_export_backup_serializes_a_real_business_row(db_session: AsyncSes
     assert len(membership_rows) == 1
     assert membership_rows[0]["business_id"] == str(business.id)
     assert membership_rows[0]["role"] == "owner"
+
+
+async def test_export_backup_excludes_sensitive_user_fields(db_session: AsyncSession) -> None:
+    uow = AppUnitOfWork(db_session)
+    await RegisterUserUseCase(uow, BcryptPasswordHasher(), SystemClock()).execute(
+        RegisterUserCommand(email="jane@example.com", password="Sup3rSecret!", display_name="Jane")
+    )
+
+    backup = await ExportBackupUseCase(db_session).execute()
+
+    user_rows = backup["users"]
+    assert len(user_rows) == 1
+    row = user_rows[0]
+    assert row["email"] == "jane@example.com"
+    for sensitive_field in ("password_hash", "email_verification_token_hash", "password_reset_token_hash"):
+        assert sensitive_field not in row
