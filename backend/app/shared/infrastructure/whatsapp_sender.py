@@ -41,4 +41,9 @@ class TwilioWhatsAppSender(IWhatsAppSender):
                     "Body": message,
                 },
             )
+            if response.is_error:
+                # Twilio's error body (code/message) is far more useful than
+                # httpx's own generic "400 Bad Request" — log it before
+                # raising so it actually shows up in production logs.
+                logger.error("Twilio WhatsApp send failed (%s): %s", response.status_code, response.text)
             response.raise_for_status()
