@@ -46,6 +46,13 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        # psycopg2 has no default connect timeout at all — without this, a
+        # migration run against an unreachable database (wrong host,
+        # expired free-tier instance, ...) hangs on the OS's own TCP
+        # timeout, which can be minutes or effectively forever depending
+        # on the network. Failing fast here means the container's boot
+        # failure shows up clearly in logs instead of as a silent hang.
+        connect_args={"connect_timeout": 10},
     )
 
     with connectable.connect() as connection:

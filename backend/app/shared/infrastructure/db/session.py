@@ -13,6 +13,12 @@ def create_engine() -> AsyncEngine:
         pool_size=10,
         max_overflow=20,
         echo=False,
+        # asyncpg's own default connect timeout is 60s — long enough that
+        # an unreachable/deleted database (wrong host, expired free-tier
+        # instance, ...) looks identical to a slow app from the outside
+        # for a full minute per attempt. 10s is still generous for a real
+        # connection and fails fast enough to show up clearly in logs.
+        connect_args={"timeout": 10},
     )
 
 
