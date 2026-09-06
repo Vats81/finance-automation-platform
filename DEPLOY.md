@@ -30,13 +30,21 @@ can be pushed.
 1. Create a free Render account.
 2. **New → PostgreSQL** (free plan). Once it's up, open it and copy the
    **"External Database URL"** (looks like `postgres://user:pass@host/db`).
-3. **New → Web Service**, connect the GitHub repo, root directory `backend`,
-   environment **Docker** (it will find `backend/Dockerfile` automatically).
-   Free plan.
-4. Under **Settings → Start Command**, override it to:
-   ```
-   sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
-   ```
+3. **New → Web Service**, connect the GitHub repo. On the creation form,
+   explicitly set **Language** to **Docker** (don't let it auto-detect —
+   it can guess wrong on a monorepo). **Root Directory**: `backend`.
+   **Dockerfile Path**: leave blank/default — resolves to `backend/Dockerfile`
+   once Root Directory is set. **Instance Type**: Free.
+4. Leave the **Docker Command** field **blank**. Migrations-then-start is
+   already baked into `backend/Dockerfile`'s own `CMD`
+   (`alembic upgrade head && uvicorn ...`) — Render's Docker Command
+   override field doesn't reliably pass shell operators like `&&` through
+   no matter how it's quoted, so don't fight it; the Dockerfile's default
+   command already does the right thing. Set **Health Check Path** to
+   `/health` — though note `/health` also checks Redis (never deployed
+   here), so it always reports unhealthy/503 regardless of whether the app
+   is actually fine; you can leave the Health Check Path blank instead if
+   Render's own health-gating on that gives you trouble.
 5. Add these environment variables:
 
    | Key | Value |
@@ -75,11 +83,24 @@ Saving triggers an automatic redeploy.
 
 ## 5. Create the test accounts
 
-In Render, open the backend service's **Shell** tab and run:
+Render's **free** plan doesn't include Shell access, so
+`scripts/seed_demo_users.py` can't be run interactively there. Instead:
 
-```
-python scripts/seed_demo_users.py
-```
+1. In Render, add a temporary env var `SEED_SECRET` set to any random
+   string you pick (this disables/enables a one-time seeding endpoint —
+   blank by default, so it's safe to leave the code in place).
+2. Save (triggers a redeploy).
+3. Visit this URL in your browser once (replace the secret with what you
+   set):
+   ```
+   https://<your-backend-url>/internal/seed-demo-users?secret=<your-secret>
+   ```
+   It returns JSON listing which accounts were created.
+4. Optional but recommended: blank out `SEED_SECRET` again afterward to
+   lock the endpoint back down.
+
+(If you're on a paid Render plan with Shell access, `python scripts/seed_demo_users.py`
+run from the Shell tab does the same thing and never needs the endpoint at all.)
 
 This creates the accounts below, pre-verified. Safe to re-run — it skips
 whatever already exists.
@@ -102,3 +123,64 @@ skipped.
 Send back the Render backend URL and the Vercel frontend URL so the deployed
 app can be checked end-to-end (login as admin, login as a friend account,
 confirm no console/CORS errors) before handing the Vercel link to friends.
+
+## 7. Optional: turn on real integrations
+
+Everything below is off by default (Console/no-op fallbacks) and turning
+each one on is just adding env vars in Render — no code changes. Check
+`/app/integrations` in the app to see live connected/not-configured status
+for each.
+
+**Outbound email** (real signup verification / password reset / report
+delivery, via any SMTP provider — [Resend](https://resend.com) is a good
+free-tier default):
+
+| Key | Value |
+|---|---|
+| `SMTP_HOST` | e.g. `smtp.resend.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USERNAME` | provider-specific |
+| `SMTP_PASSWORD` | your provider API key/password |
+| `SMTP_FROM_ADDRESS` | an address on your verified sending domain |
+
+**WhatsApp delivery** (via [Twilio](https://twilio.com) — start with their
+free WhatsApp Sandbox):
+
+| Key | Value |
+|---|---|
+| `WHATSAPP_PROVIDER` | `twilio` |
+| `TWILIO_ACCOUNT_SID` | from the Twilio Console |
+| `TWILIO_AUTH_TOKEN` | from the Twilio Console |
+| `TWILIO_WHATSAPP_FROM` | your Twilio WhatsApp number, e.g. `+14155238886` |
+
+**AI Assistant / Insights / Forecasting / Receipt Scanner** (via
+[Anthropic](https://console.anthropic.com)):
+
+| Key | Value |
+|---|---|
+| `AI_PROVIDER` | `anthropic` |
+| `ANTHROPIC_API_KEY` | your API key |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` (already the default) |
+
+**Subscription billing** (via [Stripe](https://dashboard.stripe.com/register) —
+stay in **Test mode** first, no real money involved):
+
+1. **Products** → create "Starter" and "Pro" recurring prices, copy each
+   **Price ID** (`price_...`).
+2. **Developers → API keys** → copy the **Secret key** (`sk_test_...`).
+3. **Developers → Webhooks** → add an endpoint at
+   `https://<your-backend-url>/api/v1/billing/webhook`, subscribed to
+   `checkout.session.completed`, `customer.subscription.updated`, and
+   `customer.subscription.deleted` → copy its **Signing secret** (`whsec_...`).
+
+| Key | Value |
+|---|---|
+| `STRIPE_SECRET_KEY` | your `sk_test_...` (or `sk_live_...` once ready for real charges) key |
+| `STRIPE_WEBHOOK_SECRET` | your `whsec_...` signing secret |
+| `STRIPE_PRICE_ID_STARTER` | the Starter price id |
+| `STRIPE_PRICE_ID_PRO` | the Pro price id |
+
+Once set, a business owner sees real "Upgrade to Starter/Pro" buttons on
+`/app/settings` instead of the free unpaid plan selector, and plan changes
+sync automatically via the webhook. Test with Stripe's published test card
+`4242 4242 4242 4242` (any future expiry/CVC) before ever using a real card.
