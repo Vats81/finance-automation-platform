@@ -225,6 +225,8 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 sm:flex-row">
           <span>© {new Date().getFullYear()} FinanceAI</span>
           <div className="flex gap-6">
+            <Link href="/terms" className="hover:text-slate-800">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-slate-800">Privacy Policy</Link>
             <Link href="/app/login" className="hover:text-slate-800">Log in</Link>
             <Link href="/app/signup" className="hover:text-slate-800">Sign up</Link>
           </div>

@@ -187,3 +187,36 @@ Once set, a business owner sees real "Upgrade to Starter/Pro" buttons on
 `/app/settings` instead of the free unpaid plan selector, and plan changes
 sync automatically via the webhook. Test with Stripe's published test card
 `4242 4242 4242 4242` (any future expiry/CVC) before ever using a real card.
+
+**Error tracking** (via [Sentry](https://sentry.io) — free tier available):
+
+| Key | Value |
+|---|---|
+| `SENTRY_DSN` | your project's DSN from Sentry's onboarding flow |
+
+Leave blank to disable entirely (the default) — no code changes needed
+either way.
+
+## 8. Backups
+
+There's no automated backup schedule (that would need a always-on
+scheduler, which this deployment deliberately doesn't run — see the
+Celery/Redis notes elsewhere in this repo). Instead, a platform admin can
+trigger a manual backup any time:
+
+```
+GET /api/v1/admin/backup
+```
+
+(with a platform-admin's bearer token in the `Authorization` header) —
+downloads a JSON file with every row of every SMB table. It's a logical
+backup (JSON, not a SQL dump), restorable by reading the file back in
+rather than piping it into `psql` directly. Good enough for occasional
+manual snapshots; revisit with a real scheduled `pg_dump` if this becomes
+a production system with real customer data.
+
+## 9. Legal pages
+
+`/terms` and `/privacy` are live with starter template content (clearly
+marked as a draft, not legal advice) — have an actual lawyer review and
+adapt them before relying on this with real customers.

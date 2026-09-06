@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +18,14 @@ from app.shared.infrastructure.tracing import configure_tracing
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
+
+    if settings.sentry_dsn:
+        # No-op until a real DSN is set — FastAPI/Starlette are
+        # auto-instrumented by sentry-sdk once initialized, no extra
+        # middleware needed. traces_sample_rate=0 keeps this to error
+        # tracking only, not full performance tracing (a separate,
+        # separately-priced concern on most Sentry plans).
+        sentry_sdk.init(dsn=settings.sentry_dsn, environment=settings.app_env, traces_sample_rate=0.0)
 
     app = FastAPI(
         title="Finance Automation Platform API",

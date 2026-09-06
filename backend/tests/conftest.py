@@ -19,10 +19,16 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.approvals.infrastructure import models as approvals_models  # noqa: F401
 from app.audit.infrastructure import models as audit_models  # noqa: F401
+from app.business.infrastructure import models as business_models  # noqa: F401
+from app.customers.infrastructure import models as customers_models  # noqa: F401
+from app.expenses.infrastructure import models as expenses_models  # noqa: F401
 from app.identity.infrastructure import models as identity_models  # noqa: F401
+from app.inventory.infrastructure import models as inventory_models  # noqa: F401
 from app.invoices.infrastructure import models as invoices_models  # noqa: F401
 from app.payments.infrastructure import models as payments_models  # noqa: F401
 from app.purchase_orders.infrastructure import models as purchase_orders_models  # noqa: F401
+from app.purchases.infrastructure import models as purchases_models  # noqa: F401
+from app.sales.infrastructure import models as sales_models  # noqa: F401
 from app.shared.infrastructure.db.base import Base
 
 # Import every context's ORM models so Base.metadata is fully populated

@@ -1,6 +1,8 @@
+import json
 import uuid
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from app.admin.api.schemas import BusinessesOverviewResponse, PlatformStatsResponse, UsersOverviewResponse
 from app.admin.application.commands.deactivate_user import DeactivateUserCommand, DeactivateUserUseCase
@@ -10,6 +12,7 @@ from app.admin.application.commands.reactivate_business import (
 )
 from app.admin.application.commands.reactivate_user import ReactivateUserCommand, ReactivateUserUseCase
 from app.admin.application.commands.suspend_business import SuspendBusinessCommand, SuspendBusinessUseCase
+from app.admin.application.queries.export_backup import ExportBackupUseCase
 from app.admin.application.queries.get_platform_stats import GetPlatformStatsUseCase
 from app.admin.application.queries.list_businesses_overview import (
     ListBusinessesOverviewQuery,
@@ -79,3 +82,19 @@ async def deactivate_user(
 @router.post("/users/{user_id}/reactivate", status_code=204)
 async def reactivate_user(user_id: uuid.UUID, uow: AppUnitOfWork = Depends(get_uow)) -> None:
     await ReactivateUserUseCase(uow).execute(ReactivateUserCommand(user_id=user_id))
+
+
+@router.get("/backup")
+async def export_backup(uow: AppUnitOfWork = Depends(get_uow)) -> Response:
+    """A logical (JSON, not SQL-dump) backup of every SMB table — see
+    ExportBackupUseCase's docstring for why. Manually triggered by a
+    platform admin whenever they want one; no automated schedule exists
+    (that would need Celery Beat, deliberately not deployed here).
+    """
+    backup = await ExportBackupUseCase(uow.session).execute()
+    filename = f"backup-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    return Response(
+        content=json.dumps(backup, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

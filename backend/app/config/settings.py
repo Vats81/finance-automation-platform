@@ -126,6 +126,11 @@ class Settings(BaseSettings):
     def stripe_configured(self) -> bool:
         return bool(self.stripe_secret_key)
 
+    # --- Error tracking (Sentry) ---
+    # Blank by default — no error tracking at all until a real DSN is set,
+    # same swap-by-config idea as every other optional integration here.
+    sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
+
     @model_validator(mode="after")
     def _dev_auth_only_in_local(self) -> "Settings":
         if self.auth_dev_mode and self.app_env != "local":
