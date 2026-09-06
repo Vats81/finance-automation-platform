@@ -41,7 +41,7 @@ from app.shared.infrastructure.blob_storage import AzureBlobStorageAdapter
 from app.shared.infrastructure.celery_task_queue import CeleryTaskQueueAdapter
 from app.shared.infrastructure.clock import SystemClock
 from app.shared.infrastructure.db.session import create_engine, create_session_factory
-from app.shared.infrastructure.email_sender import ConsoleEmailSender, SmtpEmailSender
+from app.shared.infrastructure.email_sender import ConsoleEmailSender, ResendApiEmailSender, SmtpEmailSender
 from app.shared.infrastructure.event_bus import InProcessEventBus
 from app.shared.infrastructure.password_hasher import BcryptPasswordHasher
 from app.shared.infrastructure.stripe_gateway import StripeGateway
@@ -134,6 +134,8 @@ def get_local_token_validator() -> LocalTokenValidator:
 @lru_cache
 def get_email_sender() -> IEmailSender:
     settings = get_settings()
+    if settings.resend_api_key:
+        return ResendApiEmailSender(api_key=settings.resend_api_key, from_address=settings.smtp_from_address)
     if settings.smtp_configured:
         return SmtpEmailSender(
             host=settings.smtp_host,

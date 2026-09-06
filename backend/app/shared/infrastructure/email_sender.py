@@ -1,10 +1,15 @@
+import base64
 import logging
 import smtplib
 from email.message import EmailMessage
 
+import httpx
+
 from app.shared.application.ports import EmailAttachment, IEmailSender
 
 logger = logging.getLogger(__name__)
+
+_RESEND_API_URL = "https://api.resend.com/emails"
 
 
 class ConsoleEmailSender(IEmailSender):
@@ -53,3 +58,42 @@ class SmtpEmailSender(IEmailSender):
             if self._username:
                 client.login(self._username, self._password)
             client.send_message(message)
+
+
+class ResendApiEmailSender(IEmailSender):
+    """Sends via Resend's HTTPS REST API instead of raw SMTP. Several
+    free-tier hosts (this app's own Render deployment included) silently
+    drop outbound SMTP connections (port 587/465) for anti-spam reasons,
+    while outbound HTTPS is never blocked — this sidesteps that class of
+    problem entirely rather than fighting it. Preferred over
+    SmtpEmailSender whenever RESEND_API_KEY is set (see
+    bootstrap/container.py:get_email_sender).
+    """
+
+    def __init__(self, *, api_key: str, from_address: str) -> None:
+        self._api_key = api_key
+        self._from_address = from_address
+
+    async def send(
+        self, *, to: str, subject: str, body: str, attachments: list[EmailAttachment] | None = None
+    ) -> None:
+        payload: dict = {
+            "from": self._from_address,
+            "to": [to],
+            "subject": subject,
+            "text": body,
+        }
+        if attachments:
+            payload["attachments"] = [
+                {"filename": a.filename, "content": base64.b64encode(a.content).decode()}
+                for a in attachments
+            ]
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                _RESEND_API_URL,
+                headers={"Authorization": f"Bearer {self._api_key}"},
+                json=payload,
+                timeout=10,
+            )
+            response.raise_for_status()

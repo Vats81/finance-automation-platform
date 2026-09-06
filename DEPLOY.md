@@ -132,16 +132,19 @@ each one on is just adding env vars in Render — no code changes. Check
 for each.
 
 **Outbound email** (real signup verification / password reset / report
-delivery, via any SMTP provider — [Resend](https://resend.com) is a good
-free-tier default):
+delivery). **Use the Resend API, not SMTP** — Render (and several other
+free-tier hosts) silently block outbound SMTP ports, so an SMTP host/port/
+credentials setup will time out no matter how correct it is. [Resend](https://resend.com)'s
+HTTPS API sidesteps that entirely:
 
 | Key | Value |
 |---|---|
-| `SMTP_HOST` | e.g. `smtp.resend.com` |
-| `SMTP_PORT` | `587` |
-| `SMTP_USERNAME` | provider-specific |
-| `SMTP_PASSWORD` | your provider API key/password |
-| `SMTP_FROM_ADDRESS` | an address on your verified sending domain |
+| `RESEND_API_KEY` | your Resend API key (`re_...`) |
+| `SMTP_FROM_ADDRESS` | an address on your verified sending domain (still used as the "From" address for Resend-sent mail) |
+
+(If you're deploying somewhere that doesn't block outbound SMTP, the
+`SMTP_HOST`/`SMTP_PORT`/`SMTP_USERNAME`/`SMTP_PASSWORD` vars still work as
+a fallback — `RESEND_API_KEY` takes priority over them when both are set.)
 
 **WhatsApp delivery** (via [Twilio](https://twilio.com) — start with their
 free WhatsApp Sandbox):

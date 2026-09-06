@@ -86,6 +86,16 @@ class Settings(BaseSettings):
     def smtp_configured(self) -> bool:
         return bool(self.smtp_host)
 
+    # --- Resend API (HTTPS-based email — see shared/infrastructure/email_sender.py
+    # for why this exists alongside SMTP: outbound SMTP ports are silently
+    # blocked on several free-tier hosts, including this app's own Render
+    # deployment; preferred over SMTP whenever set). ---
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+
+    @property
+    def email_configured(self) -> bool:
+        return bool(self.resend_api_key) or self.smtp_configured
+
     # --- Outbound WhatsApp (report delivery) ---
     # Explicit provider flag rather than an inferred "is a SID set" toggle
     # like smtp_configured — a Twilio SID being present is a less natural

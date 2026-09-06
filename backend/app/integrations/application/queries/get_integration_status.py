@@ -41,14 +41,17 @@ class GetIntegrationStatusUseCase:
         )
 
     def _email_status(self) -> ProviderStatus:
+        if self._settings.resend_api_key:
+            return ProviderStatus(connected=True, detail="Sending real email via the Resend API.")
         if self._settings.smtp_configured:
             return ProviderStatus(
-                connected=True, detail=f"Sending real email via {self._settings.smtp_host}."
+                connected=True, detail=f"Sending real email via SMTP ({self._settings.smtp_host})."
             )
         return ProviderStatus(
             connected=False,
-            detail="Not configured — set SMTP_HOST, SMTP_USERNAME, and SMTP_PASSWORD to send real "
-            "email. Currently logging to the console instead.",
+            detail="Not configured — set RESEND_API_KEY (recommended — many hosts block outbound SMTP "
+            "ports) or SMTP_HOST/SMTP_USERNAME/SMTP_PASSWORD to send real email. Currently logging to "
+            "the console instead.",
         )
 
     def _whatsapp_status(self) -> ProviderStatus:

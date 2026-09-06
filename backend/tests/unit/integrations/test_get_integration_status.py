@@ -21,6 +21,15 @@ async def test_smtp_host_set_marks_email_connected() -> None:
     assert "smtp.example.com" in status.email.detail
 
 
+async def test_resend_api_key_marks_email_connected_and_takes_priority_over_smtp() -> None:
+    status = GetIntegrationStatusUseCase(
+        Settings(RESEND_API_KEY="re_test_key", SMTP_HOST="smtp.example.com")
+    ).execute()
+
+    assert status.email.connected is True
+    assert "Resend" in status.email.detail
+
+
 async def test_twilio_provider_marks_whatsapp_connected() -> None:
     status = GetIntegrationStatusUseCase(Settings(WHATSAPP_PROVIDER="twilio")).execute()
 
