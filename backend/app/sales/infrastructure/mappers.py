@@ -61,5 +61,13 @@ def domain_to_model(sale: Sale) -> SaleModel:
 
 
 def apply_domain_to_existing_model(sale: Sale, model: SaleModel) -> None:
+    model.invoice_number = sale.invoice_number
+    model.customer_id = sale.customer_id
+    model.invoice_date = sale.invoice_date
+    model.due_date = sale.due_date
+    model.line_items = [_line_item_to_dict(item) for item in sale.line_items]
+    model.discount_cents = sale.discount.cents
+    model.tax_cents = sale.tax.cents
     model.amount_received_cents = sale.amount_received.cents
+    model.notes = sale.notes
     model.status = sale.status.value

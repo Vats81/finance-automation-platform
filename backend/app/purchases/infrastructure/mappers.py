@@ -62,5 +62,12 @@ def domain_to_model(purchase: Purchase) -> PurchaseModel:
 
 
 def apply_domain_to_existing_model(purchase: Purchase, model: PurchaseModel) -> None:
+    model.purchase_number = purchase.purchase_number
+    model.vendor_id = purchase.vendor_id
+    model.purchase_date = purchase.purchase_date
+    model.due_date = purchase.due_date
+    model.line_items = [_line_item_to_dict(item) for item in purchase.line_items]
+    model.tax_cents = purchase.tax.cents
     model.amount_paid_cents = purchase.amount_paid.cents
+    model.notes = purchase.notes
     model.status = purchase.status.value
