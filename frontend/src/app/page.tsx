@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 
 const FEATURES = [
   { title: "Unified dashboard", body: "Revenue, expenses, profit, and cash flow in one view — updated the moment you upload data." },
@@ -110,7 +111,11 @@ export default function LandingPage() {
           <a href="#contact">
             <Button variant="secondary" className="px-6 py-3 text-base">Request a demo</Button>
           </a>
+          <InstallAppButton className="px-6 py-3 text-base" />
         </div>
+        <p className="mt-3 text-xs text-slate-400">
+          On iPhone/iPad: open this page in Safari, then Share → Add to Home Screen.
+        </p>
 
         <div className="mx-auto mt-16 max-w-4xl rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:p-8">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

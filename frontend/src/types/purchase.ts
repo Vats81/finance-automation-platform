@@ -53,3 +53,7 @@ export interface CreatePurchaseRequest {
   tax?: string;
   notes?: string;
 }
+
+// Same shape as CreatePurchaseRequest — see UpdateSaleRequest's comment
+// in types/sale.ts for why.
+export type UpdatePurchaseRequest = CreatePurchaseRequest;

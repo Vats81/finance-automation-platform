@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { startBillingPortalSession, startCheckoutSession } from "@/lib/api/billing";
 import { changeBusinessPlan, completeOnboarding } from "@/lib/api/business";
 import { getIntegrationsStatus } from "@/lib/api/integrations";
@@ -400,6 +401,17 @@ export default function SettingsPage() {
         )}
         <p className="mt-3 text-xs text-slate-400">
           Only people who already have a FinanceAI account can be invited.
+        </p>
+      </Card>
+
+      <Card className="mt-6 max-w-2xl">
+        <h2 className="mb-1 text-lg font-semibold">Install app</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Add FinanceAI to your home screen or desktop for quicker access, like a native app.
+        </p>
+        <InstallAppButton />
+        <p className="mt-2 text-xs text-slate-400">
+          On iPhone/iPad: open this site in Safari, then Share → Add to Home Screen.
         </p>
       </Card>
     </div>

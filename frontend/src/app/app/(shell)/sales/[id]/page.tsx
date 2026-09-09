@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -89,6 +90,11 @@ export default function SaleDetailPage() {
         <div className="flex items-center gap-2">
           {sale.status === "void" && <Badge tone="neutral">void</Badge>}
           <Badge tone={STATUS_TONE[sale.payment_status]}>{sale.payment_status.replace("_", " ")}</Badge>
+          {sale.status !== "void" && (
+            <Link href={`/app/sales/${sale.id}/edit`}>
+              <Button variant="secondary">Edit</Button>
+            </Link>
+          )}
         </div>
       </div>
 

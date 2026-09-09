@@ -19,3 +19,8 @@ class SalePaymentRecorded(DomainEvent):
 @dataclass(frozen=True, kw_only=True)
 class SaleVoided(DomainEvent):
     invoice_number: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class SaleDetailsUpdated(DomainEvent):
+    changed_fields: list[str]

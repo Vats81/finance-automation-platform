@@ -35,6 +35,16 @@ class CreatePurchaseRequest(BaseModel):
     notes: str | None = None
 
 
+class UpdatePurchaseRequest(BaseModel):
+    purchase_number: str = Field(min_length=1, max_length=100)
+    vendor_id: uuid.UUID
+    purchase_date: date
+    line_items: list[CreatePurchaseLineItemRequest] = Field(min_length=1)
+    due_date: date | None = None
+    tax: Decimal | None = None
+    notes: str | None = None
+
+
 class RecordPurchasePaymentRequest(BaseModel):
     amount: Decimal = Field(gt=0)
 

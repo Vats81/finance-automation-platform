@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
-import { CreateSaleRequest, PagedSalesResponse, SaleResponse } from "@/types/sale";
+import { CreateSaleRequest, PagedSalesResponse, SaleResponse, UpdateSaleRequest } from "@/types/sale";
 
 export function listSales(token: string | null, businessId: string): Promise<PagedSalesResponse> {
   return apiFetch<PagedSalesResponse>(`/businesses/${businessId}/sales`, token);
@@ -20,6 +20,18 @@ export function createSale(
 ): Promise<SaleResponse> {
   return apiFetch<SaleResponse>(`/businesses/${businessId}/sales`, token, {
     method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateSale(
+  token: string | null,
+  businessId: string,
+  saleId: string,
+  body: UpdateSaleRequest
+): Promise<SaleResponse> {
+  return apiFetch<SaleResponse>(`/businesses/${businessId}/sales/${saleId}`, token, {
+    method: "PATCH",
     body: JSON.stringify(body),
   });
 }

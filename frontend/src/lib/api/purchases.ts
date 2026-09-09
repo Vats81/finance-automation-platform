@@ -1,5 +1,10 @@
 import { apiFetch } from "@/lib/api/client";
-import { CreatePurchaseRequest, PagedPurchasesResponse, PurchaseResponse } from "@/types/purchase";
+import {
+  CreatePurchaseRequest,
+  PagedPurchasesResponse,
+  PurchaseResponse,
+  UpdatePurchaseRequest,
+} from "@/types/purchase";
 
 export function listPurchases(token: string | null, businessId: string): Promise<PagedPurchasesResponse> {
   return apiFetch<PagedPurchasesResponse>(`/businesses/${businessId}/purchases`, token);
@@ -27,6 +32,18 @@ export function createPurchase(
 ): Promise<PurchaseResponse> {
   return apiFetch<PurchaseResponse>(`/businesses/${businessId}/purchases`, token, {
     method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updatePurchase(
+  token: string | null,
+  businessId: string,
+  purchaseId: string,
+  body: UpdatePurchaseRequest
+): Promise<PurchaseResponse> {
+  return apiFetch<PurchaseResponse>(`/businesses/${businessId}/purchases/${purchaseId}`, token, {
+    method: "PATCH",
     body: JSON.stringify(body),
   });
 }

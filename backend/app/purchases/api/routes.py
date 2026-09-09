@@ -14,6 +14,7 @@ from app.purchases.api.schemas import (
     PagedPurchasesResponse,
     PurchaseResponse,
     RecordPurchasePaymentRequest,
+    UpdatePurchaseRequest,
 )
 from app.purchases.application.commands.create_purchase import (
     CreatePurchaseCommand,
@@ -23,6 +24,11 @@ from app.purchases.application.commands.create_purchase import (
 from app.purchases.application.commands.record_payment import (
     RecordPurchasePaymentCommand,
     RecordPurchasePaymentUseCase,
+)
+from app.purchases.application.commands.update_purchase import (
+    UpdatePurchaseCommand,
+    UpdatePurchaseLineItemInput,
+    UpdatePurchaseUseCase,
 )
 from app.purchases.application.commands.void_purchase import VoidPurchaseCommand, VoidPurchaseUseCase
 from app.purchases.application.queries.get_purchase import GetPurchaseQuery, GetPurchaseUseCase
@@ -117,6 +123,42 @@ async def get_purchase(
 ) -> PurchaseResponse:
     use_case = GetPurchaseUseCase(uow)
     purchase = await use_case.execute(GetPurchaseQuery(business_id=business_id, purchase_id=purchase_id))
+    return PurchaseResponse.from_domain(purchase)
+
+
+@router.patch("/{purchase_id}", response_model=PurchaseResponse)
+@limiter.limit(settings.rate_limit_write)
+async def update_purchase(
+    request: Request,
+    business_id: uuid.UUID,
+    purchase_id: uuid.UUID,
+    body: UpdatePurchaseRequest,
+    _actor: User = Depends(require_business_role(*_can_write)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> PurchaseResponse:
+    use_case = UpdatePurchaseUseCase(uow)
+    purchase = await use_case.execute(
+        UpdatePurchaseCommand(
+            business_id=business_id,
+            purchase_id=purchase_id,
+            purchase_number=body.purchase_number,
+            vendor_id=body.vendor_id,
+            purchase_date=body.purchase_date,
+            due_date=body.due_date,
+            line_items=[
+                UpdatePurchaseLineItemInput(
+                    line_number=item.line_number,
+                    description=item.description,
+                    quantity=item.quantity,
+                    unit_cost=item.unit_cost,
+                    product_id=item.product_id,
+                )
+                for item in body.line_items
+            ],
+            tax=body.tax,
+            notes=body.notes,
+        )
+    )
     return PurchaseResponse.from_domain(purchase)
 
 

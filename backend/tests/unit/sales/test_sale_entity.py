@@ -109,3 +109,93 @@ def test_void_prevents_further_payments_and_double_void() -> None:
 
     with pytest.raises(SaleAlreadyVoidException):
         sale.record_payment(Money(amount=Decimal("1")))
+
+
+def test_update_details_changes_fields_and_records_event() -> None:
+    sale = make_sale()
+    new_line_items = [
+        SaleLineItem(
+            line_number=1,
+            description="Gadget",
+            quantity=Decimal("1"),
+            unit_price=Money(amount=Decimal("30")),
+        )
+    ]
+
+    sale.update_details(
+        invoice_number="INV-002",
+        customer_id=sale.customer_id,
+        invoice_date=sale.invoice_date,
+        due_date=sale.due_date,
+        line_items=new_line_items,
+        discount=sale.discount,
+        tax=sale.tax,
+        notes="updated",
+    )
+
+    assert sale.invoice_number == "INV-002"
+    assert sale.line_items == new_line_items
+    assert sale.notes == "updated"
+    events = sale.pull_domain_events()
+    assert [e.event_type for e in events] == ["SaleDetailsUpdated"]
+    assert set(events[0].changed_fields) == {"invoice_number", "line_items", "notes"}
+
+
+def test_update_details_is_a_noop_when_nothing_changes() -> None:
+    sale = make_sale()
+
+    sale.update_details(
+        invoice_number=sale.invoice_number,
+        customer_id=sale.customer_id,
+        invoice_date=sale.invoice_date,
+        due_date=sale.due_date,
+        line_items=sale.line_items,
+        discount=sale.discount,
+        tax=sale.tax,
+        notes=sale.notes,
+    )
+
+    assert sale.pull_domain_events() == []
+
+
+def test_update_details_on_void_sale_raises() -> None:
+    sale = make_sale()
+    sale.void()
+
+    with pytest.raises(SaleAlreadyVoidException):
+        sale.update_details(
+            invoice_number=sale.invoice_number,
+            customer_id=sale.customer_id,
+            invoice_date=sale.invoice_date,
+            due_date=sale.due_date,
+            line_items=sale.line_items,
+            discount=sale.discount,
+            tax=sale.tax,
+            notes="new notes",
+        )
+
+
+def test_update_details_that_would_leave_received_exceeding_new_total_raises() -> None:
+    sale = make_sale()
+    sale.record_payment(Money(amount=Decimal("100")))
+    sale.pull_domain_events()
+    smaller_line_items = [
+        SaleLineItem(
+            line_number=1,
+            description="Widget",
+            quantity=Decimal("1"),
+            unit_price=Money(amount=Decimal("50")),
+        )
+    ]
+
+    with pytest.raises(PaymentExceedsOutstandingException):
+        sale.update_details(
+            invoice_number=sale.invoice_number,
+            customer_id=sale.customer_id,
+            invoice_date=sale.invoice_date,
+            due_date=sale.due_date,
+            line_items=smaller_line_items,
+            discount=sale.discount,
+            tax=sale.tax,
+            notes=sale.notes,
+        )

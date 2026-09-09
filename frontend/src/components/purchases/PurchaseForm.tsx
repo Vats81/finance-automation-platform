@@ -18,17 +18,25 @@ export function PurchaseForm({
   products,
   onSubmit,
   isSubmitting,
+  initialValues,
+  submitLabel,
 }: {
   vendors: VendorResponse[];
   products: ProductResponse[];
   onSubmit: (data: CreatePurchaseRequest) => void;
   isSubmitting: boolean;
+  initialValues?: CreatePurchaseRequest;
+  submitLabel?: string;
 }) {
-  const [purchaseNumber, setPurchaseNumber] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10));
-  const [vendorId, setVendorId] = useState("");
-  const [lines, setLines] = useState<CreatePurchaseLineItemRequest[]>([emptyLine(1)]);
-  const [tax, setTax] = useState("0");
+  const [purchaseNumber, setPurchaseNumber] = useState(initialValues?.purchase_number ?? "");
+  const [purchaseDate, setPurchaseDate] = useState(
+    initialValues?.purchase_date ?? new Date().toISOString().slice(0, 10)
+  );
+  const [vendorId, setVendorId] = useState(initialValues?.vendor_id ?? "");
+  const [lines, setLines] = useState<CreatePurchaseLineItemRequest[]>(
+    initialValues?.line_items ?? [emptyLine(1)]
+  );
+  const [tax, setTax] = useState(initialValues?.tax ?? "0");
 
   function updateLine(index: number, patch: Partial<CreatePurchaseLineItemRequest>) {
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -155,7 +163,7 @@ export function PurchaseForm({
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Saving…" : "Record purchase"}
+        {isSubmitting ? "Saving…" : submitLabel ?? "Record purchase"}
       </Button>
     </form>
   );

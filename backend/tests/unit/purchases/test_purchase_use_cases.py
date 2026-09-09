@@ -13,6 +13,11 @@ from app.purchases.application.commands.record_payment import (
     RecordPurchasePaymentCommand,
     RecordPurchasePaymentUseCase,
 )
+from app.purchases.application.commands.update_purchase import (
+    UpdatePurchaseCommand,
+    UpdatePurchaseLineItemInput,
+    UpdatePurchaseUseCase,
+)
 from app.purchases.application.commands.void_purchase import VoidPurchaseCommand, VoidPurchaseUseCase
 from app.purchases.application.queries.get_purchase import GetPurchaseQuery, GetPurchaseUseCase
 from app.purchases.application.queries.list_purchases import ListPurchasesQuery, ListPurchasesUseCase
@@ -98,3 +103,34 @@ async def test_void_purchase_use_case() -> None:
     )
 
     assert voided.status.value == "void"
+
+
+async def test_update_purchase_use_case_changes_fields_and_recomputes_total() -> None:
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    purchase = await CreatePurchaseUseCase(uow).execute(make_create_command(business_id))
+    new_vendor_id = uuid.uuid4()
+
+    updated = await UpdatePurchaseUseCase(uow).execute(
+        UpdatePurchaseCommand(
+            business_id=business_id,
+            purchase_id=purchase.id,
+            purchase_number="PO-002",
+            vendor_id=new_vendor_id,
+            purchase_date=date(2026, 2, 1),
+            line_items=[
+                UpdatePurchaseLineItemInput(
+                    line_number=1, description="New materials", quantity=Decimal("4"), unit_cost=Decimal("2")
+                )
+            ],
+        )
+    )
+
+    assert updated.purchase_number == "PO-002"
+    assert updated.vendor_id == new_vendor_id
+    assert updated.total_amount.amount == Decimal("8.00")
+
+    refetched = await GetPurchaseUseCase(uow).execute(
+        GetPurchaseQuery(business_id=business_id, purchase_id=purchase.id)
+    )
+    assert refetched.purchase_number == "PO-002"

@@ -20,3 +20,8 @@ class PurchasePaymentRecorded(DomainEvent):
 @dataclass(frozen=True, kw_only=True)
 class PurchaseVoided(DomainEvent):
     purchase_number: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class PurchaseDetailsUpdated(DomainEvent):
+    changed_fields: list[str]

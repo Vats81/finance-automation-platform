@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from app.sales.domain.events import SalePaymentRecorded, SaleRecorded, SaleVoided
+from app.sales.domain.events import SaleDetailsUpdated, SalePaymentRecorded, SaleRecorded, SaleVoided
 from app.sales.domain.exceptions import (
     EmptySaleException,
     PaymentExceedsOutstandingException,
@@ -141,3 +141,66 @@ class Sale(AggregateRoot):
 
         self.status = SaleStatus.VOID
         self._record_event(SaleVoided(aggregate_id=self.id, invoice_number=self.invoice_number))
+
+    def update_details(
+        self,
+        *,
+        invoice_number: str,
+        customer_id: uuid.UUID | None,
+        invoice_date: date,
+        due_date: date | None,
+        line_items: list[SaleLineItem],
+        discount: Money,
+        tax: Money,
+        notes: str | None,
+    ) -> None:
+        """Full-replacement edit — the frontend edit form always resends the
+        complete new state rather than a sparse patch, so there's no
+        None-means-'leave unchanged' ambiguity to resolve for a field like
+        customer_id that's itself nullable (unlike Vendor/Customer's
+        update_details, which only touches fields explicitly passed).
+        Records one event only if something actually changed.
+        """
+        if self.status == SaleStatus.VOID:
+            raise SaleAlreadyVoidException(f"Sale {self.id} is void and cannot be edited")
+        if not line_items:
+            raise EmptySaleException("A sale requires at least one line item")
+
+        new_subtotal = Money(amount=Decimal("0"))
+        for item in line_items:
+            new_subtotal = new_subtotal + item.line_total
+        new_total = new_subtotal - discount + tax
+        if self.amount_received.cents > new_total.cents:
+            raise PaymentExceedsOutstandingException(
+                f"Editing sale {self.id} this way would make the amount already received "
+                "exceed the new total"
+            )
+
+        changed: list[str] = []
+        if invoice_number != self.invoice_number:
+            self.invoice_number = invoice_number
+            changed.append("invoice_number")
+        if customer_id != self.customer_id:
+            self.customer_id = customer_id
+            changed.append("customer_id")
+        if invoice_date != self.invoice_date:
+            self.invoice_date = invoice_date
+            changed.append("invoice_date")
+        if due_date != self.due_date:
+            self.due_date = due_date
+            changed.append("due_date")
+        if line_items != self.line_items:
+            self.line_items = line_items
+            changed.append("line_items")
+        if discount != self.discount:
+            self.discount = discount
+            changed.append("discount")
+        if tax != self.tax:
+            self.tax = tax
+            changed.append("tax")
+        if notes != self.notes:
+            self.notes = notes
+            changed.append("notes")
+
+        if changed:
+            self._record_event(SaleDetailsUpdated(aggregate_id=self.id, changed_fields=changed))

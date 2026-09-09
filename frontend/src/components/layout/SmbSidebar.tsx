@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/app/automations", label: "Automations" },
   { href: "/app/integrations", label: "Integrations" },
   { href: "/app/settings", label: "Settings" },
+  { href: "/app/help", label: "Help" },
 ];
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {

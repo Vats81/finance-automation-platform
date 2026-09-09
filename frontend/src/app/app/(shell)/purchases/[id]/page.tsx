@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
@@ -91,6 +92,11 @@ export default function PurchaseDetailPage() {
           <Badge tone={STATUS_TONE[purchase.payment_status]}>
             {purchase.payment_status.replace("_", " ")}
           </Badge>
+          {purchase.status !== "void" && (
+            <Link href={`/app/purchases/${purchase.id}/edit`}>
+              <Button variant="secondary">Edit</Button>
+            </Link>
+          )}
         </div>
       </div>
 

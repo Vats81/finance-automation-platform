@@ -10,6 +10,11 @@ from app.sales.application.commands.create_sale import (
     CreateSaleUseCase,
 )
 from app.sales.application.commands.record_payment import RecordSalePaymentCommand, RecordSalePaymentUseCase
+from app.sales.application.commands.update_sale import (
+    UpdateSaleCommand,
+    UpdateSaleLineItemInput,
+    UpdateSaleUseCase,
+)
 from app.sales.application.commands.void_sale import VoidSaleCommand, VoidSaleUseCase
 from app.sales.application.queries.get_sale import GetSaleQuery, GetSaleUseCase
 from app.sales.application.queries.list_sales import ListSalesQuery, ListSalesUseCase
@@ -86,3 +91,29 @@ async def test_void_sale_use_case() -> None:
     voided = await VoidSaleUseCase(uow).execute(VoidSaleCommand(business_id=business_id, sale_id=sale.id))
 
     assert voided.status.value == "void"
+
+
+async def test_update_sale_use_case_changes_fields_and_recomputes_total() -> None:
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    sale = await CreateSaleUseCase(uow).execute(make_create_command(business_id))
+
+    updated = await UpdateSaleUseCase(uow).execute(
+        UpdateSaleCommand(
+            business_id=business_id,
+            sale_id=sale.id,
+            invoice_number="INV-002",
+            invoice_date=date(2026, 2, 1),
+            line_items=[
+                UpdateSaleLineItemInput(
+                    line_number=1, description="Gadget", quantity=Decimal("3"), unit_price=Decimal("10")
+                )
+            ],
+        )
+    )
+
+    assert updated.invoice_number == "INV-002"
+    assert updated.total_amount.amount == Decimal("30.00")
+
+    refetched = await GetSaleUseCase(uow).execute(GetSaleQuery(business_id=business_id, sale_id=sale.id))
+    assert refetched.invoice_number == "INV-002"

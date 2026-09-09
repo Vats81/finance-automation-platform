@@ -16,17 +16,25 @@ export function SaleForm({
   customers,
   onSubmit,
   isSubmitting,
+  initialValues,
+  submitLabel,
 }: {
   customers: CustomerResponse[];
   onSubmit: (data: CreateSaleRequest) => void;
   isSubmitting: boolean;
+  initialValues?: CreateSaleRequest;
+  submitLabel?: string;
 }) {
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
-  const [customerId, setCustomerId] = useState("");
-  const [lines, setLines] = useState<CreateSaleLineItemRequest[]>([emptyLine(1)]);
-  const [discount, setDiscount] = useState("0");
-  const [tax, setTax] = useState("0");
+  const [invoiceNumber, setInvoiceNumber] = useState(initialValues?.invoice_number ?? "");
+  const [invoiceDate, setInvoiceDate] = useState(
+    initialValues?.invoice_date ?? new Date().toISOString().slice(0, 10)
+  );
+  const [customerId, setCustomerId] = useState(initialValues?.customer_id ?? "");
+  const [lines, setLines] = useState<CreateSaleLineItemRequest[]>(
+    initialValues?.line_items ?? [emptyLine(1)]
+  );
+  const [discount, setDiscount] = useState(initialValues?.discount ?? "0");
+  const [tax, setTax] = useState(initialValues?.tax ?? "0");
 
   function updateLine(index: number, patch: Partial<CreateSaleLineItemRequest>) {
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -145,7 +153,7 @@ export function SaleForm({
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Saving…" : "Record sale"}
+        {isSubmitting ? "Saving…" : submitLabel ?? "Record sale"}
       </Button>
     </form>
   );

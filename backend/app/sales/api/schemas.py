@@ -34,6 +34,17 @@ class CreateSaleRequest(BaseModel):
     notes: str | None = None
 
 
+class UpdateSaleRequest(BaseModel):
+    invoice_number: str = Field(min_length=1, max_length=100)
+    invoice_date: date
+    line_items: list[CreateSaleLineItemRequest] = Field(min_length=1)
+    customer_id: uuid.UUID | None = None
+    due_date: date | None = None
+    discount: Decimal | None = None
+    tax: Decimal | None = None
+    notes: str | None = None
+
+
 class RecordSalePaymentRequest(BaseModel):
     amount: Decimal = Field(gt=0)
 

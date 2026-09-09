@@ -53,3 +53,8 @@ export interface CreateSaleRequest {
   tax?: string;
   notes?: string;
 }
+
+// Same shape as CreateSaleRequest — the edit form always resends the full
+// record rather than a sparse patch, matching how the backend's
+// Sale.update_details works (see its docstring).
+export type UpdateSaleRequest = CreateSaleRequest;

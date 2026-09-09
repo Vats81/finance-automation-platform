@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { LocalAuthGuard } from "@/components/layout/LocalAuthGuard";
 import { SmbSidebar } from "@/components/layout/SmbSidebar";
 import { SmbTopbar } from "@/components/layout/SmbTopbar";
+import { GuidedTour } from "@/components/tour/GuidedTour";
 import { Spinner } from "@/components/ui/Spinner";
 import { CurrentBusinessProvider, useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { TourProvider } from "@/lib/tour/useTour";
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -39,6 +41,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         />
         <main className="flex-1 p-4 sm:p-8">{children}</main>
       </div>
+      <GuidedTour />
     </div>
   );
 }
@@ -54,7 +57,9 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
   return (
     <LocalAuthGuard>
       <CurrentBusinessProvider>
-        <ShellContent>{children}</ShellContent>
+        <TourProvider>
+          <ShellContent>{children}</ShellContent>
+        </TourProvider>
       </CurrentBusinessProvider>
     </LocalAuthGuard>
   );

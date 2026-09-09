@@ -14,6 +14,7 @@ from app.sales.api.schemas import (
     PagedSalesResponse,
     RecordSalePaymentRequest,
     SaleResponse,
+    UpdateSaleRequest,
 )
 from app.sales.application.commands.create_sale import (
     CreateSaleCommand,
@@ -21,6 +22,11 @@ from app.sales.application.commands.create_sale import (
     CreateSaleUseCase,
 )
 from app.sales.application.commands.record_payment import RecordSalePaymentCommand, RecordSalePaymentUseCase
+from app.sales.application.commands.update_sale import (
+    UpdateSaleCommand,
+    UpdateSaleLineItemInput,
+    UpdateSaleUseCase,
+)
 from app.sales.application.commands.void_sale import VoidSaleCommand, VoidSaleUseCase
 from app.sales.application.queries.get_sale import GetSaleQuery, GetSaleUseCase
 from app.sales.application.queries.list_outstanding_sales import (
@@ -115,6 +121,42 @@ async def get_sale(
 ) -> SaleResponse:
     use_case = GetSaleUseCase(uow)
     sale = await use_case.execute(GetSaleQuery(business_id=business_id, sale_id=sale_id))
+    return SaleResponse.from_domain(sale)
+
+
+@router.patch("/{sale_id}", response_model=SaleResponse)
+@limiter.limit(settings.rate_limit_write)
+async def update_sale(
+    request: Request,
+    business_id: uuid.UUID,
+    sale_id: uuid.UUID,
+    body: UpdateSaleRequest,
+    _actor: User = Depends(require_business_role(*_can_write)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> SaleResponse:
+    use_case = UpdateSaleUseCase(uow)
+    sale = await use_case.execute(
+        UpdateSaleCommand(
+            business_id=business_id,
+            sale_id=sale_id,
+            invoice_number=body.invoice_number,
+            invoice_date=body.invoice_date,
+            due_date=body.due_date,
+            customer_id=body.customer_id,
+            line_items=[
+                UpdateSaleLineItemInput(
+                    line_number=item.line_number,
+                    description=item.description,
+                    quantity=item.quantity,
+                    unit_price=item.unit_price,
+                )
+                for item in body.line_items
+            ],
+            discount=body.discount,
+            tax=body.tax,
+            notes=body.notes,
+        )
+    )
     return SaleResponse.from_domain(sale)
 
 

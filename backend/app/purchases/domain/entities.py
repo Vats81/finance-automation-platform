@@ -2,7 +2,12 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from app.purchases.domain.events import PurchasePaymentRecorded, PurchaseRecorded, PurchaseVoided
+from app.purchases.domain.events import (
+    PurchaseDetailsUpdated,
+    PurchasePaymentRecorded,
+    PurchaseRecorded,
+    PurchaseVoided,
+)
 from app.purchases.domain.exceptions import (
     EmptyPurchaseException,
     PurchaseAlreadyVoidException,
@@ -133,3 +138,59 @@ class Purchase(AggregateRoot):
 
         self.status = PurchaseStatus.VOID
         self._record_event(PurchaseVoided(aggregate_id=self.id, purchase_number=self.purchase_number))
+
+    def update_details(
+        self,
+        *,
+        purchase_number: str,
+        vendor_id: uuid.UUID,
+        purchase_date: date,
+        due_date: date | None,
+        line_items: list[PurchaseLineItem],
+        tax: Money,
+        notes: str | None,
+    ) -> None:
+        """Full-replacement edit — see Sale.update_details' docstring for
+        why this doesn't use the Vendor/Customer-style
+        None-means-'leave unchanged' pattern.
+        """
+        if self.status == PurchaseStatus.VOID:
+            raise PurchaseAlreadyVoidException(f"Purchase {self.id} is void and cannot be edited")
+        if not line_items:
+            raise EmptyPurchaseException("A purchase requires at least one line item")
+
+        new_subtotal = Money(amount=Decimal("0"))
+        for item in line_items:
+            new_subtotal = new_subtotal + item.line_total
+        new_total = new_subtotal + tax
+        if self.amount_paid.cents > new_total.cents:
+            raise PurchasePaymentExceedsOutstandingException(
+                f"Editing purchase {self.id} this way would make the amount already paid "
+                "exceed the new total"
+            )
+
+        changed: list[str] = []
+        if purchase_number != self.purchase_number:
+            self.purchase_number = purchase_number
+            changed.append("purchase_number")
+        if vendor_id != self.vendor_id:
+            self.vendor_id = vendor_id
+            changed.append("vendor_id")
+        if purchase_date != self.purchase_date:
+            self.purchase_date = purchase_date
+            changed.append("purchase_date")
+        if due_date != self.due_date:
+            self.due_date = due_date
+            changed.append("due_date")
+        if line_items != self.line_items:
+            self.line_items = line_items
+            changed.append("line_items")
+        if tax != self.tax:
+            self.tax = tax
+            changed.append("tax")
+        if notes != self.notes:
+            self.notes = notes
+            changed.append("notes")
+
+        if changed:
+            self._record_event(PurchaseDetailsUpdated(aggregate_id=self.id, changed_fields=changed))
