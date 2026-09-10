@@ -164,12 +164,15 @@ _Free, no credit card_ (via [Groq](https://console.groq.com)):
 |---|---|
 | `AI_PROVIDER` | `groq` |
 | `GROQ_API_KEY` | your API key from console.groq.com |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` (default) — Assistant / Insights / Forecasting |
-| `GROQ_VISION_MODEL` | `meta-llama/llama-4-scout-17b-16e-instruct` (default) — Receipt Scanner |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` (default) — Assistant / Insights / Forecasting |
+| `GROQ_VISION_MODEL` | `qwen/qwen3.8-27b` (default) — Receipt Scanner |
 
-Groq changes its hosted model list fairly often — if a call 400s with an
-"unknown model" error, check the current ids at
-`console.groq.com/docs/models` and update the two vars above.
+Groq changes its hosted model list fairly often — if a call 404s with a
+`model_not_found` error, list the current ids with
+`curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $GROQ_API_KEY"`
+and update the two vars above (`GROQ_MODEL` needs `tools` in its
+`supported_features`; `GROQ_VISION_MODEL` needs `image` in
+`input_modalities`).
 
 _Paid_ (via [Anthropic](https://console.anthropic.com)):
 

@@ -114,15 +114,14 @@ class Settings(BaseSettings):
     # real key — this default is just a reasonable starting point.
     anthropic_model: str = Field(default="claude-sonnet-5", alias="ANTHROPIC_MODEL")
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
-    # Groq rotates hosted models fairly often — confirm both ids in Groq's
-    # docs when wiring a real key. `groq_model` handles the Assistant /
-    # Insights / Forecasting (text + tool calls); `groq_vision_model` is
-    # used only when a request carries an image (the Receipt Scanner),
-    # since the default text model can't see images.
-    groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
-    groq_vision_model: str = Field(
-        default="meta-llama/llama-4-scout-17b-16e-instruct", alias="GROQ_VISION_MODEL"
-    )
+    # Groq rotates hosted models fairly often — if a call 404s with
+    # "model_not_found", pull the current list from GET /openai/v1/models
+    # and update these. `groq_model` handles the Assistant / Insights /
+    # Forecasting (needs `tools` support); `groq_vision_model` is used only
+    # when a request carries an image (the Receipt Scanner) and must have
+    # "image" in its input_modalities.
+    groq_model: str = Field(default="openai/gpt-oss-120b", alias="GROQ_MODEL")
+    groq_vision_model: str = Field(default="qwen/qwen3.8-27b", alias="GROQ_VISION_MODEL")
 
     # --- One-time demo-account seeding (free-tier hosts with no shell access) ---
     # Blank by default, which disables the endpoint entirely (see api/seed.py).

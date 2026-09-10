@@ -93,7 +93,10 @@ class GroqAiClient(IAiClient):
         payload: dict[str, Any] = {
             "model": self._vision_model if has_image else self._model,
             "messages": oai_messages,
-            "max_tokens": 1024,
+            # Higher than AnthropicAiClient's 1024: Groq's gpt-oss/Qwen
+            # models spend part of this budget on hidden reasoning tokens,
+            # so a tight cap can truncate before any answer text lands.
+            "max_tokens": 4096,
         }
         if tools:
             payload["tools"] = [_to_openai_tool(tool) for tool in tools]
