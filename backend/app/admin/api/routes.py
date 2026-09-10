@@ -87,9 +87,11 @@ async def reactivate_user(user_id: uuid.UUID, uow: AppUnitOfWork = Depends(get_u
 @router.get("/backup")
 async def export_backup(uow: AppUnitOfWork = Depends(get_uow)) -> Response:
     """A logical (JSON, not SQL-dump) backup of every SMB table — see
-    ExportBackupUseCase's docstring for why. Manually triggered by a
-    platform admin whenever they want one; no automated schedule exists
-    (that would need Celery Beat, deliberately not deployed here).
+    ExportBackupUseCase's docstring for why. A platform admin can call this
+    ad hoc; it is also called on a daily schedule by the
+    `.github/workflows/backup.yml` GitHub Action, which encrypts the result
+    and keeps it as an artifact (no always-on scheduler runs in the app
+    itself — Celery Beat is deliberately not deployed here).
     """
     backup = await ExportBackupUseCase(uow.session).execute()
     filename = f"backup-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"

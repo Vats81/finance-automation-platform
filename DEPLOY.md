@@ -223,21 +223,36 @@ either way.
 
 ## 8. Backups
 
-There's no automated backup schedule (that would need a always-on
-scheduler, which this deployment deliberately doesn't run — see the
-Celery/Redis notes elsewhere in this repo). Instead, a platform admin can
-trigger a manual backup any time:
+**Automated** — `.github/workflows/backup.yml` runs daily (03:17 UTC), plus
+on-demand from the Actions tab ("Run workflow"). It logs in as a platform
+admin, calls `GET /api/v1/admin/backup`, checks the JSON has all nine
+tables, encrypts it with GPG/AES-256, and uploads it as a 90-day artifact.
+Encryption is not optional here: this repo is public and artifacts on a
+public repo are world-downloadable, and the dump contains customer PII.
+
+Set these once in **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `BACKUP_ADMIN_EMAIL` | a platform-admin account's email (e.g. the seeded `admin@financeai.app`) |
+| `BACKUP_ADMIN_PASSWORD` | that account's password |
+| `BACKUP_ENCRYPTION_PASSPHRASE` | any strong passphrase — **store it somewhere safe; without it the backups are unreadable** |
+
+Optional variable `BACKUP_API_BASE_URL` overrides the default Render API URL.
+
+GitHub disables scheduled workflows after 60 days of no repo activity — if
+commits go quiet, re-enable it from the Actions tab.
+
+**Restore** — download the artifact from the workflow run, then:
 
 ```
-GET /api/v1/admin/backup
+gpg --batch --yes --passphrase '<passphrase>' --decrypt backup-XXXX.json.gpg > backup.json
 ```
 
-(with a platform-admin's bearer token in the `Authorization` header) —
-downloads a JSON file with every row of every SMB table. It's a logical
-backup (JSON, not a SQL dump), restorable by reading the file back in
-rather than piping it into `psql` directly. Good enough for occasional
-manual snapshots; revisit with a real scheduled `pg_dump` if this becomes
-a production system with real customer data.
+It's a logical backup (JSON, not a SQL dump), restored by reading the file
+back in rather than piping into `psql`. Revisit with a real scheduled
+`pg_dump` if this becomes a production system with significant customer
+data.
 
 ## 9. Legal pages
 
