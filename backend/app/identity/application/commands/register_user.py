@@ -30,11 +30,13 @@ class RegisterUserUseCase:
         clock: IClock,
         *,
         verification_ttl_hours: int = 24,
+        auto_verify_email: bool = False,
     ) -> None:
         self._uow = uow
         self._password_hasher = password_hasher
         self._clock = clock
         self._verification_ttl_hours = verification_ttl_hours
+        self._auto_verify_email = auto_verify_email
 
     async def execute(self, command: RegisterUserCommand) -> User:
         existing = await self._uow.users.get_by_email(command.email)
@@ -49,6 +51,12 @@ class RegisterUserUseCase:
             verification_token=verification_token,
             verification_expires_at=self._clock.now() + timedelta(hours=self._verification_ttl_hours),
         )
+        if self._auto_verify_email:
+            # Deployments that can't deliver the verification email set
+            # AUTH_AUTO_VERIFY_EMAIL — run the user straight through the real
+            # verify transition so login isn't walled off. UserRegistered
+            # still fires; its email task is a harmless no-op here.
+            user.verify_email(token=verification_token, now=self._clock.now())
         self._uow.users.add(user)
         await self._uow.commit()
         return user

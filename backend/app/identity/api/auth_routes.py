@@ -46,7 +46,11 @@ async def register(
     clock: IClock = Depends(get_clock),
 ) -> LocalUserResponse:
     use_case = RegisterUserUseCase(
-        uow, password_hasher, clock, verification_ttl_hours=settings.email_verification_ttl_hours
+        uow,
+        password_hasher,
+        clock,
+        verification_ttl_hours=settings.email_verification_ttl_hours,
+        auto_verify_email=settings.auth_auto_verify_email,
     )
     user = await use_case.execute(
         RegisterUserCommand(email=body.email, password=body.password, display_name=body.display_name)

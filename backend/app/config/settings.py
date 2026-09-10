@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="dev-only-insecure-jwt-secret", alias="JWT_SECRET_KEY")
     jwt_access_token_ttl_days: int = Field(default=7, alias="JWT_ACCESS_TOKEN_TTL_DAYS")
     email_verification_ttl_hours: int = Field(default=24, alias="EMAIL_VERIFICATION_TTL_HOURS")
+    # When true, self-serve signups are created already email-verified and can
+    # log in immediately — an escape hatch for deployments that can't actually
+    # deliver the verification email (no verified sending domain, or no
+    # Celery/Redis to run the send task). Leave false wherever real email works.
+    auth_auto_verify_email: bool = Field(default=False, alias="AUTH_AUTO_VERIFY_EMAIL")
     password_reset_ttl_hours: int = Field(default=2, alias="PASSWORD_RESET_TTL_HOURS")
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
 

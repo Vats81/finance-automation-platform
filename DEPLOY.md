@@ -146,6 +146,13 @@ HTTPS API sidesteps that entirely:
 `SMTP_HOST`/`SMTP_PORT`/`SMTP_USERNAME`/`SMTP_PASSWORD` vars still work as
 a fallback — `RESEND_API_KEY` takes priority over them when both are set.)
 
+_No sending domain yet?_ Resend's shared/sandbox key only delivers to your
+own verified address, so friends' signup-verification emails never arrive
+and they can't log in. Until you verify a real domain, set
+`AUTH_AUTO_VERIFY_EMAIL=true` — new signups are then created
+already-verified and can log in straight away. Flip it back to `false`
+(or drop it) once real email works.
+
 **WhatsApp delivery** (via [Twilio](https://twilio.com) — start with their
 free WhatsApp Sandbox):
 

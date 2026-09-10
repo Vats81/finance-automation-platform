@@ -23,6 +23,23 @@ async def test_register_creates_unverified_local_user_and_records_event() -> Non
     assert stored.id == user.id
 
 
+async def test_register_with_auto_verify_email_creates_verified_user() -> None:
+    uow = FakeUnitOfWork()
+    use_case = RegisterUserUseCase(
+        uow, FakePasswordHasher(), FakeClock(), auto_verify_email=True
+    )
+
+    user = await use_case.execute(
+        RegisterUserCommand(email="owner@acme.com", password="s3cret-pw", display_name="Ada Owner")
+    )
+
+    assert user.is_email_verified is True
+    assert user.email_verification_token_hash is None
+    stored = await uow.users.get_by_email("owner@acme.com")
+    assert stored is not None
+    assert stored.is_email_verified is True
+
+
 async def test_register_with_duplicate_email_raises() -> None:
     uow = FakeUnitOfWork()
     use_case = RegisterUserUseCase(uow, FakePasswordHasher(), FakeClock())
