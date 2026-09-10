@@ -15,13 +15,15 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
+  const [alreadyVerified, setAlreadyVerified] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setIsSubmitting(true);
     setError(null);
     try {
-      await registerUser({ email, password, display_name: displayName });
+      const user = await registerUser({ email, password, display_name: displayName });
+      setAlreadyVerified(user.is_email_verified);
       setRegistered(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create your account");
@@ -34,14 +36,28 @@ export default function SignupPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <Card className="w-full max-w-sm text-center">
-          <h1 className="mb-2 text-xl font-semibold">Check your email</h1>
+          <h1 className="mb-2 text-xl font-semibold">
+            {alreadyVerified ? "Account created" : "Check your email"}
+          </h1>
           <p className="text-sm text-slate-600">
-            We sent a verification link to <span className="font-medium">{email}</span>. Verify your
-            email to activate your account, then{" "}
-            <Link href="/app/login" className="text-brand-600 underline">
-              sign in
-            </Link>
-            .
+            {alreadyVerified ? (
+              <>
+                Your account is ready.{" "}
+                <Link href="/app/login" className="text-brand-600 underline">
+                  Sign in
+                </Link>{" "}
+                to get started.
+              </>
+            ) : (
+              <>
+                We sent a verification link to <span className="font-medium">{email}</span>. Verify
+                your email to activate your account, then{" "}
+                <Link href="/app/login" className="text-brand-600 underline">
+                  sign in
+                </Link>
+                .
+              </>
+            )}
           </p>
         </Card>
       </div>
