@@ -71,10 +71,17 @@ class GetIntegrationStatusUseCase:
                 detail=f"Using Anthropic Claude ({self._settings.anthropic_model}) for the AI "
                 "Assistant, Insights, Forecasting, and Receipt Scanner.",
             )
+        if self._settings.ai_provider == "groq":
+            return ProviderStatus(
+                connected=True,
+                detail=f"Using Groq ({self._settings.groq_model}) for the AI Assistant, Insights, and "
+                f"Forecasting, and {self._settings.groq_vision_model} for the Receipt Scanner.",
+            )
         return ProviderStatus(
             connected=False,
-            detail="Not configured — set AI_PROVIDER=anthropic and ANTHROPIC_API_KEY to enable real "
-            "AI answers. Currently using a placeholder response instead.",
+            detail="Not configured — set AI_PROVIDER=groq and GROQ_API_KEY (free at "
+            "console.groq.com), or AI_PROVIDER=anthropic and ANTHROPIC_API_KEY, to enable real AI "
+            "answers. Currently using a placeholder response instead.",
         )
 
     def _document_storage_status(self) -> ProviderStatus:

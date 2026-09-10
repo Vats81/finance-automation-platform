@@ -36,7 +36,7 @@ from app.shared.application.ports import (
     ITaskQueue,
     IWhatsAppSender,
 )
-from app.shared.infrastructure.ai_client import AnthropicAiClient, ConsoleAiClient
+from app.shared.infrastructure.ai_client import AnthropicAiClient, ConsoleAiClient, GroqAiClient
 from app.shared.infrastructure.blob_storage import AzureBlobStorageAdapter
 from app.shared.infrastructure.celery_task_queue import CeleryTaskQueueAdapter
 from app.shared.infrastructure.clock import SystemClock
@@ -164,6 +164,12 @@ def get_ai_client() -> IAiClient:
     settings = get_settings()
     if settings.ai_provider == "anthropic":
         return AnthropicAiClient(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
+    if settings.ai_provider == "groq":
+        return GroqAiClient(
+            api_key=settings.groq_api_key,
+            model=settings.groq_model,
+            vision_model=settings.groq_vision_model,
+        )
     return ConsoleAiClient()
 
 

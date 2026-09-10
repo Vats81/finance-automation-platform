@@ -83,8 +83,8 @@ export default function TermsPage() {
               <h2 className="mb-2 text-base font-semibold text-slate-900">7. AI features</h2>
               <p>
                 The AI Assistant, Insights, Forecasting, and Receipt Scanner features use a third-party AI
-                provider (Anthropic) and generate outputs that may be incomplete or inaccurate. Always
-                verify AI-generated financial figures before relying on them for real decisions.
+                provider (Groq or Anthropic) and generate outputs that may be incomplete or inaccurate.
+                Always verify AI-generated financial figures before relying on them for real decisions.
               </p>
             </section>
 

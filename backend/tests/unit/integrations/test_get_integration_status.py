@@ -45,6 +45,27 @@ async def test_anthropic_provider_marks_ai_assistant_connected_and_mentions_mode
     assert "claude-sonnet-5" in status.ai_assistant.detail
 
 
+async def test_groq_provider_marks_ai_assistant_connected_and_mentions_both_models() -> None:
+    status = GetIntegrationStatusUseCase(
+        Settings(
+            AI_PROVIDER="groq",
+            GROQ_MODEL="llama-3.3-70b-versatile",
+            GROQ_VISION_MODEL="llama-4-scout",
+        )
+    ).execute()
+
+    assert status.ai_assistant.connected is True
+    assert "llama-3.3-70b-versatile" in status.ai_assistant.detail
+    assert "llama-4-scout" in status.ai_assistant.detail
+
+
+async def test_default_ai_assistant_detail_mentions_the_free_groq_option() -> None:
+    status = GetIntegrationStatusUseCase(Settings()).execute()
+
+    assert status.ai_assistant.connected is False
+    assert "GROQ_API_KEY" in status.ai_assistant.detail
+
+
 async def test_azure_storage_connection_string_marks_document_storage_connected() -> None:
     status = GetIntegrationStatusUseCase(
         Settings(AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;...")

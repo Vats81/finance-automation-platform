@@ -156,8 +156,22 @@ free WhatsApp Sandbox):
 | `TWILIO_AUTH_TOKEN` | from the Twilio Console |
 | `TWILIO_WHATSAPP_FROM` | your Twilio WhatsApp number, e.g. `+14155238886` |
 
-**AI Assistant / Insights / Forecasting / Receipt Scanner** (via
-[Anthropic](https://console.anthropic.com)):
+**AI Assistant / Insights / Forecasting / Receipt Scanner** — pick one provider.
+
+_Free, no credit card_ (via [Groq](https://console.groq.com)):
+
+| Key | Value |
+|---|---|
+| `AI_PROVIDER` | `groq` |
+| `GROQ_API_KEY` | your API key from console.groq.com |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` (default) — Assistant / Insights / Forecasting |
+| `GROQ_VISION_MODEL` | `meta-llama/llama-4-scout-17b-16e-instruct` (default) — Receipt Scanner |
+
+Groq changes its hosted model list fairly often — if a call 400s with an
+"unknown model" error, check the current ids at
+`console.groq.com/docs/models` and update the two vars above.
+
+_Paid_ (via [Anthropic](https://console.anthropic.com)):
 
 | Key | Value |
 |---|---|

@@ -69,9 +69,10 @@ export default function PrivacyPage() {
                   use that feature.
                 </li>
                 <li>
-                  <span className="font-medium">Anthropic</span> — powers the AI Assistant, Insights,
-                  Forecasting, and Receipt Scanner features. Relevant business data is sent to Anthropic&apos;s
-                  API only when you actively use one of these features.
+                  <span className="font-medium">Groq</span> (or Anthropic, depending on configuration) —
+                  powers the AI Assistant, Insights, Forecasting, and Receipt Scanner features. Relevant
+                  business data is sent to the AI provider&apos;s API only when you actively use one of
+                  these features.
                 </li>
                 <li>
                   <span className="font-medium">Render and Vercel</span> — cloud hosting for our backend

@@ -106,11 +106,23 @@ class Settings(BaseSettings):
     twilio_whatsapp_from: str = Field(default="", alias="TWILIO_WHATSAPP_FROM")
 
     # --- AI Business Assistant ---
-    ai_provider: Literal["console", "anthropic"] = Field(default="console", alias="AI_PROVIDER")
+    # "groq" is the free-tier option (no card, console.groq.com); "anthropic"
+    # is the paid one. Both go through IAiClient — see get_ai_client().
+    ai_provider: Literal["console", "groq", "anthropic"] = Field(default="console", alias="AI_PROVIDER")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     # Verify the exact current model id in Anthropic's docs when wiring a
     # real key — this default is just a reasonable starting point.
     anthropic_model: str = Field(default="claude-sonnet-5", alias="ANTHROPIC_MODEL")
+    groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
+    # Groq rotates hosted models fairly often — confirm both ids in Groq's
+    # docs when wiring a real key. `groq_model` handles the Assistant /
+    # Insights / Forecasting (text + tool calls); `groq_vision_model` is
+    # used only when a request carries an image (the Receipt Scanner),
+    # since the default text model can't see images.
+    groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
+    groq_vision_model: str = Field(
+        default="meta-llama/llama-4-scout-17b-16e-instruct", alias="GROQ_VISION_MODEL"
+    )
 
     # --- One-time demo-account seeding (free-tier hosts with no shell access) ---
     # Blank by default, which disables the endpoint entirely (see api/seed.py).
