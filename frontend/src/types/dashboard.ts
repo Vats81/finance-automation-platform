@@ -30,7 +30,8 @@ export const DASHBOARD_PERIODS: { value: DashboardPeriod; label: string }[] = [
 ];
 
 export interface BusinessHealthScoreResponse {
-  overall_score: number;
+  // null when there isn't enough data to score at all.
+  overall_score: number | null;
   label: string;
   breakdown: Record<string, number | null>;
 }

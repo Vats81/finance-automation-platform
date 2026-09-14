@@ -102,15 +102,22 @@ export default function ReportsPage() {
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [whatsAppStatus, setWhatsAppStatus] = useState<string | null>(null);
 
+  const [retryToken, setRetryToken] = useState(0);
+  // Separate from `error` (used by the PDF/email/WhatsApp actions below) so
+  // a failed send after the report already loaded doesn't blank out the
+  // table that's already on screen.
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!currentBusinessId) return;
     setPoints(null);
     setError(null);
+    setLoadError(null);
     const range = getPeriodRange(period);
     getDashboardTrend(getAccessToken(), currentBusinessId, { ...range, granularity })
       .then((res) => setPoints(res.points))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load report"));
-  }, [currentBusinessId, period, granularity, getAccessToken]);
+      .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load report"));
+  }, [currentBusinessId, period, granularity, getAccessToken, retryToken]);
 
   const hasActivity = points?.some((p) => Number(p.revenue) !== 0 || Number(p.expenses) !== 0);
   const totalRevenue = points?.reduce((sum, p) => sum + Number(p.revenue), 0) ?? 0;
@@ -202,9 +209,16 @@ export default function ReportsPage() {
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <Card>
-        {!points && !error ? (
+        {loadError ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <Button variant="secondary" onClick={() => setRetryToken((n) => n + 1)}>
+              Retry
+            </Button>
+          </div>
+        ) : !points ? (
           <p className="text-sm text-slate-500">Loading...</p>
-        ) : points && hasActivity ? (
+        ) : hasActivity ? (
           <>
             <div className="mb-4 flex justify-end gap-3">
               <Button variant="secondary" onClick={() => downloadCsv(points, granularity)}>

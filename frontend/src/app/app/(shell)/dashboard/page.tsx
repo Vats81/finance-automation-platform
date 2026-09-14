@@ -6,6 +6,7 @@ import { RevenueExpenseChart } from "@/components/dashboard/RevenueExpenseChart"
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { MarkdownLite } from "@/components/ui/MarkdownLite";
 import { Select } from "@/components/ui/Select";
 import { getInsights } from "@/lib/api/aiAssistant";
 import {
@@ -41,6 +42,26 @@ const BREAKDOWN_LABELS: Record<string, string> = {
   receivables_health: "Receivables health",
   inventory_health: "Inventory health",
 };
+
+function widgetErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
+}
+
+// Shared "this widget's own fetch failed" state — distinct from the
+// page-level `error` banner, so one slow/failed widget (e.g. Insights)
+// doesn't block the others from still rendering. Previously these fetches
+// used `.catch(() => undefined)`, which swallowed the failure and left the
+// widget on "Loading..." forever with no way to recover.
+function WidgetError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm text-red-600">{message}</p>
+      <Button variant="secondary" onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
+  );
+}
 
 function toISODate(d: Date): string {
   // Building from local getters (not toISOString, which converts to UTC
@@ -91,10 +112,15 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [trend, setTrend] = useState<DashboardTrendResponse | null>(null);
   const [healthScore, setHealthScore] = useState<BusinessHealthScoreResponse | null>(null);
+  const [healthScoreError, setHealthScoreError] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightsResponse | null>(null);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
   const [forecast, setForecast] = useState<DashboardForecastResponse | null>(null);
+  const [forecastError, setForecastError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [healthScoreRetryToken, setHealthScoreRetryToken] = useState(0);
+  const [forecastRetryToken, setForecastRetryToken] = useState(0);
 
   useEffect(() => {
     if (!currentBusinessId) return;
@@ -117,26 +143,32 @@ export default function DashboardPage() {
     // Independent of `period` — the health score is always "as of now",
     // not scoped to the KPI cards' selected period.
     if (!currentBusinessId) return;
+    setHealthScore(null);
+    setHealthScoreError(null);
     getBusinessHealthScore(getAccessToken(), currentBusinessId)
       .then(setHealthScore)
-      .catch(() => undefined);
-  }, [currentBusinessId, getAccessToken]);
+      .catch((err) => setHealthScoreError(widgetErrorMessage(err)));
+  }, [currentBusinessId, getAccessToken, healthScoreRetryToken]);
 
   useEffect(() => {
     // Independent of `period`, same reasoning as the health score — insights
     // summarize the business "as of now," not a selected date range.
     if (!currentBusinessId) return;
     getInsights(getAccessToken(), currentBusinessId)
-      .then(setInsights)
-      .catch(() => undefined);
+      .then((res) => {
+        setInsights(res);
+        setInsightsError(null);
+      })
+      .catch((err) => setInsightsError(widgetErrorMessage(err)));
   }, [currentBusinessId, getAccessToken]);
 
   const handleRefreshInsights = () => {
     if (!currentBusinessId) return;
     setIsRefreshingInsights(true);
+    setInsightsError(null);
     getInsights(getAccessToken(), currentBusinessId)
       .then(setInsights)
-      .catch(() => undefined)
+      .catch((err) => setInsightsError(widgetErrorMessage(err)))
       .finally(() => setIsRefreshingInsights(false));
   };
 
@@ -144,10 +176,12 @@ export default function DashboardPage() {
     // Independent of `period`, same reasoning as Health Score/Insights — a
     // forecast is always "as of now," not scoped to a selected date range.
     if (!currentBusinessId) return;
+    setForecast(null);
+    setForecastError(null);
     getForecast(getAccessToken(), currentBusinessId)
       .then(setForecast)
-      .catch(() => undefined);
-  }, [currentBusinessId, getAccessToken]);
+      .catch((err) => setForecastError(widgetErrorMessage(err)));
+  }, [currentBusinessId, getAccessToken, forecastRetryToken]);
 
   const hasTrendActivity = trend?.points.some((p) => Number(p.revenue) !== 0 || Number(p.expenses) !== 0);
 
@@ -202,25 +236,34 @@ export default function DashboardPage() {
 
       <Card className="mt-6">
         <h2 className="mb-4 text-sm font-semibold">Business Health Score</h2>
-        {healthScore ? (
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-bold text-slate-900">{healthScore.overall_score}</span>
-              <Badge tone={HEALTH_SCORE_TONE[healthScore.label] ?? "neutral"}>{healthScore.label}</Badge>
+        {healthScoreError ? (
+          <WidgetError message={healthScoreError} onRetry={() => setHealthScoreRetryToken((n) => n + 1)} />
+        ) : healthScore ? (
+          healthScore.overall_score === null ? (
+            <p className="text-sm text-slate-500">
+              Not enough data yet — record at least a few weeks of sales and expenses to see a health
+              score.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-bold text-slate-900">{healthScore.overall_score}</span>
+                <Badge tone={HEALTH_SCORE_TONE[healthScore.label] ?? "neutral"}>{healthScore.label}</Badge>
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
+                {Object.entries(healthScore.breakdown).map(([key, value]) => (
+                  <div key={key}>
+                    <span className="text-slate-500">{BREAKDOWN_LABELS[key] ?? key}: </span>
+                    {value === null ? (
+                      <span className="text-slate-400">Not enough data yet</span>
+                    ) : (
+                      <span className="font-medium">{Math.round(value * 100)}%</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
-              {Object.entries(healthScore.breakdown).map(([key, value]) => (
-                <div key={key}>
-                  <span className="text-slate-500">{BREAKDOWN_LABELS[key] ?? key}: </span>
-                  {value === null ? (
-                    <span className="text-slate-400">Not enough data yet</span>
-                  ) : (
-                    <span className="font-medium">{Math.round(value * 100)}%</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          )
         ) : (
           <p className="text-sm text-slate-500">Loading...</p>
         )}
@@ -237,8 +280,10 @@ export default function DashboardPage() {
             {isRefreshingInsights ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
-        {insights ? (
-          <p className="text-sm whitespace-pre-wrap text-slate-700">{insights.insights}</p>
+        {insightsError ? (
+          <WidgetError message={insightsError} onRetry={handleRefreshInsights} />
+        ) : insights ? (
+          <MarkdownLite text={insights.insights} className="text-sm text-slate-700" />
         ) : (
           <p className="text-sm text-slate-500">Loading...</p>
         )}
@@ -263,7 +308,9 @@ export default function DashboardPage() {
 
       <Card className="mt-6">
         <h2 className="mb-1 text-sm font-semibold">Forecast</h2>
-        {forecast ? (
+        {forecastError ? (
+          <WidgetError message={forecastError} onRetry={() => setForecastRetryToken((n) => n + 1)} />
+        ) : forecast ? (
           <>
             <p className="mb-3 text-xs text-slate-500">
               Projected using trend analysis of your last {forecast.history_months_used} months of data.

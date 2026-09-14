@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { MarkdownLite } from "@/components/ui/MarkdownLite";
 import { askAssistant } from "@/lib/api/aiAssistant";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
@@ -60,13 +61,17 @@ export default function AiAssistantPage() {
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${
+                className={`max-w-[80%] rounded-lg px-4 py-2 text-sm ${
                   message.role === "user"
                     ? "bg-brand-600 text-white"
                     : "bg-slate-100 text-slate-800"
                 }`}
               >
-                {message.text}
+                {message.role === "assistant" ? (
+                  <MarkdownLite text={message.text} />
+                ) : (
+                  <span className="whitespace-pre-wrap">{message.text}</span>
+                )}
               </div>
             </div>
           ))}

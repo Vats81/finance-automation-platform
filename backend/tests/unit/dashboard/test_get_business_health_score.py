@@ -134,7 +134,12 @@ async def test_lossy_declining_business_scores_critical() -> None:
     assert result.breakdown["inventory_health"] == 0.0
 
 
-async def test_brand_new_business_excludes_inapplicable_categories() -> None:
+async def test_brand_new_business_has_no_score_yet() -> None:
+    # Regression test: this used to average revenue_trend's fabricated 0.5
+    # and receivables_health's fabricated 1.0 into a 75/100 "Good" score for
+    # a business with zero sales history ever — "no data" was being scored
+    # as "healthy." All four sub-scores must be inapplicable here, and the
+    # use case must report "not enough data," not a number.
     uow = FakeUnitOfWork()
     business_id = await _make_business(uow)
 
@@ -144,10 +149,53 @@ async def test_brand_new_business_excludes_inapplicable_categories() -> None:
 
     assert result.breakdown["profitability"] is None
     assert result.breakdown["inventory_health"] is None
-    assert result.breakdown["revenue_trend"] == 0.5
-    assert result.breakdown["receivables_health"] == 1.0
-    assert result.overall_score == 75
-    assert result.label == "Good"
+    assert result.breakdown["revenue_trend"] is None
+    assert result.breakdown["receivables_health"] is None
+    assert result.overall_score is None
+    assert result.label == "Not enough data"
+
+
+async def test_expenses_with_zero_revenue_ever_has_no_score_yet() -> None:
+    # The exact case a launch-readiness review flagged: a business with
+    # only an expense recorded and no sales ever previously still scored
+    # 75/100 "Good" (same root cause as the brand-new-business case above).
+    uow = FakeUnitOfWork()
+    business_id = await _make_business(uow)
+    await CreateExpenseUseCase(uow).execute(
+        CreateExpenseCommand(
+            business_id=business_id,
+            expense_date=date(2026, 7, 9),
+            category="Rent",
+            description="Rent",
+            amount=Decimal("1000"),
+            payment_method=PaymentMethod.CASH,
+        )
+    )
+
+    result = await GetBusinessHealthScoreUseCase(uow, FakeClock(_NOW)).execute(
+        GetBusinessHealthScoreQuery(business_id=business_id)
+    )
+
+    assert result.overall_score is None
+    assert result.label == "Not enough data"
+
+
+async def test_stale_unpaid_invoice_with_no_revenue_this_period_scores_unhealthy() -> None:
+    # Zero revenue this period does NOT always mean "no data" for
+    # receivables — an old unpaid invoice with money still outstanding is a
+    # real, measurable problem and must keep scoring as unhealthy (0.0),
+    # not fall back to "not enough data."
+    uow = FakeUnitOfWork()
+    business_id = await _make_business(uow)
+    await _make_sale(
+        uow, business_id, invoice_date=date(2026, 5, 1), amount=Decimal("300"), invoice_number="MAY-1"
+    )
+
+    result = await GetBusinessHealthScoreUseCase(uow, FakeClock(_NOW)).execute(
+        GetBusinessHealthScoreQuery(business_id=business_id)
+    )
+
+    assert result.breakdown["receivables_health"] == 0.0
 
 
 async def test_revenue_from_zero_last_month_scores_full_trend() -> None:

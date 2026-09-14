@@ -28,6 +28,13 @@ _LABEL_BANDS: list[tuple[int, str]] = [
     (20, "Needs attention"),
 ]
 _LOWEST_LABEL = "Critical"
+# Distinct from every score band above — an overall_score of None means "we
+# don't have enough data to judge this at all," which is a different claim
+# from "this business is doing badly" (Critical). A brand-new business with
+# zero sales history used to average its two inapplicable-but-defaulted
+# sub-scores (see _revenue_trend/_receivables_health below) into a
+# fabricated 75/100 "Good" — this label is what replaces that.
+_INSUFFICIENT_DATA_LABEL = "Not enough data"
 
 
 @dataclass(frozen=True)
@@ -37,7 +44,9 @@ class GetBusinessHealthScoreQuery:
 
 @dataclass(frozen=True)
 class BusinessHealthScore:
-    overall_score: int
+    # None when every sub-score was inapplicable (see execute()) — the
+    # frontend shows "not enough data" rather than a number in that case.
+    overall_score: int | None
     label: str
     # None for any category excluded from the average (see
     # GetBusinessHealthScoreUseCase's docstring) — the frontend renders
@@ -96,8 +105,12 @@ class GetBusinessHealthScoreUseCase:
         }
 
         applicable = [v for v in breakdown.values() if v is not None]
-        overall = round(100 * (sum(applicable) / len(applicable))) if applicable else 0
+        if not applicable:
+            return BusinessHealthScore(
+                overall_score=None, label=_INSUFFICIENT_DATA_LABEL, breakdown=breakdown
+            )
 
+        overall = round(100 * (sum(applicable) / len(applicable)))
         return BusinessHealthScore(overall_score=overall, label=_label_for(overall), breakdown=breakdown)
 
     def _profitability(self, this_month: DashboardSummary) -> float | None:
@@ -106,17 +119,32 @@ class GetBusinessHealthScoreUseCase:
         margin = this_month.net_profit / this_month.total_revenue
         return float(_clamp(margin / _PROFIT_MARGIN_CEILING, Decimal("0"), Decimal("1")))
 
-    def _revenue_trend(self, this_month: DashboardSummary, last_month: DashboardSummary) -> float:
+    def _revenue_trend(self, this_month: DashboardSummary, last_month: DashboardSummary) -> float | None:
+        if this_month.total_revenue <= 0 and last_month.total_revenue <= 0:
+            # No revenue in either period — there is no trend to measure,
+            # not a neutral one. Previously this returned a fabricated 0.5
+            # ("50% healthy") for a business that has never made a sale.
+            return None
         if last_month.total_revenue <= 0:
-            return 1.0 if this_month.total_revenue > 0 else 0.5
+            # This month has real revenue and last month had none: a
+            # genuine "started from zero" positive signal, not a default.
+            return 1.0
 
         growth = (this_month.total_revenue - last_month.total_revenue) / last_month.total_revenue
         span = _REVENUE_GROWTH_CEILING - _REVENUE_GROWTH_FLOOR
         return float(_clamp((growth - _REVENUE_GROWTH_FLOOR) / span, Decimal("0"), Decimal("1")))
 
-    def _receivables_health(self, this_month: DashboardSummary) -> float:
+    def _receivables_health(self, this_month: DashboardSummary) -> float | None:
         if this_month.total_revenue <= 0:
-            return 0.0 if this_month.outstanding_receivables > 0 else 1.0
+            if this_month.outstanding_receivables > 0:
+                # Money owed with no revenue being generated this period is
+                # a real, measurable problem — keep scoring it as unhealthy.
+                return 0.0
+            # No revenue and nothing outstanding: there has been no sales
+            # activity to judge receivables health on at all. Previously
+            # this returned a fabricated 1.0 ("100% healthy") for a
+            # business that has never recorded a sale.
+            return None
 
         ratio = this_month.outstanding_receivables / this_month.total_revenue
         return float(_clamp(Decimal("1") - ratio, Decimal("0"), Decimal("1")))

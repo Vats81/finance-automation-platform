@@ -61,7 +61,9 @@ class SendReportWhatsAppRequest(BaseModel):
 
 
 class BusinessHealthScoreResponse(BaseModel):
-    overall_score: int
+    # None when there isn't enough data to score at all — see
+    # GetBusinessHealthScoreUseCase.execute()'s docstring.
+    overall_score: int | None
     label: str
     breakdown: dict[str, float | None]
 
