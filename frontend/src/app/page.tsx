@@ -7,19 +7,19 @@ import { Card } from "@/components/ui/Card";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 
 const FEATURES = [
-  { title: "Unified dashboard", body: "Revenue, expenses, profit, and cash flow in one view — updated the moment you upload data." },
-  { title: "Sales & expense tracking", body: "Log transactions manually or import from CSV/Excel, with categorization and duplicate detection." },
+  { title: "Unified dashboard", body: "Revenue, expenses, profit, and cash flow in one view — updated the moment you record or import data." },
+  { title: "Sales & expense tracking", body: "Record sales and purchases directly in the app, or import expenses, customers, vendors, and products from a CSV file." },
   { title: "Inventory intelligence", body: "Low-stock alerts, reorder suggestions, and fast vs. slow-moving product insights." },
   { title: "Payment tracking", body: "See every outstanding receivable and payable, and send reminders before they're overdue." },
   { title: "AI business assistant", body: "Ask questions about your own numbers in plain language and get answers with context." },
-  { title: "Automated reports", body: "Daily, weekly, and monthly reports — downloadable as PDF, delivered by email or WhatsApp." },
+  { title: "Reports & alerts", body: "Download PDF reports anytime, or send them by email or WhatsApp with one click. Real-time alerts flag overdue payments and low stock automatically." },
 ];
 
 const STEPS = [
   { step: "1", title: "Register your business", body: "Create an account and tell us a bit about your business — skip anything you're not sure of yet." },
-  { step: "2", title: "Upload your data", body: "Import sales, expenses, purchases, inventory, or customer records from CSV or Excel." },
+  { step: "2", title: "Add your data", body: "Import customers, vendors, products, or expenses from a CSV file, and record your sales and purchases directly in the app." },
   { step: "3", title: "Get instant insight", body: "Your dashboard updates automatically, and AI-generated insights start surfacing what matters." },
-  { step: "4", title: "Act on it", body: "Ask the AI assistant a question, download a report, or set up an automated alert." },
+  { step: "4", title: "Act on it", body: "Ask the AI assistant a question, download a report, or send one by email or WhatsApp." },
 ];
 
 const PLANS = [
@@ -27,13 +27,13 @@ const PLANS = [
     name: "Starter",
     price: "Free",
     description: "For a single business just getting started.",
-    features: ["One business", "Basic dashboard", "CSV & Excel uploads", "Monthly reports", "Limited AI insights"],
+    features: ["One business", "Basic dashboard", "CSV uploads", "On-demand reports", "Limited AI insights"],
   },
   {
     name: "Growth",
     price: "$29/mo",
     description: "For a growing business that needs more automation.",
-    features: ["Multiple users", "Daily & weekly reports", "Inventory intelligence", "AI assistant", "WhatsApp reports", "Payment reminders"],
+    features: ["Multiple users", "Real-time payment & stock alerts", "Inventory intelligence", "AI assistant", "WhatsApp reports", "Payment reminders"],
     highlighted: true,
   },
   {
@@ -47,8 +47,8 @@ const PLANS = [
 const FAQS = [
   { q: "Do I need an accountant to use this?", a: "No. It's built for business owners without accounting or technical knowledge — it complements your accountant, not replaces full accounting software." },
   { q: "Can I manage more than one business?", a: "Yes. One account can hold multiple businesses or branches, each with its own data and team." },
-  { q: "What file formats can I upload?", a: "CSV and Excel (.xlsx/.xls) for sales, expenses, purchases, inventory, customers, and vendors." },
-  { q: "How do reports get delivered?", a: "View them in-app, download as PDF, or have them sent automatically by email or WhatsApp." },
+  { q: "What file formats can I upload?", a: "CSV files for customers, vendors, products, and expenses. Sales and purchases are recorded directly in the app rather than imported." },
+  { q: "How do reports get delivered?", a: "View them in-app, download as PDF, or send them by email or WhatsApp with one click. Scheduled, recurring delivery is coming soon." },
 ];
 
 function ContactForm() {
@@ -100,7 +100,7 @@ export default function LandingPage() {
           Your AI Finance Manager for Business Growth
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600">
-          Upload your sales, expenses, and inventory data — and get a clear picture of revenue, profit,
+          Track your sales, expenses, and inventory — and get a clear picture of revenue, profit,
           cash flow, and what to do next, powered by AI. Built for small and medium businesses, not
           accountants.
         </p>
