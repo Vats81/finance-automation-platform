@@ -90,11 +90,15 @@ class ForecastPointResponse(BaseModel):
 
 class ForecastResponse(BaseModel):
     history_months_used: int
+    months_with_activity: int
+    is_available: bool
     points: list[ForecastPointResponse]
 
     @classmethod
     def from_domain(cls, forecast: Forecast) -> "ForecastResponse":
         return cls(
             history_months_used=forecast.history_months_used,
+            months_with_activity=forecast.months_with_activity,
+            is_available=forecast.is_available,
             points=[ForecastPointResponse.from_domain(p) for p in forecast.points],
         )

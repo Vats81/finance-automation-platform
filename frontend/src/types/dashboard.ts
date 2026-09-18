@@ -45,5 +45,7 @@ export interface ForecastPoint {
 
 export interface DashboardForecastResponse {
   history_months_used: number;
+  months_with_activity: number;
+  is_available: boolean;
   points: ForecastPoint[];
 }

@@ -92,7 +92,12 @@ async def test_declining_revenue_projection_floored_at_zero() -> None:
     assert all(p.projected_revenue == Decimal("0.00") for p in forecast.points)
 
 
-async def test_no_activity_produces_zero_projection_without_crashing() -> None:
+async def test_no_activity_reports_unavailable_instead_of_a_fabricated_zero_forecast() -> None:
+    # Regression test: this used to return history_months_used=6 with all
+    # three points at $0.00 — indistinguishable from a real "flat" forecast
+    # and technically true ("6 calendar months were in the window") while
+    # being substantively misleading (none of those 6 months had any
+    # revenue or expenses recorded at all).
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
 
@@ -101,13 +106,46 @@ async def test_no_activity_produces_zero_projection_without_crashing() -> None:
     )
 
     assert forecast.history_months_used == 6
-    assert len(forecast.points) == 3
-    assert all(
-        p.projected_revenue == Decimal("0.00")
-        and p.projected_expenses == Decimal("0.00")
-        and p.projected_net_profit == Decimal("0.00")
-        for p in forecast.points
+    assert forecast.months_with_activity == 0
+    assert forecast.is_available is False
+    assert forecast.points == []
+
+
+async def test_single_active_month_reports_unavailable() -> None:
+    # One month of activity is a data point, not a trend — must still be
+    # reported as unavailable, not a "projection" built from it.
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    await CreateSaleUseCase(uow).execute(
+        make_sale_command(business_id, Decimal("500"), date(2026, 6, 15))
     )
+
+    forecast = await GetForecastUseCase(uow, FakeClock(_NOW)).execute(
+        GetForecastQuery(business_id=business_id)
+    )
+
+    assert forecast.months_with_activity == 1
+    assert forecast.is_available is False
+    assert forecast.points == []
+
+
+async def test_two_active_months_produces_an_available_forecast() -> None:
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    await CreateSaleUseCase(uow).execute(
+        make_sale_command(business_id, Decimal("500"), date(2026, 5, 15))
+    )
+    await CreateSaleUseCase(uow).execute(
+        make_sale_command(business_id, Decimal("500"), date(2026, 6, 15))
+    )
+
+    forecast = await GetForecastUseCase(uow, FakeClock(_NOW)).execute(
+        GetForecastQuery(business_id=business_id)
+    )
+
+    assert forecast.months_with_activity == 2
+    assert forecast.is_available is True
+    assert len(forecast.points) == 3
 
 
 async def test_current_month_activity_excluded_from_regression_input() -> None:

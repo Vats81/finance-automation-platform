@@ -17,6 +17,14 @@ from app.shared.application.ports import IClock
 _HISTORY_MONTHS = 6
 _FORECAST_MONTHS = 3
 
+# A calendar month with zero recorded revenue AND zero expenses isn't a
+# real data point — it's the absence of one. Regressing over a window
+# that's mostly (or entirely) such months produces a flat/near-zero line
+# that looks like a real projection but isn't. Require at least this many
+# months with actual activity before returning any projected numbers; a
+# single active month is a data point, not a trend.
+_MIN_ACTIVE_MONTHS_FOR_FORECAST = 2
+
 
 @dataclass(frozen=True)
 class GetForecastQuery:
@@ -33,7 +41,15 @@ class ForecastPoint:
 
 @dataclass(frozen=True)
 class Forecast:
+    # Calendar months in the lookback window (always _HISTORY_MONTHS today)
+    # — distinct from months_with_activity, which is how many of those
+    # actually had anything recorded.
     history_months_used: int
+    months_with_activity: int
+    # False when months_with_activity < _MIN_ACTIVE_MONTHS_FOR_FORECAST —
+    # `points` is empty in that case rather than a fabricated flat-zero
+    # projection.
+    is_available: bool
     points: list[ForecastPoint]
 
 
@@ -104,6 +120,15 @@ class GetForecastUseCase:
             )
         )
 
+        months_with_activity = sum(1 for p in trend.points if p.revenue != 0 or p.expenses != 0)
+        if months_with_activity < _MIN_ACTIVE_MONTHS_FOR_FORECAST:
+            return Forecast(
+                history_months_used=len(trend.points),
+                months_with_activity=months_with_activity,
+                is_available=False,
+                points=[],
+            )
+
         xs = list(range(len(trend.points)))
         revenue_intercept, revenue_slope = _fit_line(xs, [float(p.revenue) for p in trend.points])
         expenses_intercept, expenses_slope = _fit_line(xs, [float(p.expenses) for p in trend.points])
@@ -122,4 +147,9 @@ class GetForecastUseCase:
                 )
             )
 
-        return Forecast(history_months_used=len(trend.points), points=points)
+        return Forecast(
+            history_months_used=len(trend.points),
+            months_with_activity=months_with_activity,
+            is_available=True,
+            points=points,
+        )

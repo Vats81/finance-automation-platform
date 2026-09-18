@@ -311,38 +311,48 @@ export default function DashboardPage() {
         {forecastError ? (
           <WidgetError message={forecastError} onRetry={() => setForecastRetryToken((n) => n + 1)} />
         ) : forecast ? (
-          <>
-            <p className="mb-3 text-xs text-slate-500">
-              Projected using trend analysis of your last {forecast.history_months_used} months of data.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-slate-500">
-                    <th className="py-2 pr-4 font-medium">Month</th>
-                    <th className="py-2 pr-4 font-medium">Projected revenue</th>
-                    <th className="py-2 pr-4 font-medium">Projected expenses</th>
-                    <th className="py-2 pr-4 font-medium">Projected net profit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {forecast.points.map((point) => (
-                    <tr key={point.period_start} className="border-b border-slate-100">
-                      <td className="py-2 pr-4">
-                        {new Date(point.period_start).toLocaleDateString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-2 pr-4">{formatCurrency(point.projected_revenue)}</td>
-                      <td className="py-2 pr-4">{formatCurrency(point.projected_expenses)}</td>
-                      <td className="py-2 pr-4">{formatCurrency(point.projected_net_profit)}</td>
+          forecast.is_available ? (
+            <>
+              <p className="mb-3 text-xs text-slate-500">
+                Estimated from a trend across your last {forecast.history_months_used} months (
+                {forecast.months_with_activity} with recorded activity). These are estimates based on
+                past trends, not guarantees.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-slate-500">
+                      <th className="py-2 pr-4 font-medium">Month</th>
+                      <th className="py-2 pr-4 font-medium">Projected revenue</th>
+                      <th className="py-2 pr-4 font-medium">Projected expenses</th>
+                      <th className="py-2 pr-4 font-medium">Projected net profit</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                  </thead>
+                  <tbody>
+                    {forecast.points.map((point) => (
+                      <tr key={point.period_start} className="border-b border-slate-100">
+                        <td className="py-2 pr-4">
+                          {new Date(point.period_start).toLocaleDateString("en-US", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="py-2 pr-4">{formatCurrency(point.projected_revenue)}</td>
+                        <td className="py-2 pr-4">{formatCurrency(point.projected_expenses)}</td>
+                        <td className="py-2 pr-4">{formatCurrency(point.projected_net_profit)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Not enough sales and expense history yet to forecast — {forecast.months_with_activity} of
+              the last {forecast.history_months_used} months have recorded activity so far, and
+              forecasting needs at least 2.
+            </p>
+          )
         ) : (
           <p className="text-sm text-slate-500">Loading...</p>
         )}
