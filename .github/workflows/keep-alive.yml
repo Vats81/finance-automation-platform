@@ -6,10 +6,11 @@ name: Keep backend awake
 # timeout. This pings /health every 5 minutes so it never goes idle.
 #
 # Notes:
-# - GitHub scheduled runs are best-effort and can start late (sometimes by
-#   many minutes under load), which is why this runs every 5 minutes
-#   rather than every 14: the margin absorbs the delay. The repo is public,
-#   so the run minutes are free.
+# - GitHub scheduled runs are best-effort and, in practice for this repo,
+#   very late (the daily backup cron consistently starts ~6.5h after its
+#   time). Treat this as a backup, not the primary keep-alive: an external
+#   uptime monitor (UptimeRobot / cron-job.org) is far more reliable. See
+#   DEPLOY.md section 10. The repo is public, so the run minutes are free.
 # - /health returns 503 on this deployment (Redis isn't running — expected,
 #   see DEPLOY.md), so an HTTP error code is NOT treated as failure. The
 #   backend counts as awake when the response body is the app's own JSON

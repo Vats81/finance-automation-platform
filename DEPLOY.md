@@ -273,9 +273,15 @@ so that doesn't happen. It needs no secrets.
   (expected). The ping counts the backend as awake when the response body is
   the app's own JSON, not by status code, and only fails the run (so GitHub
   notifies you) if the app never answers after three tries.
-- Scheduled runs are best-effort and can start late, hence every 5 minutes
-  rather than every 14. If it still sleeps now and then, check the run
-  history in the Actions tab for gaps.
+- **Do not rely on this alone.** GitHub's scheduler is best-effort and, in
+  practice here, far too imprecise for a 5-minute job: the daily backup
+  workflow (cron 03:17 UTC) has consistently started ~6.5 hours late, and
+  this workflow had run zero times 35 minutes after being added. A
+  keep-alive needs a gap under ~15 minutes, so treat this as a backup. For
+  a dependable one, add a free external uptime monitor (e.g. UptimeRobot or
+  cron-job.org, 5-minute interval) pointed at
+  `https://<your-backend>.onrender.com/health` — a 503 response is fine, it
+  only needs to wake the service.
 - Always-on consumes Render's free monthly instance hours (750h; one
   service 24/7 is ~744h). Those hours are shared across all free web
   services on the account — a second always-on service would exceed them.
