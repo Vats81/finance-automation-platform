@@ -1,0 +1,58 @@
+name: Keep backend awake
+
+# Render's free tier puts the backend to sleep after ~15 minutes without
+# traffic, and the first request after that takes a minute or more to wake
+# it — long enough that logins on a quiet site hit the frontend's request
+# timeout. This pings /health every 5 minutes so it never goes idle.
+#
+# Notes:
+# - GitHub scheduled runs are best-effort and can start late (sometimes by
+#   many minutes under load), which is why this runs every 5 minutes
+#   rather than every 14: the margin absorbs the delay. The repo is public,
+#   so the run minutes are free.
+# - /health returns 503 on this deployment (Redis isn't running — expected,
+#   see DEPLOY.md), so an HTTP error code is NOT treated as failure. The
+#   backend counts as awake when the response body is the app's own JSON
+#   (it contains "status"), which a bare Render proxy/holding page lacks.
+# - The run only fails when the app never answers after three attempts —
+#   a real outage — so you aren't emailed on every ping.
+# - Always-on uses the free tier's monthly instance hours (750h; one
+#   service running 24/7 is ~744h). Hours are shared across every free web
+#   service on the Render account.
+# - GitHub disables scheduled workflows after 60 days with no repository
+#   activity; re-enable from the Actions tab if that ever happens.
+#
+# Optional repository variable KEEPALIVE_URL overrides the URL below.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Ping /health
+        env:
+          URL: ${{ vars.KEEPALIVE_URL || 'https://finance-automation-platform-1.onrender.com/health' }}
+        run: |
+          for attempt in 1 2 3; do
+            rm -f body.txt
+            code="$(curl -sS --max-time 120 -o body.txt -w '%{http_code}' "${URL}" || true)"
+            if grep -q '"status"' body.txt 2>/dev/null; then
+              echo "attempt ${attempt}: HTTP ${code} from the app — backend is awake."
+              exit 0
+            fi
+            echo "attempt ${attempt}: HTTP ${code:-none}, no app response yet. Body: $(head -c 200 body.txt 2>/dev/null)"
+            sleep 15
+          done
+          echo "::error::Backend did not answer after 3 attempts — it may be down, not just asleep."
+          exit 1

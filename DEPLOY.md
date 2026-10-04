@@ -259,3 +259,27 @@ data.
 `/terms` and `/privacy` are live with starter template content (clearly
 marked as a draft, not legal advice) — have an actual lawyer review and
 adapt them before relying on this with real customers.
+
+## 10. Keeping the free backend awake
+
+Render's free tier puts the backend to sleep after ~15 minutes without
+traffic, and the first request afterwards takes a minute or more — long
+enough that a login on a quiet site hits the frontend's 45s request
+timeout (it shows "The server is taking too long to respond" and a retry
+works). `.github/workflows/keep-alive.yml` pings `/health` every 5 minutes
+so that doesn't happen. It needs no secrets.
+
+- `/health` returns **503** on this deployment because Redis isn't running
+  (expected). The ping counts the backend as awake when the response body is
+  the app's own JSON, not by status code, and only fails the run (so GitHub
+  notifies you) if the app never answers after three tries.
+- Scheduled runs are best-effort and can start late, hence every 5 minutes
+  rather than every 14. If it still sleeps now and then, check the run
+  history in the Actions tab for gaps.
+- Always-on consumes Render's free monthly instance hours (750h; one
+  service 24/7 is ~744h). Those hours are shared across all free web
+  services on the account — a second always-on service would exceed them.
+- GitHub disables scheduled workflows after 60 days of no repo activity;
+  re-enable from the Actions tab if that happens (same for the backup job).
+- To stop it: disable the workflow in the Actions tab. Optional repository
+  variable `KEEPALIVE_URL` overrides the default URL.
