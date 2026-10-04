@@ -149,6 +149,18 @@ async def test_list_low_stock_products_tool_filters_correctly() -> None:
 
     assert len(result["products"]) == 1
     assert result["products"][0]["sku"] == "LOW-1"
+    # total_products lets the model tell "no products exist" apart from
+    # "products exist and are well stocked" when `products` is empty.
+    assert result["total_products"] == 2
+
+
+async def test_list_low_stock_products_tool_reports_zero_total_for_a_business_with_no_products() -> None:
+    uow = FakeUnitOfWork()
+    business_id = await _make_business(uow)
+
+    result = await TOOL_HANDLERS["list_low_stock_products"](uow, business_id)
+
+    assert result == {"total_products": 0, "products": []}
 
 
 async def test_list_recent_expenses_tool_sorts_and_limits() -> None:

@@ -100,9 +100,21 @@ class GenerateInsightsUseCase:
                 "Top outstanding sales: "
                 + "; ".join(f"{s.invoice_number} owes ${s.outstanding_amount.amount}" for s in top)
             )
-        prompt_lines.append(f"Number of low-stock or out-of-stock products: {len(low_stock)}")
-        if low_stock:
-            prompt_lines.append("Low-stock products: " + ", ".join(p.name for p in low_stock[:5]))
+        total_products = len(products_page.items)
+        if total_products == 0:
+            # "0 low-stock products" reads identically whether the business
+            # has no products at all or every product is well stocked, and
+            # the model was reporting the former as "inventory is fully
+            # stocked." Say what's actually true.
+            prompt_lines.append(
+                "Inventory: no products have been added yet, so inventory is not being tracked. "
+                "Do not describe inventory as healthy, fully stocked, or not a concern."
+            )
+        else:
+            prompt_lines.append(f"Number of products tracked: {total_products}")
+            prompt_lines.append(f"Number of low-stock or out-of-stock products: {len(low_stock)}")
+            if low_stock:
+                prompt_lines.append("Low-stock products: " + ", ".join(p.name for p in low_stock[:5]))
 
         response = await self._ai_client.send(
             system=_SYSTEM_PROMPT, messages=[{"role": "user", "content": "\n".join(prompt_lines)}], tools=[]

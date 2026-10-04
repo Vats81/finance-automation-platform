@@ -10,6 +10,7 @@ from app.business.application.commands.register_business import (
     RegisterBusinessCommand,
     RegisterBusinessUseCase,
 )
+from app.inventory.application.commands.create_product import CreateProductCommand, CreateProductUseCase
 from app.sales.application.commands.create_sale import (
     CreateSaleCommand,
     CreateSaleLineItemInput,
@@ -78,6 +79,53 @@ async def test_prompt_says_score_unavailable_instead_of_none_for_a_new_business(
     assert "None" not in prompt
     assert "/100" not in prompt
     assert "not available yet" in prompt
+
+
+async def test_prompt_says_inventory_untracked_when_there_are_no_products() -> None:
+    # Regression test: with zero products the prompt only said "0 low-stock
+    # products," which the model reported as "inventory is fully stocked."
+    uow = FakeUnitOfWork()
+    business = await RegisterBusinessUseCase(uow).execute(
+        RegisterBusinessCommand(owner_user_id=uuid.uuid4(), name="Test Business")
+    )
+    ai_client = FakeAiClient([AiResponse(text="- ok", tool_calls=[], stop_reason="end_turn")])
+
+    await GenerateInsightsUseCase(uow, ai_client, FakeClock(_NOW)).execute(
+        GenerateInsightsCommand(business_id=business.id)
+    )
+
+    prompt = ai_client.calls[0]["messages"][0]["content"]
+    assert "no products have been added yet" in prompt
+    assert "low-stock or out-of-stock products: 0" not in prompt
+
+
+async def test_prompt_reports_product_and_low_stock_counts_when_products_exist() -> None:
+    uow = FakeUnitOfWork()
+    business = await RegisterBusinessUseCase(uow).execute(
+        RegisterBusinessCommand(owner_user_id=uuid.uuid4(), name="Test Business")
+    )
+    for sku, qty in (("OK-1", "100"), ("LOW-1", "1")):
+        await CreateProductUseCase(uow).execute(
+            CreateProductCommand(
+                business_id=business.id,
+                name=sku,
+                sku=sku,
+                selling_price=Decimal("10"),
+                purchase_cost=Decimal("5"),
+                current_quantity=Decimal(qty),
+                minimum_stock_level=Decimal("10"),
+            )
+        )
+    ai_client = FakeAiClient([AiResponse(text="- ok", tool_calls=[], stop_reason="end_turn")])
+
+    await GenerateInsightsUseCase(uow, ai_client, FakeClock(_NOW)).execute(
+        GenerateInsightsCommand(business_id=business.id)
+    )
+
+    prompt = ai_client.calls[0]["messages"][0]["content"]
+    assert "Number of products tracked: 2" in prompt
+    assert "low-stock or out-of-stock products: 1" in prompt
+    assert "no products have been added yet" not in prompt
 
 
 async def test_falls_back_when_ai_returns_no_text() -> None:

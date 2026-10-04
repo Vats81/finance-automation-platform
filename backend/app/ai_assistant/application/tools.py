@@ -59,7 +59,10 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
     },
     {
         "name": "list_low_stock_products",
-        "description": "List products that are low on stock or out of stock.",
+        "description": (
+            "List products that are low on stock or out of stock. Also returns total_products: if it is "
+            "0 the business has no products yet, which is not the same as inventory being healthy."
+        ),
         "input_schema": {"type": "object", "properties": {}},
     },
     {
@@ -145,6 +148,9 @@ async def _handle_list_low_stock_products(uow: AppUnitOfWork, business_id: uuid.
     )
     low_stock = [p for p in page.items if p.is_low_stock or p.is_out_of_stock]
     return {
+        # Without this, an empty `products` list can't distinguish "every
+        # product is well stocked" from "no products exist yet."
+        "total_products": len(page.items),
         "products": [
             {
                 "name": product.name,
@@ -154,7 +160,7 @@ async def _handle_list_low_stock_products(uow: AppUnitOfWork, business_id: uuid.
                 "is_out_of_stock": product.is_out_of_stock,
             }
             for product in low_stock
-        ]
+        ],
     }
 
 
