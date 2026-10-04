@@ -225,7 +225,7 @@ either way.
 
 **Automated** — `.github/workflows/backup.yml` runs daily (03:17 UTC), plus
 on-demand from the Actions tab ("Run workflow"). It logs in as a platform
-admin, calls `GET /api/v1/admin/backup`, checks the JSON has all nine
+admin, calls `GET /api/v1/admin/backup`, checks the JSON has all ten
 tables, encrypts it with GPG/AES-256, and uploads it as a 90-day artifact.
 Encryption is not optional here: this repo is public and artifacts on a
 public repo are world-downloadable, and the dump contains customer PII.
@@ -283,3 +283,23 @@ so that doesn't happen. It needs no secrets.
   re-enable from the Actions tab if that happens (same for the backup job).
 - To stop it: disable the workflow in the Actions tab. Optional repository
   variable `KEEPALIVE_URL` overrides the default URL.
+
+## 11. Demo-request form
+
+The landing page's "Request a demo" form posts to `POST /api/v1/contact`.
+Each submission is saved to the `contact_requests` table first (so a request
+is never lost) and listed newest-first under **Admin → Demo requests**
+(the sidebar link is "Demo requests"). To also be
+emailed on each one, set in Render:
+
+| Key | Value |
+|---|---|
+| `CONTACT_INBOX_EMAIL` | the address to notify. With Resend's sandbox key this must be the Resend account owner's own address; any other address needs a verified sending domain. |
+
+If the email fails or no inbox is set, the request is still saved and shows
+as "not emailed" in the admin list. The endpoint is public, so it has a
+10/hour rate limit, length caps, and a hidden honeypot field that silently
+drops bot submissions. The rate limit is per client address as the backend
+sees it, which behind Render's proxy may be coarser than per visitor.
+Requests are included in the encrypted backup (`contact_requests`).
+

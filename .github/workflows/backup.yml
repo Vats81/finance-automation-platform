@@ -79,15 +79,15 @@ jobs:
             exit 1
           fi
 
-          # Validate: parseable JSON containing all nine expected tables.
-          for key in users businesses business_memberships customers vendors products sales purchases expenses; do
+          # Validate: parseable JSON containing all ten expected tables.
+          for key in users businesses business_memberships customers vendors products sales purchases expenses contact_requests; do
             jq -e "has(\"${key}\")" "${plain}" >/dev/null || {
               echo "::error::Backup JSON is missing top-level key: ${key}"
               exit 1
             }
           done
           rows="$(jq '[.[] | length] | add' "${plain}")"
-          echo "Backup valid: ${rows} rows across 9 tables, $(wc -c < "${plain}") bytes."
+          echo "Backup valid: ${rows} rows across 10 tables, $(wc -c < "${plain}") bytes."
 
           gpg --batch --yes --symmetric --cipher-algo AES256 \
             --passphrase "${PASSPHRASE}" --output "${plain}.gpg" "${plain}"

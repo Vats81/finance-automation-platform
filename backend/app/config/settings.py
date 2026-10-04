@@ -80,6 +80,12 @@ class Settings(BaseSettings):
     password_reset_ttl_hours: int = Field(default=2, alias="PASSWORD_RESET_TTL_HOURS")
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
 
+    # --- Landing-page "request a demo" form ---
+    # Where to email a notification for each submission. Blank = no email,
+    # requests are still saved and listed in the admin panel. With Resend's
+    # sandbox key this must be the Resend account owner's own address.
+    contact_inbox_email: str = Field(default="", alias="CONTACT_INBOX_EMAIL")
+
     # --- Outbound email (verification / password reset links) ---
     smtp_host: str = Field(default="", alias="SMTP_HOST")
     smtp_port: int = Field(default=587, alias="SMTP_PORT")

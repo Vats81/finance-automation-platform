@@ -42,3 +42,17 @@ export interface PlatformStats {
   verified_users: number;
   unverified_users: number;
 }
+
+export interface ContactRequestResponse {
+  id: string;
+  name: string;
+  email: string;
+  business_name: string | null;
+  message: string | null;
+  notified: boolean;
+  created_at: string;
+}
+
+export interface ContactRequestsResponse {
+  items: ContactRequestResponse[];
+}

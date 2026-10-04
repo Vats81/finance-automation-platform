@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.admin.api.schemas import BusinessesOverviewResponse, PlatformStatsResponse, UsersOverviewResponse
 from app.admin.application.commands.deactivate_user import DeactivateUserCommand, DeactivateUserUseCase
@@ -24,6 +24,9 @@ from app.admin.application.queries.list_users_overview import (
 )
 from app.bootstrap.container import get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
+from app.contact.api.dependencies import get_contact_request_store
+from app.contact.api.schemas import ContactRequestResponse, ContactRequestsResponse
+from app.contact.application.ports import IContactRequestStore
 from app.identity.api.dependencies import require_platform_admin
 from app.identity.domain.entities import User
 
@@ -82,6 +85,19 @@ async def deactivate_user(
 @router.post("/users/{user_id}/reactivate", status_code=204)
 async def reactivate_user(user_id: uuid.UUID, uow: AppUnitOfWork = Depends(get_uow)) -> None:
     await ReactivateUserUseCase(uow).execute(ReactivateUserCommand(user_id=user_id))
+
+
+@router.get("/contact-requests", response_model=ContactRequestsResponse)
+async def list_contact_requests(
+    limit: int = Query(default=100, ge=1, le=500),
+    store: IContactRequestStore = Depends(get_contact_request_store),
+) -> ContactRequestsResponse:
+    """Newest-first demo requests submitted from the landing page. This is
+    where requests are read when CONTACT_INBOX_EMAIL isn't set (or an email
+    failed) — `notified` says whether an email actually went out.
+    """
+    requests = await store.list_recent(limit=limit)
+    return ContactRequestsResponse(items=[ContactRequestResponse.from_domain(r) for r in requests])
 
 
 @router.get("/backup")

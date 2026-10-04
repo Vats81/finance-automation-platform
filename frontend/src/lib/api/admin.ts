@@ -1,5 +1,10 @@
 import { apiFetch } from "@/lib/api/client";
-import { BusinessesOverviewResponse, PlatformStats, UsersOverviewResponse } from "@/types/admin";
+import {
+  BusinessesOverviewResponse,
+  ContactRequestsResponse,
+  PlatformStats,
+  UsersOverviewResponse,
+} from "@/types/admin";
 
 export function listBusinessesOverview(
   token: string | null,
@@ -41,4 +46,8 @@ export function deactivateUser(token: string | null, userId: string): Promise<vo
 
 export function reactivateUser(token: string | null, userId: string): Promise<void> {
   return apiFetch<void>(`/admin/users/${userId}/reactivate`, token, { method: "POST" });
+}
+
+export function listContactRequests(token: string | null): Promise<ContactRequestsResponse> {
+  return apiFetch<ContactRequestsResponse>("/admin/contact-requests", token);
 }

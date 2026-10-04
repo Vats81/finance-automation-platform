@@ -5,6 +5,8 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
+import { submitContactRequest } from "@/lib/api/contact";
+import { ApiError } from "@/lib/api/client";
 
 const FEATURES = [
   { title: "Unified dashboard", body: "Revenue, expenses, profit, and cash flow in one view — updated the moment you record or import data." },
@@ -43,25 +45,111 @@ const FAQS = [
   { q: "How do reports get delivered?", a: "View them in-app, download as PDF, or send them by email or WhatsApp with one click. Scheduled, recurring delivery is coming soon." },
 ];
 
+// This form used to flip to "Thanks — we'll be in touch shortly" on submit
+// without sending the data anywhere. It now posts to the backend, which
+// saves the request (and emails a notification if an inbox is configured),
+// and only shows success once the server has actually accepted it.
 function ContactForm() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [message, setMessage] = useState("");
+  const [website, setWebsite] = useState(""); // honeypot, never filled by a person
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setSubmitted(true);
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await submitContactRequest({
+        name,
+        email,
+        business_name: businessName || undefined,
+        message: message || undefined,
+        website: website || undefined,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 429) {
+        setError("Too many requests from your network just now — please try again in a while.");
+      } else if (err instanceof ApiError && err.status === 422) {
+        setError("Please check your name and email and try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong — please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (submitted) {
-    return <p className="text-sm text-emerald-700">Thanks — we&apos;ll be in touch shortly.</p>;
+    return (
+      <p className="text-sm text-emerald-700">
+        Thanks — we&apos;ve received your request and will be in touch.
+      </p>
+    );
   }
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-      <input required placeholder="Name" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-      <input required type="email" placeholder="Work email" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
-      <input placeholder="Business name" className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
-      <textarea placeholder="What would you like to see in a demo?" rows={3} className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" />
-      <Button type="submit" className="sm:col-span-2">Request a demo</Button>
+      {error && (
+        <p role="alert" className="text-sm text-red-600 sm:col-span-2">
+          {error}
+        </p>
+      )}
+      <input
+        required
+        maxLength={200}
+        placeholder="Name"
+        aria-label="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      <input
+        required
+        type="email"
+        placeholder="Work email"
+        aria-label="Work email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+      />
+      <input
+        maxLength={200}
+        placeholder="Business name"
+        aria-label="Business name"
+        value={businessName}
+        onChange={(e) => setBusinessName(e.target.value)}
+        className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+      />
+      <textarea
+        maxLength={2000}
+        placeholder="What would you like to see in a demo?"
+        aria-label="What would you like to see in a demo?"
+        rows={3}
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+      />
+      {/* Honeypot: positioned off-screen and hidden from assistive tech, so
+          people never see or fill it, while bots that fill every field do. */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        value={website}
+        onChange={(e) => setWebsite(e.target.value)}
+        className="absolute left-[-9999px] h-0 w-0 opacity-0"
+      />
+      <Button type="submit" disabled={isSubmitting} className="sm:col-span-2">
+        {isSubmitting ? "Sending…" : "Request a demo"}
+      </Button>
     </form>
   );
 }

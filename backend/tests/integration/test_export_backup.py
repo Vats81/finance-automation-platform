@@ -42,6 +42,7 @@ async def test_export_backup_serializes_a_real_business_row(db_session: AsyncSes
         "sales",
         "purchases",
         "expenses",
+        "contact_requests",
     }
     business_rows = backup["businesses"]
     assert len(business_rows) == 1

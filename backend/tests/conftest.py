@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app.approvals.infrastructure import models as approvals_models  # noqa: F401
 from app.audit.infrastructure import models as audit_models  # noqa: F401
 from app.business.infrastructure import models as business_models  # noqa: F401
+from app.contact.infrastructure import models as contact_models  # noqa: F401
 from app.customers.infrastructure import models as customers_models  # noqa: F401
 from app.expenses.infrastructure import models as expenses_models  # noqa: F401
 from app.identity.infrastructure import models as identity_models  # noqa: F401
