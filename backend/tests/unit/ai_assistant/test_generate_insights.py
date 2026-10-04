@@ -60,6 +60,26 @@ async def test_prompt_embeds_real_figures_and_returns_ai_text() -> None:
     assert "Business Health Score" in prompt
 
 
+async def test_prompt_says_score_unavailable_instead_of_none_for_a_new_business() -> None:
+    # Regression test: a business with no history has overall_score=None,
+    # and the prompt used to interpolate it as the literal "None/100" — the
+    # model then repeated "score: None/100" back to the user.
+    uow = FakeUnitOfWork()
+    business = await RegisterBusinessUseCase(uow).execute(
+        RegisterBusinessCommand(owner_user_id=uuid.uuid4(), name="Test Business")
+    )
+    ai_client = FakeAiClient([AiResponse(text="- ok", tool_calls=[], stop_reason="end_turn")])
+
+    await GenerateInsightsUseCase(uow, ai_client, FakeClock(_NOW)).execute(
+        GenerateInsightsCommand(business_id=business.id)
+    )
+
+    prompt = ai_client.calls[0]["messages"][0]["content"]
+    assert "None" not in prompt
+    assert "/100" not in prompt
+    assert "not available yet" in prompt
+
+
 async def test_falls_back_when_ai_returns_no_text() -> None:
     uow = FakeUnitOfWork()
     business = await RegisterBusinessUseCase(uow).execute(

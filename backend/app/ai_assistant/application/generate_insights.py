@@ -76,10 +76,24 @@ class GenerateInsightsUseCase:
             f"This month's expenses: ${summary.total_expenses}",
             f"This month's net profit: ${summary.net_profit}",
             f"Outstanding receivables (all time): ${summary.outstanding_receivables}",
-            f"Business Health Score: {health.overall_score}/100 ({health.label})",
-            f"Health score breakdown: {health.breakdown}",
-            f"Number of outstanding (unpaid/partial) sales: {len(outstanding_sales)}",
         ]
+        if health.overall_score is None:
+            # overall_score is None when there isn't enough history to score
+            # at all. Interpolating it directly put the literal text
+            # "None/100" in front of the model (and it repeated it back to
+            # the user), so say what's actually true instead.
+            prompt_lines.append(
+                "Business Health Score: not available yet — there isn't enough sales or expense "
+                "history to calculate one. Do not state or invent a score."
+            )
+        else:
+            breakdown = ", ".join(
+                f"{name.replace('_', ' ')}: {'n/a' if value is None else f'{round(value * 100)}%'}"
+                for name, value in health.breakdown.items()
+            )
+            prompt_lines.append(f"Business Health Score: {health.overall_score}/100 ({health.label})")
+            prompt_lines.append(f"Health score breakdown: {breakdown}")
+        prompt_lines.append(f"Number of outstanding (unpaid/partial) sales: {len(outstanding_sales)}")
         if outstanding_sales:
             top = outstanding_sales[:3]
             prompt_lines.append(
