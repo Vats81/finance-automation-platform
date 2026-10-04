@@ -22,26 +22,18 @@ const STEPS = [
   { step: "4", title: "Act on it", body: "Ask the AI assistant a question, download a report, or send one by email or WhatsApp." },
 ];
 
-const PLANS = [
-  {
-    name: "Starter",
-    price: "Free",
-    description: "For a single business just getting started.",
-    features: ["One business", "Basic dashboard", "CSV uploads", "On-demand reports", "Limited AI insights"],
-  },
-  {
-    name: "Growth",
-    price: "$29/mo",
-    description: "For a growing business that needs more automation.",
-    features: ["Multiple users", "Real-time payment & stock alerts", "Inventory intelligence", "AI assistant", "WhatsApp reports", "Payment reminders"],
-    highlighted: true,
-  },
-  {
-    name: "Professional",
-    price: "$79/mo",
-    description: "For multi-branch businesses that need forecasting.",
-    features: ["Multiple branches", "Advanced forecasting", "Advanced automations", "More integrations", "Priority support"],
-  },
+// Paid tiers ($29 / $79) used to be listed here, but billing isn't active
+// (Settings itself said "plans are modeled, not billed, yet") — advertising
+// prices nobody can pay is a trust problem. One early-access offer, listing
+// only what exists today.
+const EARLY_ACCESS_FEATURES = [
+  "Dashboard with revenue, expenses, profit, and outstanding payments",
+  "Track sales, purchases, expenses, inventory, customers, and vendors",
+  "CSV import for customers, vendors, products, and expenses",
+  "AI business assistant and insights",
+  "Profit & Loss reports with PDF and CSV export",
+  "Real-time alerts for overdue payments and low stock",
+  "Invite teammates who already have an account",
 ];
 
 const FAQS = [
@@ -165,37 +157,29 @@ export default function LandingPage() {
 
       <section id="pricing" className="bg-slate-50 py-20">
         <div className="mx-auto max-w-6xl px-6">
-          <h2 className="text-center text-3xl font-bold">Simple, transparent pricing</h2>
+          <h2 className="text-center text-3xl font-bold">Free during the private beta</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-slate-600">
-            Start free. Upgrade as your business grows. Cancel anytime.
+            We&apos;re in early access. Nobody is being charged, and paid plans aren&apos;t available yet.
           </p>
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {PLANS.map((plan) => (
-              <Card
-                key={plan.name}
-                className={plan.highlighted ? "border-brand-500 ring-1 ring-brand-500" : undefined}
-              >
-                <h3 className="font-semibold">{plan.name}</h3>
-                <div className="mt-2 text-2xl font-bold">{plan.price}</div>
-                <p className="mt-2 text-sm text-slate-600">{plan.description}</p>
-                <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2">
-                      <span className="text-brand-600">✓</span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/app/signup" className="mt-6 block">
-                  <Button
-                    variant={plan.highlighted ? "primary" : "secondary"}
-                    className="w-full"
-                  >
-                    Start free trial
-                  </Button>
-                </Link>
-              </Card>
-            ))}
+          <div className="mx-auto mt-12 max-w-md">
+            <Card className="border-brand-500 ring-1 ring-brand-500">
+              <h3 className="font-semibold">Early access</h3>
+              <div className="mt-2 text-2xl font-bold">Free</div>
+              <p className="mt-2 text-sm text-slate-600">
+                Everything below, free while we&apos;re in private beta.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                {EARLY_ACCESS_FEATURES.map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <span className="text-brand-600">✓</span>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/app/signup" className="mt-6 block">
+                <Button className="w-full">Join the private beta</Button>
+              </Link>
+            </Card>
           </div>
         </div>
       </section>

@@ -59,11 +59,11 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="mb-2 text-base font-semibold text-slate-900">5. Subscriptions and billing</h2>
+              <h2 className="mb-2 text-base font-semibold text-slate-900">5. Pricing and billing</h2>
               <p>
-                Some plans are paid subscriptions billed on a recurring basis through our payment
-                processor (Stripe). Upgrading, downgrading, and cancellation are handled through the
-                Billing settings in-app. Fees are non-refundable except where required by law.
+                The Service is currently in a private beta and is free to use. No plan is being charged
+                and no payment details are collected. If paid plans are introduced in the future, the
+                pricing and billing terms will be added here before any charge is made.
               </p>
             </section>
 

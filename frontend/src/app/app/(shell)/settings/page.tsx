@@ -331,7 +331,8 @@ export default function SettingsPage() {
         )}
         {!billingConnected && (
           <p className="mt-2 text-xs text-slate-400">
-            No payment required — plans are modeled, not billed, yet.
+            Private beta: every plan is free and no payment is taken. Plans currently only set the
+            team-size limit.
           </p>
         )}
       </Card>

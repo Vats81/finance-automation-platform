@@ -74,7 +74,7 @@ const TOPICS: HelpTopic[] = [
     title: "Team & billing",
     points: [
       "Settings → Team members to invite teammates (they need an existing account) and manage their roles.",
-      "Settings → Plan to see your current plan and upgrade — this may redirect to a real checkout if billing is enabled.",
+      "Settings → Plan shows your current plan and its team-size limit. Paid billing isn't active during the private beta — no payment is taken.",
     ],
   },
 ];

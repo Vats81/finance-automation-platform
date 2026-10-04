@@ -43,9 +43,9 @@ export default function PrivacyPage() {
               <h2 className="mb-2 text-base font-semibold text-slate-900">2. How we use it</h2>
               <p>
                 To operate the Service (store and display your business data, compute dashboards and
-                reports), to authenticate you and secure your account, to process payments for paid plans,
-                to send transactional messages you request (email/WhatsApp report delivery, password
-                resets), and to improve reliability and detect abuse.
+                reports), to authenticate you and secure your account, to send transactional messages you
+                request (email/WhatsApp report delivery, password resets), and to improve reliability and
+                detect abuse.
               </p>
             </section>
 
@@ -57,8 +57,9 @@ export default function PrivacyPage() {
               </p>
               <ul className="list-inside list-disc space-y-1">
                 <li>
-                  <span className="font-medium">Stripe</span> — payment processing for paid subscription
-                  plans. We never see or store your full card details.
+                  <span className="font-medium">Stripe</span> — payment processing, only if paid plans are
+                  introduced. It is not active during the private beta, and no payment details are
+                  collected.
                 </li>
                 <li>
                   <span className="font-medium">Resend</span> — outbound transactional email (verification
