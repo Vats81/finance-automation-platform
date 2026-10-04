@@ -2,7 +2,7 @@ import json
 import uuid
 from dataclasses import dataclass
 
-from app.ai_assistant.application.tools import TOOL_HANDLERS, TOOL_SCHEMAS
+from app.ai_assistant.application.tools import TOOL_HANDLERS, TOOL_SCHEMAS, filter_tool_input
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.shared.application.ports import IAiClient
 
@@ -72,7 +72,11 @@ class AskAssistantUseCase:
                     result_content = f"Unknown tool: {tool_call.name}"
                 else:
                     try:
-                        result = await handler(self._uow, command.business_id, **tool_call.input)
+                        result = await handler(
+                            self._uow,
+                            command.business_id,
+                            **filter_tool_input(tool_call.name, tool_call.input),
+                        )
                         result_content = json.dumps(result)
                     except Exception as exc:  # noqa: BLE001 - a bad tool call must not crash the request
                         result_content = f"Error running {tool_call.name}: {exc}"

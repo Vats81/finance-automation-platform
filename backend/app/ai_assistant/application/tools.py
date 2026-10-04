@@ -198,6 +198,27 @@ async def _handle_list_customers(
     }
 
 
+_DECLARED_ARGS: dict[str, set[str]] = {
+    schema["name"]: set(schema["input_schema"].get("properties", {})) for schema in TOOL_SCHEMAS
+}
+
+
+def filter_tool_input(tool_name: str, tool_input: dict[str, Any]) -> dict[str, Any]:
+    """Drops any argument the tool's schema doesn't declare. Models sometimes
+    add plausible-looking extras (e.g. a `limit` on a tool that takes no
+    arguments); the handlers are strict about their signatures, so an
+    extra turned into a TypeError, burned one of the assistant loop's few
+    round trips on an error message, and could end in "I wasn't able to
+    finish answering that." Ignoring what the schema never offered is
+    harmless — the handler runs with exactly the arguments it defines.
+    Unknown tool names pass through untouched (the caller reports those).
+    """
+    declared = _DECLARED_ARGS.get(tool_name)
+    if declared is None:
+        return tool_input
+    return {key: value for key, value in tool_input.items() if key in declared}
+
+
 TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_business_summary": _handle_get_business_summary,
     "list_outstanding_sales": _handle_list_outstanding_sales,
