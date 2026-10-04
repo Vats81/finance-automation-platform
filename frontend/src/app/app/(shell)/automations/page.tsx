@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { getNotifications } from "@/lib/api/notifications";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
@@ -18,13 +19,17 @@ export default function AutomationsPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const [notifications, setNotifications] = useState<NotificationsResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     if (!currentBusinessId) return;
+    setNotifications(null);
+    setLoadError(null);
     getNotifications(getAccessToken(), currentBusinessId)
       .then(setNotifications)
-      .catch(() => undefined);
-  }, [currentBusinessId, getAccessToken]);
+      .catch((err) => setLoadError(errorMessage(err)));
+  }, [currentBusinessId, getAccessToken, retryToken]);
 
   return (
     <div>
@@ -35,7 +40,9 @@ export default function AutomationsPage() {
       </p>
 
       <Card>
-        {!notifications ? (
+        {loadError ? (
+          <InlineError message={loadError} onRetry={() => setRetryToken((n) => n + 1)} />
+        ) : !notifications ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : notifications.count === 0 ? (
           <p className="text-sm text-slate-500">You&apos;re all caught up — no alerts right now.</p>

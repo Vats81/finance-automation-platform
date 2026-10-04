@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
@@ -94,16 +95,26 @@ export default function SettingsPage() {
   const isOwner = currentBusiness?.role === "owner";
   const canManageMembers = isOwner || currentBusiness?.role === "admin";
 
+  const [membersError, setMembersError] = useState<string | null>(null);
+  const [memberActionError, setMemberActionError] = useState<string | null>(null);
+
   const refreshMembers = async () => {
     if (!currentBusiness) return;
     const list = await listTeamMembers(getAccessToken(), currentBusiness.business.id);
     setMembers(list);
+    setMembersError(null);
+  };
+
+  const loadMembers = () => {
+    setMembers(null);
+    setMembersError(null);
+    refreshMembers().catch((err) => setMembersError(errorMessage(err)));
   };
 
   useEffect(() => {
     if (!currentBusiness) return;
     setSelectedPlan(currentBusiness.business.plan);
-    refreshMembers().catch(() => undefined);
+    loadMembers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusiness?.business.id]);
 
@@ -140,18 +151,32 @@ export default function SettingsPage() {
     }
   }
 
+  // Previously both of these did `.catch(() => undefined)`, so a rejected
+  // removal or role change (e.g. a 403, or "can't remove the last owner")
+  // looked like the click did nothing. Surface the server's message, then
+  // refresh anyway so the table shows the real current state.
+  async function runMemberAction(action: () => Promise<unknown>) {
+    setMemberActionError(null);
+    try {
+      await action();
+    } catch (err) {
+      setMemberActionError(errorMessage(err, "That change couldn't be saved."));
+    }
+    await refreshMembers().catch((err) => setMembersError(errorMessage(err)));
+  }
+
   async function handleRemove(membershipId: string) {
     if (!currentBusiness) return;
-    await removeTeamMember(getAccessToken(), currentBusiness.business.id, membershipId).catch(() => undefined);
-    await refreshMembers();
+    await runMemberAction(() =>
+      removeTeamMember(getAccessToken(), currentBusiness.business.id, membershipId)
+    );
   }
 
   async function handleRoleChange(membershipId: string, role: BusinessRole) {
     if (!currentBusiness) return;
-    await updateTeamMemberRole(getAccessToken(), currentBusiness.business.id, membershipId, { role }).catch(
-      () => undefined
+    await runMemberAction(() =>
+      updateTeamMemberRole(getAccessToken(), currentBusiness.business.id, membershipId, { role })
     );
-    await refreshMembers();
   }
 
   useEffect(() => {
@@ -314,7 +339,12 @@ export default function SettingsPage() {
       <Card className="mt-6 max-w-2xl">
         <h2 className="mb-4 text-lg font-semibold">Team members</h2>
 
-        {!members ? (
+        {memberActionError && <p className="mb-3 text-sm text-red-600">{memberActionError}</p>}
+        {membersError ? (
+          <div className="mb-4">
+            <InlineError message={membersError} onRetry={loadMembers} />
+          </div>
+        ) : !members ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : (
           <table className="mb-4 w-full text-sm">

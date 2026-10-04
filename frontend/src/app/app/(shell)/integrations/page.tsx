@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { getIntegrationsStatus } from "@/lib/api/integrations";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { IntegrationsStatusResponse, ProviderStatus } from "@/types/integrations";
@@ -27,12 +28,16 @@ function StatusCard({ name, status }: { name: string; status: ProviderStatus }) 
 export default function IntegrationsPage() {
   const { getAccessToken } = useLocalAuth();
   const [status, setStatus] = useState<IntegrationsStatusResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
+    setStatus(null);
+    setLoadError(null);
     getIntegrationsStatus(getAccessToken())
       .then(setStatus)
-      .catch(() => undefined);
-  }, [getAccessToken]);
+      .catch((err) => setLoadError(errorMessage(err)));
+  }, [getAccessToken, retryToken]);
 
   return (
     <div>
@@ -43,7 +48,9 @@ export default function IntegrationsPage() {
 
       <Card className="mb-6">
         <h2 className="mb-4 text-sm font-semibold">Connected services</h2>
-        {status ? (
+        {loadError ? (
+          <InlineError message={loadError} onRetry={() => setRetryToken((n) => n + 1)} />
+        ) : status ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatusCard name="Email" status={status.email} />
             <StatusCard name="WhatsApp" status={status.whatsapp} />

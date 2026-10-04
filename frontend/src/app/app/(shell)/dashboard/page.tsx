@@ -6,6 +6,7 @@ import { RevenueExpenseChart } from "@/components/dashboard/RevenueExpenseChart"
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { MarkdownLite } from "@/components/ui/MarkdownLite";
 import { Select } from "@/components/ui/Select";
 import { getInsights } from "@/lib/api/aiAssistant";
@@ -42,26 +43,6 @@ const BREAKDOWN_LABELS: Record<string, string> = {
   receivables_health: "Receivables health",
   inventory_health: "Inventory health",
 };
-
-function widgetErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Something went wrong.";
-}
-
-// Shared "this widget's own fetch failed" state — distinct from the
-// page-level `error` banner, so one slow/failed widget (e.g. Insights)
-// doesn't block the others from still rendering. Previously these fetches
-// used `.catch(() => undefined)`, which swallowed the failure and left the
-// widget on "Loading..." forever with no way to recover.
-function WidgetError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <p className="text-sm text-red-600">{message}</p>
-      <Button variant="secondary" onClick={onRetry}>
-        Retry
-      </Button>
-    </div>
-  );
-}
 
 function toISODate(d: Date): string {
   // Building from local getters (not toISOString, which converts to UTC
@@ -147,7 +128,7 @@ export default function DashboardPage() {
     setHealthScoreError(null);
     getBusinessHealthScore(getAccessToken(), currentBusinessId)
       .then(setHealthScore)
-      .catch((err) => setHealthScoreError(widgetErrorMessage(err)));
+      .catch((err) => setHealthScoreError(errorMessage(err)));
   }, [currentBusinessId, getAccessToken, healthScoreRetryToken]);
 
   useEffect(() => {
@@ -159,7 +140,7 @@ export default function DashboardPage() {
         setInsights(res);
         setInsightsError(null);
       })
-      .catch((err) => setInsightsError(widgetErrorMessage(err)));
+      .catch((err) => setInsightsError(errorMessage(err)));
   }, [currentBusinessId, getAccessToken]);
 
   const handleRefreshInsights = () => {
@@ -168,7 +149,7 @@ export default function DashboardPage() {
     setInsightsError(null);
     getInsights(getAccessToken(), currentBusinessId)
       .then(setInsights)
-      .catch((err) => setInsightsError(widgetErrorMessage(err)))
+      .catch((err) => setInsightsError(errorMessage(err)))
       .finally(() => setIsRefreshingInsights(false));
   };
 
@@ -180,7 +161,7 @@ export default function DashboardPage() {
     setForecastError(null);
     getForecast(getAccessToken(), currentBusinessId)
       .then(setForecast)
-      .catch((err) => setForecastError(widgetErrorMessage(err)));
+      .catch((err) => setForecastError(errorMessage(err)));
   }, [currentBusinessId, getAccessToken, forecastRetryToken]);
 
   const hasTrendActivity = trend?.points.some((p) => Number(p.revenue) !== 0 || Number(p.expenses) !== 0);
@@ -237,7 +218,7 @@ export default function DashboardPage() {
       <Card className="mt-6">
         <h2 className="mb-4 text-sm font-semibold">Business Health Score</h2>
         {healthScoreError ? (
-          <WidgetError message={healthScoreError} onRetry={() => setHealthScoreRetryToken((n) => n + 1)} />
+          <InlineError message={healthScoreError} onRetry={() => setHealthScoreRetryToken((n) => n + 1)} />
         ) : healthScore ? (
           healthScore.overall_score === null ? (
             <p className="text-sm text-slate-500">
@@ -281,7 +262,7 @@ export default function DashboardPage() {
           </Button>
         </div>
         {insightsError ? (
-          <WidgetError message={insightsError} onRetry={handleRefreshInsights} />
+          <InlineError message={insightsError} onRetry={handleRefreshInsights} />
         ) : insights ? (
           <MarkdownLite text={insights.insights} className="text-sm text-slate-700" />
         ) : (
@@ -309,7 +290,7 @@ export default function DashboardPage() {
       <Card className="mt-6">
         <h2 className="mb-1 text-sm font-semibold">Forecast</h2>
         {forecastError ? (
-          <WidgetError message={forecastError} onRetry={() => setForecastRetryToken((n) => n + 1)} />
+          <InlineError message={forecastError} onRetry={() => setForecastRetryToken((n) => n + 1)} />
         ) : forecast ? (
           forecast.is_available ? (
             <>
