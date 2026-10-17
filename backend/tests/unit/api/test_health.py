@@ -44,7 +44,7 @@ def _client(
     app.include_router(router)
     app.dependency_overrides[get_db_session] = lambda: _Session(postgres_ok)
     app.dependency_overrides[get_settings] = lambda: SimpleNamespace(
-        redis_url="redis://x", redis_required=redis_required
+        redis_url="redis://x", redis_required=redis_required, database_ssl="require"
     )
     monkeypatch.setattr(health_module.redis, "from_url", lambda _url: _Redis(redis_ok))
     return TestClient(app)
@@ -87,3 +87,18 @@ def test_postgres_down_is_always_unhealthy_and_says_why(
     assert response.status_code == 503
     assert body["status"] == "unhealthy"
     assert "connection refused" in body["checks"]["postgres"]
+
+
+def test_reports_the_running_commit_and_the_tls_setting_it_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "3e2c3fcabcdef1234567890")
+
+    body = _client(monkeypatch, postgres_ok=True, redis_ok=True, redis_required=False).get("/health").json()
+
+    assert body["build"] == {"commit": "3e2c3fc", "database_ssl": "require"}
+
+
+def test_postgres_error_names_the_exception_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    body = _client(monkeypatch, postgres_ok=False, redis_ok=True, redis_required=False).get("/health").json()
+
+    assert body["checks"]["postgres"].startswith("error: ConnectionError: ")
+

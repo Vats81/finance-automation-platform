@@ -1,3 +1,5 @@
+import os
+
 import redis.asyncio as redis
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -29,7 +31,9 @@ async def health_check(
         await session.execute(text("SELECT 1"))
         checks["postgres"] = "ok"
     except Exception as exc:  # noqa: BLE001 - health check must not raise
-        checks["postgres"] = f"error: {exc}"
+        # Include the exception type: the message alone can be ambiguous
+        # (a bare "SSL/TLS required" looks the same whichever layer said it).
+        checks["postgres"] = f"error: {type(exc).__name__}: {exc}"
 
     try:
         redis_client = redis.from_url(settings.redis_url)
@@ -49,4 +53,18 @@ async def health_check(
     else:
         status, status_code = "healthy", 200
 
-    return JSONResponse(status_code=status_code, content={"status": status, "checks": checks})
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": status,
+            "checks": checks,
+            # Which build is actually running, and what TLS setting this
+            # process actually read. When a config change "doesn't work",
+            # these say whether the new build is live and whether it saw the
+            # new value, instead of guessing. Neither is sensitive.
+            "build": {
+                "commit": os.environ.get("RENDER_GIT_COMMIT", "unknown")[:7],
+                "database_ssl": getattr(settings, "database_ssl", "") or "(driver default)",
+            },
+        },
+    )
