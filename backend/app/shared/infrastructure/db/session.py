@@ -5,6 +5,19 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app.config.settings import get_settings
 
 
+def build_connect_args(database_ssl: str) -> dict[str, object]:
+    # asyncpg's own default connect timeout is 60s — long enough that an
+    # unreachable/deleted database (wrong host, expired free-tier instance,
+    # ...) looks identical to a slow app from the outside for a full minute
+    # per attempt. 10s is still generous for a real connection and fails
+    # fast enough to show up clearly in logs.
+    connect_args: dict[str, object] = {"timeout": 10}
+    if database_ssl:
+        # asyncpg's name for the libpq sslmode values (same strings).
+        connect_args["ssl"] = database_ssl
+    return connect_args
+
+
 def create_engine() -> AsyncEngine:
     settings = get_settings()
     return create_async_engine(
@@ -13,12 +26,7 @@ def create_engine() -> AsyncEngine:
         pool_size=10,
         max_overflow=20,
         echo=False,
-        # asyncpg's own default connect timeout is 60s — long enough that
-        # an unreachable/deleted database (wrong host, expired free-tier
-        # instance, ...) looks identical to a slow app from the outside
-        # for a full minute per attempt. 10s is still generous for a real
-        # connection and fails fast enough to show up clearly in logs.
-        connect_args={"timeout": 10},
+        connect_args=build_connect_args(settings.database_ssl),
     )
 
 

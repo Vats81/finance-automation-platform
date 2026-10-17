@@ -80,6 +80,18 @@ class Settings(BaseSettings):
     password_reset_ttl_hours: int = Field(default=2, alias="PASSWORD_RESET_TTL_HOURS")
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
 
+    # --- Database TLS ---
+    # Blank (default) leaves the drivers' own behaviour: opportunistic TLS
+    # ("prefer"), which is fine locally and in CI. Hosted Postgres that
+    # refuses non-TLS connections (Render's external URL answers "SSL/TLS
+    # required") needs this set to "require" — the app and the migration
+    # step then insist on TLS instead of relying on negotiation. One flag
+    # for both drivers so it can't drift between DATABASE_URL and
+    # DATABASE_URL_SYNC.
+    database_ssl: Literal["", "disable", "allow", "prefer", "require", "verify-ca", "verify-full"] = Field(
+        default="", alias="DATABASE_SSL"
+    )
+
     # --- Health check ---
     # Postgres always decides healthy vs unhealthy. Redis only does when
     # this is true. Off by default because the SMB deployment doesn't run

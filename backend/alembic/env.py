@@ -56,7 +56,11 @@ def run_migrations_online() -> None:
         # timeout, which can be minutes or effectively forever depending
         # on the network. Failing fast here means the container's boot
         # failure shows up clearly in logs instead of as a silent hang.
-        connect_args={"connect_timeout": 10},
+        connect_args={
+            "connect_timeout": 10,
+            # Only when DATABASE_SSL is set; see Settings.database_ssl.
+            **({"sslmode": settings.database_ssl} if settings.database_ssl else {}),
+        },
     )
 
     try:

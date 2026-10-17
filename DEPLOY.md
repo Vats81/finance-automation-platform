@@ -55,6 +55,7 @@ can be pushed.
    | `JWT_SECRET_KEY` | `f7fbc779f6300013e245e86060058bd296f1b6219c5aa35a4a66e5ebc6053264` |
    | `DATABASE_URL` | the External Database URL from step 2, with `postgres://` replaced by `postgresql+asyncpg://` |
    | `DATABASE_URL_SYNC` | the same URL, with `postgres://` replaced by `postgresql+psycopg2://` |
+   | `DATABASE_SSL` | `require` — Render's external database URL refuses connections that don't use TLS, and relying on the driver to negotiate it stopped working (see Troubleshooting) |
    | `CORS_ALLOWED_ORIGINS` | leave as `http://localhost:3000` for now — comes back in step 4 below |
    | `FRONTEND_BASE_URL` | same, leave as-is for now |
 
@@ -314,4 +315,20 @@ as "not emailed" in the admin list. The endpoint is public, so it has a
 drops bot submissions. The rate limit is per client address as the backend
 sees it, which behind Render's proxy may be coarser than per visitor.
 Requests are included in the encrypted backup (`contact_requests`).
+
+## 12. Troubleshooting: the app is up but every request fails
+
+Open `https://<your-backend>.onrender.com/health`. It answers even when the
+database is unreachable (migrations are skipped rather than stopping the
+server), and says why:
+
+| `/health` says | Meaning / fix |
+|---|---|
+| `"postgres": "error: SSL/TLS required"` | The database only accepts TLS connections. Set `DATABASE_SSL=require` in Render (or add `?ssl=require` to `DATABASE_URL` and `?sslmode=require` to `DATABASE_URL_SYNC`). |
+| `"postgres": "error: ... timed out"` / connection refused | The database is stopped, expired (Render's free Postgres lasts 30 days), or the host in `DATABASE_URL` is wrong. Check the instance in the Render dashboard. |
+| password / authentication errors | `DATABASE_URL` has stale credentials, e.g. after the database was recreated. |
+| no response at all | The service isn't running. Check the service's Logs in Render. |
+
+If `status` is `"degraded"` the database is fine and only Redis (not used
+here) is down, which is expected.
 
