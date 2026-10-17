@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { deactivateUser, listUsersOverview, reactivateUser } from "@/lib/api/admin";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { UsersOverviewResponse } from "@/types/admin";
@@ -15,17 +16,29 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState<UsersOverviewResponse | null>(null);
   const [offset, setOffset] = useState(0);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = () => {
     listUsersOverview(getAccessToken(), { offset, limit: PAGE_SIZE })
-      .then(setPage)
-      .catch(() => undefined);
+      .then((res) => {
+        setPage(res);
+        setLoadError(null);
+      })
+      .catch((err) => setLoadError(errorMessage(err)));
+  };
+
+  const retry = () => {
+    setLoadError(null);
+    setPage(null);
+    refresh();
   };
 
   useEffect(refresh, [getAccessToken, offset]);
 
   async function handleToggleActive(userId: string, isActive: boolean) {
     setPendingId(userId);
+    setActionError(null);
     try {
       if (isActive) {
         await deactivateUser(getAccessToken(), userId);
@@ -33,9 +46,11 @@ export default function AdminUsersPage() {
         await reactivateUser(getAccessToken(), userId);
       }
       refresh();
-    } catch {
-      // no-op — same "table just doesn't update" fallback as the
-      // businesses page; a real toast is out of scope for this slice
+    } catch (err) {
+      // Previously swallowed: a rejected deactivate/reactivate (e.g. the
+      // server refusing to deactivate yourself) just looked like the
+      // button did nothing.
+      setActionError(errorMessage(err, "That change couldn't be saved."));
     } finally {
       setPendingId(null);
     }
@@ -45,8 +60,12 @@ export default function AdminUsersPage() {
     <div>
       <h1 className="mb-6 text-2xl font-semibold">Users</h1>
 
+      {actionError && <p className="mb-3 text-sm text-red-600">{actionError}</p>}
+
       <Card>
-        {!page ? (
+        {loadError ? (
+          <InlineError message={loadError} onRetry={retry} />
+        ) : !page ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : page.items.length === 0 ? (
           <p className="text-sm text-slate-500">No users yet.</p>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { listBusinessesOverview, reactivateBusiness, suspendBusiness } from "@/lib/api/admin";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { BusinessesOverviewResponse } from "@/types/admin";
@@ -26,17 +27,29 @@ export default function AdminBusinessesPage() {
   const [page, setPage] = useState<BusinessesOverviewResponse | null>(null);
   const [offset, setOffset] = useState(0);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = () => {
     listBusinessesOverview(getAccessToken(), { offset, limit: PAGE_SIZE })
-      .then(setPage)
-      .catch(() => undefined);
+      .then((res) => {
+        setPage(res);
+        setLoadError(null);
+      })
+      .catch((err) => setLoadError(errorMessage(err)));
+  };
+
+  const retry = () => {
+    setLoadError(null);
+    setPage(null);
+    refresh();
   };
 
   useEffect(refresh, [getAccessToken, offset]);
 
   async function handleToggleStatus(businessId: string, currentStatus: string) {
     setPendingId(businessId);
+    setActionError(null);
     try {
       if (currentStatus === "active") {
         await suspendBusiness(getAccessToken(), businessId);
@@ -44,9 +57,10 @@ export default function AdminBusinessesPage() {
         await reactivateBusiness(getAccessToken(), businessId);
       }
       refresh();
-    } catch {
-      // no-op — the table simply won't reflect the change; a real toast
-      // could surface this, out of scope for this slice
+    } catch (err) {
+      // Previously swallowed: a rejected suspend/reactivate just looked
+      // like the button did nothing.
+      setActionError(errorMessage(err, "That change couldn't be saved."));
     } finally {
       setPendingId(null);
     }
@@ -56,8 +70,12 @@ export default function AdminBusinessesPage() {
     <div>
       <h1 className="mb-6 text-2xl font-semibold">Businesses</h1>
 
+      {actionError && <p className="mb-3 text-sm text-red-600">{actionError}</p>}
+
       <Card>
-        {!page ? (
+        {loadError ? (
+          <InlineError message={loadError} onRetry={retry} />
+        ) : !page ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : page.items.length === 0 ? (
           <p className="text-sm text-slate-500">No businesses yet.</p>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
+import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { getPlatformStats } from "@/lib/api/admin";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { PlatformStats } from "@/types/admin";
@@ -9,18 +10,24 @@ import { PlatformStats } from "@/types/admin";
 export default function AdminOverviewPage() {
   const { getAccessToken } = useLocalAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
+    setStats(null);
+    setLoadError(null);
     getPlatformStats(getAccessToken())
       .then(setStats)
-      .catch(() => undefined);
-  }, [getAccessToken]);
+      .catch((err) => setLoadError(errorMessage(err)));
+  }, [getAccessToken, retryToken]);
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold">Platform Overview</h1>
 
-      {!stats ? (
+      {loadError ? (
+        <InlineError message={loadError} onRetry={() => setRetryToken((n) => n + 1)} />
+      ) : !stats ? (
         <p className="text-sm text-slate-500">Loading...</p>
       ) : (
         <>
