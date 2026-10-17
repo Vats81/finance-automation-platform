@@ -6,10 +6,11 @@ from app.integrations.application.queries.get_integration_status import Integrat
 class ProviderStatusResponse(BaseModel):
     connected: bool
     detail: str
+    limited: bool = False
 
     @classmethod
     def from_domain(cls, status: ProviderStatus) -> "ProviderStatusResponse":
-        return cls(connected=status.connected, detail=status.detail)
+        return cls(connected=status.connected, detail=status.detail, limited=status.limited)
 
 
 class IntegrationsStatusResponse(BaseModel):

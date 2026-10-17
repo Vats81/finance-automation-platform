@@ -7,6 +7,17 @@ from app.config.settings import Settings
 class ProviderStatus:
     connected: bool
     detail: str
+    # True when the service is configured and does send, but only in a
+    # restricted test/sandbox mode that won't reach real customers. Shown as
+    # "Limited" rather than "Connected", which would overstate what works.
+    limited: bool = False
+
+
+# Resend's shared test sender; mail from it is only delivered to the
+# Resend account owner's own address.
+_RESEND_TEST_SENDER_DOMAIN = "resend.dev"
+# Twilio's published WhatsApp Sandbox number (digits only).
+_TWILIO_SANDBOX_NUMBER = "14155238886"
 
 
 @dataclass(frozen=True)
@@ -42,6 +53,15 @@ class GetIntegrationStatusUseCase:
 
     def _email_status(self) -> ProviderStatus:
         if self._settings.resend_api_key:
+            sender = self._settings.smtp_from_address.lower()
+            if sender.endswith(f"@{_RESEND_TEST_SENDER_DOMAIN}"):
+                return ProviderStatus(
+                    connected=True,
+                    limited=True,
+                    detail="Sending via the Resend API in test mode: email only reaches the Resend "
+                    "account owner's own address. Verify a sending domain in Resend and set "
+                    "SMTP_FROM_ADDRESS to an address on it to email anyone else.",
+                )
             return ProviderStatus(connected=True, detail="Sending real email via the Resend API.")
         if self._settings.smtp_configured:
             return ProviderStatus(
@@ -56,6 +76,16 @@ class GetIntegrationStatusUseCase:
 
     def _whatsapp_status(self) -> ProviderStatus:
         if self._settings.whatsapp_provider == "twilio":
+            sender_digits = "".join(ch for ch in self._settings.twilio_whatsapp_from if ch.isdigit())
+            if sender_digits == _TWILIO_SANDBOX_NUMBER:
+                return ProviderStatus(
+                    connected=True,
+                    limited=True,
+                    detail="Using the Twilio WhatsApp Sandbox: each recipient must first opt in by "
+                    "sending the sandbox join code, and free-form messages only deliver within 24 "
+                    "hours of their last message to the sandbox. Sending to real customers needs an "
+                    "approved WhatsApp Business sender and message templates.",
+                )
             return ProviderStatus(connected=True, detail="Sending real WhatsApp messages via Twilio.")
         return ProviderStatus(
             connected=False,

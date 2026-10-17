@@ -16,8 +16,8 @@ function StatusCard({ name, status }: { name: string; status: ProviderStatus }) 
     <div className="rounded-md border border-slate-200 p-4">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-slate-900">{name}</span>
-        <Badge tone={status.connected ? "success" : "neutral"}>
-          {status.connected ? "Connected" : "Not configured"}
+        <Badge tone={status.connected ? (status.limited ? "warning" : "success") : "neutral"}>
+          {status.connected ? (status.limited ? "Limited" : "Connected") : "Not configured"}
         </Badge>
       </div>
       <p className="text-xs text-slate-500">{status.detail}</p>

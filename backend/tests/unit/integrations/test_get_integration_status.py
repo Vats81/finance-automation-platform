@@ -78,3 +78,45 @@ async def test_stripe_secret_key_marks_billing_connected() -> None:
     status = GetIntegrationStatusUseCase(Settings(STRIPE_SECRET_KEY="sk_test_dummy")).execute()
 
     assert status.billing.connected is True
+
+
+async def test_resend_test_sender_is_reported_as_limited_not_plain_connected() -> None:
+    # Resend's shared test sender only delivers to the account owner, so
+    # "Connected" would overstate what works for anyone else.
+    status = GetIntegrationStatusUseCase(
+        Settings(RESEND_API_KEY="re_test_key", SMTP_FROM_ADDRESS="onboarding@resend.dev")
+    ).execute()
+
+    assert status.email.connected is True
+    assert status.email.limited is True
+    assert "test mode" in status.email.detail
+
+
+async def test_resend_with_a_real_sender_domain_is_fully_connected() -> None:
+    status = GetIntegrationStatusUseCase(
+        Settings(RESEND_API_KEY="re_live_key", SMTP_FROM_ADDRESS="hello@acme.com")
+    ).execute()
+
+    assert status.email.connected is True
+    assert status.email.limited is False
+
+
+async def test_twilio_sandbox_number_is_reported_as_limited() -> None:
+    for sandbox_number in ("+14155238886", "14155238886", "+1 (415) 523-8886"):
+        status = GetIntegrationStatusUseCase(
+            Settings(WHATSAPP_PROVIDER="twilio", TWILIO_WHATSAPP_FROM=sandbox_number)
+        ).execute()
+
+        assert status.whatsapp.connected is True, sandbox_number
+        assert status.whatsapp.limited is True, sandbox_number
+        assert "Sandbox" in status.whatsapp.detail
+
+
+async def test_twilio_with_a_business_number_is_fully_connected() -> None:
+    status = GetIntegrationStatusUseCase(
+        Settings(WHATSAPP_PROVIDER="twilio", TWILIO_WHATSAPP_FROM="+919876543210")
+    ).execute()
+
+    assert status.whatsapp.connected is True
+    assert status.whatsapp.limited is False
+
