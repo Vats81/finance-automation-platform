@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 
 
 class Settings(BaseSettings):
@@ -179,6 +181,27 @@ class Settings(BaseSettings):
         if self.auth_dev_mode and self.app_env != "local":
             raise ValueError("AUTH_DEV_MODE must not be enabled outside APP_ENV=local")
         return self
+
+    @property
+    def effective_database_ssl(self) -> str:
+        """The TLS mode actually used for database connections. An explicit
+        DATABASE_SSL always wins (including "disable"). Otherwise, hosts that
+        are recognisably Render-managed Postgres — `dpg-...` instance names
+        or `*.render.com` — get "require": Render's databases answer
+        "SSL/TLS required" to anything else, and the drivers' opportunistic
+        negotiation stopped getting through, which took the whole backend
+        offline. Anything else (local Postgres, a docker-compose service,
+        CI) keeps the driver default so nothing outside Render changes.
+        """
+        if self.database_ssl:
+            return self.database_ssl
+        try:
+            host = make_url(self.database_url).host or ""
+        except ArgumentError:
+            return ""
+        if host.startswith("dpg-") or host.endswith(".render.com"):
+            return "require"
+        return ""
 
     @property
     def is_local(self) -> bool:

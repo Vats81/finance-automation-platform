@@ -44,7 +44,10 @@ def _client(
     app.include_router(router)
     app.dependency_overrides[get_db_session] = lambda: _Session(postgres_ok)
     app.dependency_overrides[get_settings] = lambda: SimpleNamespace(
-        redis_url="redis://x", redis_required=redis_required, database_ssl="require"
+        redis_url="redis://x",
+        redis_required=redis_required,
+        database_ssl="",
+        effective_database_ssl="require",
     )
     monkeypatch.setattr(health_module.redis, "from_url", lambda _url: _Redis(redis_ok))
     return TestClient(app)
@@ -94,7 +97,11 @@ def test_reports_the_running_commit_and_the_tls_setting_it_read(monkeypatch: pyt
 
     body = _client(monkeypatch, postgres_ok=True, redis_ok=True, redis_required=False).get("/health").json()
 
-    assert body["build"] == {"commit": "3e2c3fc", "database_ssl": "require"}
+    build = body["build"]
+    assert build["commit"] == "3e2c3fc"
+    assert build["database_ssl"] == "(not set)"
+    assert build["database_ssl_effective"] == "require"
+    assert build["started_at"]  # ISO timestamp of process start
 
 
 def test_postgres_error_names_the_exception_type(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -55,7 +55,7 @@ can be pushed.
    | `JWT_SECRET_KEY` | `f7fbc779f6300013e245e86060058bd296f1b6219c5aa35a4a66e5ebc6053264` |
    | `DATABASE_URL` | the External Database URL from step 2, with `postgres://` replaced by `postgresql+asyncpg://` |
    | `DATABASE_URL_SYNC` | the same URL, with `postgres://` replaced by `postgresql+psycopg2://` |
-   | `DATABASE_SSL` | `require` — Render's external database URL refuses connections that don't use TLS, and relying on the driver to negotiate it stopped working (see Troubleshooting) |
+   | `DATABASE_SSL` | *(optional)* TLS mode for the database. Leave unset on Render: hosts that look like Render Postgres (`dpg-...` or `*.render.com`) automatically get `require`. Set it only to override (e.g. `disable`). `/health` shows the value in effect. |
    | `CORS_ALLOWED_ORIGINS` | leave as `http://localhost:3000` for now — comes back in step 4 below |
    | `FRONTEND_BASE_URL` | same, leave as-is for now |
 
@@ -324,7 +324,7 @@ server), and says why:
 
 | `/health` says | Meaning / fix |
 |---|---|
-| `"postgres": "error: SSL/TLS required"` | The database only accepts TLS connections. Set `DATABASE_SSL=require` in Render (or add `?ssl=require` to `DATABASE_URL` and `?sslmode=require` to `DATABASE_URL_SYNC`). |
+| `"postgres": "error: ...: SSL/TLS required"` | The database only accepts TLS connections. Render-managed hosts get TLS automatically; for any other host set `DATABASE_SSL=require` (or add `?ssl=require` to `DATABASE_URL` and `?sslmode=require` to `DATABASE_URL_SYNC`). Check `build.database_ssl_effective` in the same response to see what the running process is using, and `build.commit` / `build.started_at` to confirm which build is live and that it restarted. |
 | `"postgres": "error: ... timed out"` / connection refused | The database is stopped, expired (Render's free Postgres lasts 30 days), or the host in `DATABASE_URL` is wrong. Check the instance in the Render dashboard. |
 | password / authentication errors | `DATABASE_URL` has stale credentials, e.g. after the database was recreated. |
 | no response at all | The service isn't running. Check the service's Logs in Render. |

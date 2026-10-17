@@ -58,8 +58,13 @@ def run_migrations_online() -> None:
         # failure shows up clearly in logs instead of as a silent hang.
         connect_args={
             "connect_timeout": 10,
-            # Only when DATABASE_SSL is set; see Settings.database_ssl.
-            **({"sslmode": settings.database_ssl} if settings.database_ssl else {}),
+            # See Settings.effective_database_ssl (explicit DATABASE_SSL, or
+            # automatic "require" for Render-managed Postgres hosts).
+            **(
+                {"sslmode": settings.effective_database_ssl}
+                if settings.effective_database_ssl
+                else {}
+            ),
         },
     )
 

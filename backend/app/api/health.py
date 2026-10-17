@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 import redis.asyncio as redis
 from fastapi import APIRouter, Depends
@@ -10,6 +11,10 @@ from app.bootstrap.container import get_db_session
 from app.config.settings import Settings, get_settings
 
 router = APIRouter(tags=["health"])
+
+# When this process started — together with build.commit it shows whether a
+# config change or deploy actually restarted the service.
+_STARTED_AT = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 @router.get("/health")
@@ -64,7 +69,10 @@ async def health_check(
             # new value, instead of guessing. Neither is sensitive.
             "build": {
                 "commit": os.environ.get("RENDER_GIT_COMMIT", "unknown")[:7],
-                "database_ssl": getattr(settings, "database_ssl", "") or "(driver default)",
+                "database_ssl": getattr(settings, "database_ssl", "") or "(not set)",
+                "database_ssl_effective": getattr(settings, "effective_database_ssl", "")
+                or "(driver default)",
+                "started_at": _STARTED_AT,
             },
         },
     )

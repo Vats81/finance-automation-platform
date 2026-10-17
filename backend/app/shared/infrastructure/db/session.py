@@ -26,7 +26,7 @@ def create_engine() -> AsyncEngine:
         pool_size=10,
         max_overflow=20,
         echo=False,
-        connect_args=build_connect_args(settings.database_ssl),
+        connect_args=build_connect_args(settings.effective_database_ssl),
     )
 
 
