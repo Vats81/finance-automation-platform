@@ -80,6 +80,15 @@ class Settings(BaseSettings):
     password_reset_ttl_hours: int = Field(default=2, alias="PASSWORD_RESET_TTL_HOURS")
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
 
+    # --- Health check ---
+    # Postgres always decides healthy vs unhealthy. Redis only does when
+    # this is true. Off by default because the SMB deployment doesn't run
+    # Redis (no Celery worker, local auth, in-memory rate limiting), so a
+    # missing Redis made /health return 503 forever — which looks like an
+    # outage to any uptime monitor or load balancer. Set REDIS_REQUIRED=true
+    # when running with workers/Entra, where Redis really is a hard dependency.
+    redis_required: bool = Field(default=False, alias="REDIS_REQUIRED")
+
     # --- Landing-page "request a demo" form ---
     # Where to email a notification for each submission. Blank = no email,
     # requests are still saved and listed in the admin panel. With Resend's

@@ -41,10 +41,11 @@ can be pushed.
    override field doesn't reliably pass shell operators like `&&` through
    no matter how it's quoted, so don't fight it; the Dockerfile's default
    command already does the right thing. Set **Health Check Path** to
-   `/health` — though note `/health` also checks Redis (never deployed
-   here), so it always reports unhealthy/503 regardless of whether the app
-   is actually fine; you can leave the Health Check Path blank instead if
-   Render's own health-gating on that gives you trouble.
+   `/health`. It returns **200** (`healthy`, or `degraded` when only Redis —
+   never deployed here — is down) and **503** only when Postgres can't be
+   reached, with the reason in the response body
+   (`"postgres": "error: ..."`). Set `REDIS_REQUIRED=true` only if you run
+   Redis-dependent workers.
 5. Add these environment variables:
 
    | Key | Value |
@@ -269,10 +270,13 @@ timeout (it shows "The server is taking too long to respond" and a retry
 works). `.github/workflows/keep-alive.yml` pings `/health` every 5 minutes
 so that doesn't happen. It needs no secrets.
 
-- `/health` returns **503** on this deployment because Redis isn't running
-  (expected). The ping counts the backend as awake when the response body is
-  the app's own JSON, not by status code, and only fails the run (so GitHub
-  notifies you) if the app never answers after three tries.
+- `/health` returns **200 `degraded`** here (Redis isn't running — expected)
+  and 503 only when Postgres is unreachable. The ping counts the backend as
+  awake when the response body is the app's own JSON, not by status code. It
+  passes on `healthy`/`degraded` and fails (so GitHub notifies you, with the
+  reason in the log) if the app never answers or answers `unhealthy` three
+  times in a row — a backend that's up but can't reach its database counts as
+  an outage.
 - **Do not rely on this alone.** GitHub's scheduler is best-effort and, in
   practice here, far too imprecise for a 5-minute job: the daily backup
   workflow (cron 03:17 UTC) has consistently started ~6.5 hours late, and
@@ -280,8 +284,10 @@ so that doesn't happen. It needs no secrets.
   keep-alive needs a gap under ~15 minutes, so treat this as a backup. For
   a dependable one, add a free external uptime monitor (e.g. UptimeRobot or
   cron-job.org, 5-minute interval) pointed at
-  `https://<your-backend>.onrender.com/health` — a 503 response is fine, it
-  only needs to wake the service.
+  `https://<your-backend>.onrender.com/health`. A healthy or degraded
+  backend answers 200, so the monitor will only report "down" when it
+  really is (503 = database unreachable, no answer = the service isn't
+  running).
 - Always-on consumes Render's free monthly instance hours (750h; one
   service 24/7 is ~744h). Those hours are shared across all free web
   services on the account — a second always-on service would exceed them.

@@ -15,8 +15,13 @@ async def health_check(
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
 ) -> JSONResponse:
-    """Liveness/readiness probe: verifies the API can actually reach its
-    critical dependencies (Postgres, Redis), not just that the process is up.
+    """Liveness/readiness probe. Postgres is always critical: if it can't be
+    reached the API can't serve anything, so that is 503 "unhealthy". Redis
+    only counts when settings.redis_required is set; otherwise a Redis
+    failure is reported as "degraded" with HTTP 200. This deployment doesn't
+    run Redis, and returning 503 for that made the endpoint look like a
+    permanent outage to any uptime monitor or load balancer. Each check's
+    own result is always in `checks`, so a degraded Redis is still visible.
     """
     checks: dict[str, str] = {}
 
@@ -34,8 +39,14 @@ async def health_check(
     except Exception as exc:  # noqa: BLE001 - health check must not raise
         checks["redis"] = f"error: {exc}"
 
-    is_healthy = all(v == "ok" for v in checks.values())
-    return JSONResponse(
-        status_code=200 if is_healthy else 503,
-        content={"status": "healthy" if is_healthy else "unhealthy", "checks": checks},
-    )
+    postgres_ok = checks["postgres"] == "ok"
+    redis_ok = checks["redis"] == "ok"
+
+    if not postgres_ok or (settings.redis_required and not redis_ok):
+        status, status_code = "unhealthy", 503
+    elif not redis_ok:
+        status, status_code = "degraded", 200
+    else:
+        status, status_code = "healthy", 200
+
+    return JSONResponse(status_code=status_code, content={"status": status, "checks": checks})

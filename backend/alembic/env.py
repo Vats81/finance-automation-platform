@@ -1,7 +1,9 @@
+import logging
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.exc import OperationalError
 
 from app.config.settings import get_settings
 from app.shared.infrastructure.db.base import Base
@@ -22,6 +24,8 @@ config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+logger = logging.getLogger("alembic.env")
 
 target_metadata = Base.metadata
 
@@ -55,7 +59,30 @@ def run_migrations_online() -> None:
         connect_args={"connect_timeout": 10},
     )
 
-    with connectable.connect() as connection:
+    try:
+        connection = connectable.connect()
+    except OperationalError as exc:
+        # The database can't be reached at all (expired/suspended free-tier
+        # instance, wrong host or credentials, ...). There is nothing to
+        # migrate, and exiting non-zero here made the container's
+        # `alembic upgrade head && uvicorn ...` chain stop before the web
+        # server ever started — so the whole service went silent (Render's
+        # edge just hung) and the cause was invisible from outside. Return
+        # cleanly instead so the app boots, and /health reports
+        # "postgres: error: ..." in seconds.
+        #
+        # Deliberately narrow: only a failed *connect* is skipped. A
+        # migration that fails against a reachable database still raises and
+        # aborts the deploy, which keeps Render's protection of leaving the
+        # previous working version running.
+        logger.warning(
+            "Database unreachable, skipping migrations so the app can still start "
+            "(check DATABASE_URL_SYNC / that the database is active): %s",
+            exc,
+        )
+        return
+
+    with connection:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
