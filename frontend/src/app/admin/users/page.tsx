@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { errorMessage, InlineError } from "@/components/ui/InlineError";
-import { deactivateUser, listUsersOverview, reactivateUser } from "@/lib/api/admin";
+import { deactivateUser, deleteUser, listUsersOverview, reactivateUser } from "@/lib/api/admin";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { UsersOverviewResponse } from "@/types/admin";
 
@@ -51,6 +51,25 @@ export default function AdminUsersPage() {
       // server refusing to deactivate yourself) just looked like the
       // button did nothing.
       setActionError(errorMessage(err, "That change couldn't be saved."));
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleDelete(userId: string, email: string) {
+    const typed = window.prompt(
+      `This permanently deletes the account ${email}. Delete any business they own first. It cannot be undone.
+
+Type their email to confirm:`
+    );
+    if (typed === null) return;
+    setPendingId(userId);
+    setActionError(null);
+    try {
+      await deleteUser(getAccessToken(), userId, typed);
+      refresh();
+    } catch (err) {
+      setActionError(errorMessage(err, "The user couldn't be deleted."));
     } finally {
       setPendingId(null);
     }
@@ -102,15 +121,24 @@ export default function AdminUsersPage() {
                       <td className="py-2 pr-4">
                         {new Date(user.created_at).toLocaleDateString("en-US")}
                       </td>
-                      <td className="py-2 pr-4">
+                      <td className="flex gap-2 py-2 pr-4">
                         {!isSelf && (
-                          <Button
-                            variant={user.is_active ? "danger" : "secondary"}
-                            disabled={pendingId === user.id}
-                            onClick={() => handleToggleActive(user.id, user.is_active)}
-                          >
-                            {user.is_active ? "Deactivate" : "Reactivate"}
-                          </Button>
+                          <>
+                            <Button
+                              variant={user.is_active ? "danger" : "secondary"}
+                              disabled={pendingId === user.id}
+                              onClick={() => handleToggleActive(user.id, user.is_active)}
+                            >
+                              {user.is_active ? "Deactivate" : "Reactivate"}
+                            </Button>
+                            <Button
+                              variant="danger"
+                              disabled={pendingId === user.id}
+                              onClick={() => handleDelete(user.id, user.email)}
+                            >
+                              Delete
+                            </Button>
+                          </>
                         )}
                       </td>
                     </tr>

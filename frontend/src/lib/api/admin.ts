@@ -48,6 +48,30 @@ export function reactivateUser(token: string | null, userId: string): Promise<vo
   return apiFetch<void>(`/admin/users/${userId}/reactivate`, token, { method: "POST" });
 }
 
+export function purgeBusiness(
+  token: string | null,
+  businessId: string,
+  confirmName: string
+): Promise<void> {
+  return apiFetch<void>(
+    `/admin/businesses/${businessId}?confirm_name=${encodeURIComponent(confirmName)}`,
+    token,
+    { method: "DELETE" }
+  );
+}
+
+export function deleteUser(token: string | null, userId: string, confirmEmail: string): Promise<void> {
+  return apiFetch<void>(
+    `/admin/users/${userId}?confirm_email=${encodeURIComponent(confirmEmail)}`,
+    token,
+    { method: "DELETE" }
+  );
+}
+
+export function deleteContactRequest(token: string | null, requestId: string): Promise<void> {
+  return apiFetch<void>(`/admin/contact-requests/${requestId}`, token, { method: "DELETE" });
+}
+
 export function listContactRequests(token: string | null): Promise<ContactRequestsResponse> {
   return apiFetch<ContactRequestsResponse>("/admin/contact-requests", token);
 }

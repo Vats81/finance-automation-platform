@@ -36,6 +36,9 @@ class InMemoryContactRequestStore(IContactRequestStore):
     async def list_recent(self, *, limit: int) -> list[ContactRequest]:
         return sorted(self.rows.values(), key=lambda r: r.created_at, reverse=True)[:limit]
 
+    async def delete(self, request_id: uuid.UUID) -> bool:
+        return self.rows.pop(request_id, None) is not None
+
 
 class FailingEmailSender(IEmailSender):
     async def send(
@@ -102,3 +105,12 @@ async def test_newlines_in_the_name_cannot_inject_extra_subject_lines() -> None:
     subject = sender.sent[0]["subject"]
     assert "\n" not in subject and "\r" not in subject
     assert subject == "New demo request from Eve Bcc: attacker@example.com"
+
+
+async def test_contact_request_can_be_removed() -> None:
+    store = InMemoryContactRequestStore()
+    request = await store.add(name="A", email="a@example.com", business_name=None, message=None)
+
+    assert await store.delete(request.id) is True
+    assert await store.delete(request.id) is False
+    assert await store.list_recent(limit=10) == []

@@ -2,10 +2,13 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.api.schemas import BusinessesOverviewResponse, PlatformStatsResponse, UsersOverviewResponse
 from app.admin.application.commands.deactivate_user import DeactivateUserCommand, DeactivateUserUseCase
+from app.admin.application.commands.delete_user import DeleteUserCommand, DeleteUserUseCase
+from app.admin.application.commands.purge_business import PurgeBusinessCommand, PurgeBusinessUseCase
 from app.admin.application.commands.reactivate_business import (
     ReactivateBusinessCommand,
     ReactivateBusinessUseCase,
@@ -98,6 +101,44 @@ async def list_contact_requests(
     """
     requests = await store.list_recent(limit=limit)
     return ContactRequestsResponse(items=[ContactRequestResponse.from_domain(r) for r in requests])
+
+
+@router.delete("/contact-requests/{request_id}", status_code=204)
+async def delete_contact_request(
+    request_id: uuid.UUID, store: IContactRequestStore = Depends(get_contact_request_store)
+) -> None:
+    if not await store.delete(request_id):
+        raise HTTPException(status_code=404, detail="Contact request not found")
+
+
+@router.delete("/businesses/{business_id}", status_code=204)
+async def purge_business(
+    business_id: uuid.UUID,
+    confirm_name: str = Query(min_length=1),
+    actor: User = Depends(require_platform_admin),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> None:
+    """Irreversibly deletes a business and all of its data. `confirm_name`
+    must equal the business's name exactly.
+    """
+    session: AsyncSession = uow.session
+    await PurgeBusinessUseCase(session).execute(
+        PurgeBusinessCommand(business_id=business_id, confirm_name=confirm_name, actor_user_id=actor.id)
+    )
+
+
+@router.delete("/users/{user_id}", status_code=204)
+async def delete_user(
+    user_id: uuid.UUID,
+    confirm_email: str = Query(min_length=1),
+    actor: User = Depends(require_platform_admin),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> None:
+    """Irreversibly deletes a user. `confirm_email` must equal their email."""
+    session: AsyncSession = uow.session
+    await DeleteUserUseCase(session).execute(
+        DeleteUserCommand(user_id=user_id, confirm_email=confirm_email, actor_user_id=actor.id)
+    )
 
 
 @router.get("/backup")

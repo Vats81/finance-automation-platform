@@ -5,7 +5,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { errorMessage, InlineError } from "@/components/ui/InlineError";
-import { listBusinessesOverview, reactivateBusiness, suspendBusiness } from "@/lib/api/admin";
+import {
+  listBusinessesOverview,
+  purgeBusiness,
+  reactivateBusiness,
+  suspendBusiness,
+} from "@/lib/api/admin";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { BusinessesOverviewResponse } from "@/types/admin";
 
@@ -66,6 +71,25 @@ export default function AdminBusinessesPage() {
     }
   }
 
+  async function handlePurge(businessId: string, name: string) {
+    const typed = window.prompt(
+      `This permanently deletes "${name}" and ALL of its sales, purchases, expenses, products, customers, vendors and team memberships. It cannot be undone.
+
+Type the business name to confirm:`
+    );
+    if (typed === null) return;
+    setPendingId(businessId);
+    setActionError(null);
+    try {
+      await purgeBusiness(getAccessToken(), businessId, typed);
+      refresh();
+    } catch (err) {
+      setActionError(errorMessage(err, "The business couldn't be deleted."));
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold">Businesses</h1>
@@ -108,13 +132,20 @@ export default function AdminBusinessesPage() {
                     <td className="py-2 pr-4">
                       {new Date(business.created_at).toLocaleDateString("en-US")}
                     </td>
-                    <td className="py-2 pr-4">
+                    <td className="flex gap-2 py-2 pr-4">
                       <Button
                         variant={business.status === "active" ? "danger" : "secondary"}
                         disabled={pendingId === business.id}
                         onClick={() => handleToggleStatus(business.id, business.status)}
                       >
                         {business.status === "active" ? "Suspend" : "Reactivate"}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        disabled={pendingId === business.id}
+                        onClick={() => handlePurge(business.id, business.name)}
+                      >
+                        Delete
                       </Button>
                     </td>
                   </tr>

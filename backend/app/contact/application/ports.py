@@ -33,3 +33,8 @@ class IContactRequestStore(ABC):
 
     @abstractmethod
     async def list_recent(self, *, limit: int) -> list[ContactRequest]: ...
+
+    @abstractmethod
+    async def delete(self, request_id: uuid.UUID) -> bool:
+        """True if a request was deleted, False if none had that id."""
+        ...

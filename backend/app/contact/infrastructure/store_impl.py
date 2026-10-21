@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contact.application.ports import ContactRequest, IContactRequestStore
@@ -46,6 +46,13 @@ class SqlAlchemyContactRequestStore(IContactRequestStore):
             update(ContactRequestModel).where(ContactRequestModel.id == request_id).values(notified=True)
         )
         await self._session.commit()
+
+    async def delete(self, request_id: uuid.UUID) -> bool:
+        result = await self._session.execute(
+            delete(ContactRequestModel).where(ContactRequestModel.id == request_id)
+        )
+        await self._session.commit()
+        return bool(result.rowcount)  # type: ignore[attr-defined]
 
     async def list_recent(self, *, limit: int) -> list[ContactRequest]:
         result = await self._session.execute(
