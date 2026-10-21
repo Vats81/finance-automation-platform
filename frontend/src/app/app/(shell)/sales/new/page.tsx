@@ -6,7 +6,9 @@ import { SaleForm } from "@/components/sales/SaleForm";
 import { Card } from "@/components/ui/Card";
 import { createSale } from "@/lib/api/sales";
 import { listCustomers } from "@/lib/api/customers";
+import { ApiError } from "@/lib/api/client";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
+import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { CustomerResponse } from "@/types/customer";
 import { CreateSaleRequest } from "@/types/sale";
@@ -15,6 +17,7 @@ export default function NewSalePage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
+  const submission = useSubmissionKey();
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +36,10 @@ export default function NewSalePage() {
     setError(null);
     try {
       const token = getAccessToken();
-      const sale = await createSale(token, currentBusinessId, data);
+      const sale = await createSale(token, currentBusinessId, data, { idempotencyKey: submission.key() });
       router.push(`/app/sales/${sale.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
       setError(err instanceof Error ? err.message : "Failed to record sale");
       setIsSubmitting(false);
     }

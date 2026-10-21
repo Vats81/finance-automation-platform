@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from app.sales.application.ports import SalesUnitOfWork
 from app.sales.domain.entities import Sale
+from app.sales.domain.exceptions import DuplicateInvoiceNumberException
 from app.sales.domain.value_objects import SaleLineItem
 from app.shared.domain.value_objects import Money
 
@@ -35,6 +36,10 @@ class CreateSaleUseCase:
         self._uow = uow
 
     async def execute(self, command: CreateSaleCommand) -> Sale:
+        if await self._uow.sales.invoice_number_in_use(command.business_id, command.invoice_number):
+            raise DuplicateInvoiceNumberException(
+                f"Invoice number {command.invoice_number!r} is already used by another sale in this business."
+            )
         line_items = [
             SaleLineItem(
                 line_number=item.line_number,

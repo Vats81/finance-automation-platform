@@ -13,5 +13,9 @@ class PaymentExceedsOutstandingException(ValidationException):
     error_code = "payment_exceeds_outstanding"
 
 
+class DuplicateInvoiceNumberException(ConflictException):
+    error_code = "duplicate_invoice_number"
+
+
 class SaleAlreadyVoidException(ConflictException):
     error_code = "sale_already_void"

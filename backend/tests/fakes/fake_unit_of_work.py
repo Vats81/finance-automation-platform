@@ -18,6 +18,7 @@ from app.purchases.domain.entities import Purchase
 from app.purchases.domain.repository import IPurchaseRepository
 from app.sales.domain.entities import Sale
 from app.sales.domain.repository import ISaleRepository
+from app.sales.domain.value_objects import SaleStatus
 from app.shared.application.unit_of_work import IUnitOfWork
 from app.vendors.domain.entities import Vendor
 from app.vendors.domain.repository import IVendorRepository
@@ -204,6 +205,17 @@ class FakeCustomerRepository(ICustomerRepository):
 class FakeSaleRepository(ISaleRepository):
     def __init__(self) -> None:
         self._store: dict[uuid.UUID, Sale] = {}
+
+    async def invoice_number_in_use(
+        self, business_id: uuid.UUID, invoice_number: str, *, exclude_sale_id: uuid.UUID | None = None
+    ) -> bool:
+        return any(
+            s.business_id == business_id
+            and s.invoice_number == invoice_number
+            and s.status != SaleStatus.VOID
+            and s.id != exclude_sale_id
+            for s in self._store.values()
+        )
 
     async def get_by_id_for_business(self, sale_id: uuid.UUID, business_id: uuid.UUID) -> Sale | None:
         sale = self._store.get(sale_id)

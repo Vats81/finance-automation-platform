@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { getSale, recordSalePayment, voidSale } from "@/lib/api/sales";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
+import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { SalePaymentStatus, SaleResponse } from "@/types/sale";
 
@@ -23,6 +24,7 @@ export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
+  const paymentKey = useSubmissionKey();
   const [sale, setSale] = useState<SaleResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -49,8 +51,9 @@ export default function SaleDetailPage() {
     setError(null);
     try {
       const token = getAccessToken();
-      setSale(await recordSalePayment(token, currentBusinessId, id, paymentAmount));
+      setSale(await recordSalePayment(token, currentBusinessId, id, paymentAmount, { idempotencyKey: paymentKey.key() }));
       setPaymentAmount("");
+      paymentKey.renew();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to record payment");
     } finally {

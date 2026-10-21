@@ -6,7 +6,9 @@ import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { Card } from "@/components/ui/Card";
 import { createExpense } from "@/lib/api/expenses";
 import { listBusinessVendors } from "@/lib/api/businessVendors";
+import { ApiError } from "@/lib/api/client";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
+import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { CreateExpenseRequest } from "@/types/expense";
 import { VendorResponse } from "@/types/vendor";
@@ -15,6 +17,7 @@ export default function NewExpensePage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
+  const submission = useSubmissionKey();
   const [vendors, setVendors] = useState<VendorResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +36,10 @@ export default function NewExpensePage() {
     setError(null);
     try {
       const token = getAccessToken();
-      const expense = await createExpense(token, currentBusinessId, data);
+      const expense = await createExpense(token, currentBusinessId, data, { idempotencyKey: submission.key() });
       router.push(`/app/expenses/${expense.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
       setError(err instanceof Error ? err.message : "Failed to record expense");
       setIsSubmitting(false);
     }

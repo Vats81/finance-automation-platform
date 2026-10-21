@@ -14,6 +14,13 @@ class ISaleRepository(ABC):
     ) -> tuple[list[Sale], int]: ...
 
     @abstractmethod
+    async def invoice_number_in_use(
+        self, business_id: uuid.UUID, invoice_number: str, *, exclude_sale_id: uuid.UUID | None = None
+    ) -> bool:
+        """True if a non-void sale in this business already has the number."""
+        ...
+
+    @abstractmethod
     def add(self, sale: Sale) -> None: ...
 
     @abstractmethod

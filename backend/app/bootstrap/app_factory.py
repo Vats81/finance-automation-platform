@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.audit_middleware import AuditMiddleware, record_to_database
 from app.api.exception_handlers import register_exception_handlers
 from app.api.health import router as health_router
+from app.api.idempotency import IdempotencyMiddleware
 from app.api.main_router import api_router
 from app.api.middleware import CorrelationIdMiddleware
 from app.api.openapi import custom_openapi
@@ -34,6 +35,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Added before CORS so it sits inside it: its early 409/422 replies still
+    # carry CORS headers and the browser can read them.
+    app.add_middleware(IdempotencyMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,

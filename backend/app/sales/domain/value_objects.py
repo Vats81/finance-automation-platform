@@ -22,6 +22,9 @@ class SalePaymentStatus(str, enum.Enum):
     PAID = "paid"
 
 
+MAX_LINE_QUANTITY = Decimal("1000000000")
+
+
 @dataclass(frozen=True)
 class SaleLineItem(ValueObject):
     """Identical shape/validation to invoices/domain/value_objects.py's
@@ -38,6 +41,10 @@ class SaleLineItem(ValueObject):
     def __post_init__(self) -> None:
         if self.quantity <= 0:
             raise ValidationException("Line item quantity must be positive")
+        if self.quantity > MAX_LINE_QUANTITY:
+            raise ValidationException("Line item quantity is too large")
+        if self.unit_price.amount < 0:
+            raise ValidationException("Line item unit price cannot be negative")
         if not self.description:
             raise ValidationException("Line item description is required")
 

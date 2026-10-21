@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.sales.domain.entities import Sale
 from app.sales.domain.exceptions import SaleNotFoundException
 from app.sales.domain.repository import ISaleRepository
+from app.sales.domain.value_objects import SaleStatus
 from app.sales.infrastructure.mappers import (
     apply_domain_to_existing_model,
     domain_to_model,
@@ -28,6 +29,22 @@ class SqlAlchemySaleRepository(ISaleRepository):
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return model_to_domain(model) if model else None
+
+    async def invoice_number_in_use(
+        self, business_id: uuid.UUID, invoice_number: str, *, exclude_sale_id: uuid.UUID | None = None
+    ) -> bool:
+        stmt = (
+            select(func.count())
+            .select_from(SaleModel)
+            .where(
+                SaleModel.business_id == business_id,
+                SaleModel.invoice_number == invoice_number,
+                SaleModel.status != SaleStatus.VOID.value,
+            )
+        )
+        if exclude_sale_id is not None:
+            stmt = stmt.where(SaleModel.id != exclude_sale_id)
+        return (await self._session.execute(stmt)).scalar_one() > 0
 
     async def list_for_business(
         self, business_id: uuid.UUID, *, offset: int = 0, limit: int = 50

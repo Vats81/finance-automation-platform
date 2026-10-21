@@ -15,6 +15,7 @@ from app.purchases.domain.exceptions import (
 )
 from app.purchases.domain.value_objects import PurchaseLineItem, PurchasePaymentStatus, PurchaseStatus
 from app.shared.domain.aggregate_root import AggregateRoot
+from app.shared.domain.exceptions import ValidationException
 from app.shared.domain.value_objects import Money
 
 
@@ -70,6 +71,8 @@ class Purchase(AggregateRoot):
     ) -> "Purchase":
         if not line_items:
             raise EmptyPurchaseException("A purchase requires at least one line item")
+        if tax is not None and tax.amount < 0:
+            raise ValidationException("Tax cannot be negative")
 
         purchase = cls(
             business_id=business_id,
@@ -162,6 +165,8 @@ class Purchase(AggregateRoot):
         new_subtotal = Money(amount=Decimal("0"))
         for item in line_items:
             new_subtotal = new_subtotal + item.line_total
+        if tax.amount < 0:
+            raise ValidationException("Tax cannot be negative")
         new_total = new_subtotal + tax
         if self.amount_paid.cents > new_total.cents:
             raise PurchasePaymentExceedsOutstandingException(

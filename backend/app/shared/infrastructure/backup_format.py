@@ -19,6 +19,7 @@ A backup is one JSON document:
 Every table in the schema is included (not a hand-kept list), so a new table
 cannot be silently left out of backups. Excluded on purpose:
 
+* ``idempotency_keys`` - 24-hour request de-duplication bookkeeping.
 * ``outbox_messages`` - the event relay queue. Restoring it would replay
   already-delivered events (emails, WhatsApp messages) from the past.
 * One-time token hashes (email verification, password reset); they expire and
@@ -39,7 +40,7 @@ from typing import Any
 
 FORMAT_VERSION = 1
 
-EXCLUDED_TABLES = frozenset({"outbox_messages", "alembic_version"})
+EXCLUDED_TABLES = frozenset({"outbox_messages", "alembic_version", "idempotency_keys"})
 EXCLUDED_COLUMNS: dict[str, frozenset[str]] = {
     "users": frozenset({"email_verification_token_hash", "password_reset_token_hash"}),
 }

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from app.sales.application.ports import SalesUnitOfWork
 from app.sales.domain.entities import Sale
-from app.sales.domain.exceptions import SaleNotFoundException
+from app.sales.domain.exceptions import DuplicateInvoiceNumberException, SaleNotFoundException
 from app.sales.domain.value_objects import SaleLineItem
 from app.shared.domain.value_objects import Money
 
@@ -40,6 +40,12 @@ class UpdateSaleUseCase:
         sale = await self._uow.sales.get_by_id_for_business(command.sale_id, command.business_id)
         if sale is None:
             raise SaleNotFoundException(f"Sale {command.sale_id} not found")
+        if command.invoice_number != sale.invoice_number and await self._uow.sales.invoice_number_in_use(
+            command.business_id, command.invoice_number, exclude_sale_id=sale.id
+        ):
+            raise DuplicateInvoiceNumberException(
+                f"Invoice number {command.invoice_number!r} is already used by another sale in this business."
+            )
 
         line_items = [
             SaleLineItem(

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
 import {
   CreatePurchaseRequest,
   PagedPurchasesResponse,
@@ -28,10 +29,12 @@ export function getPurchase(
 export function createPurchase(
   token: string | null,
   businessId: string,
-  body: CreatePurchaseRequest
+  body: CreatePurchaseRequest,
+  options?: IdempotencyOptions
 ): Promise<PurchaseResponse> {
   return apiFetch<PurchaseResponse>(`/businesses/${businessId}/purchases`, token, {
     method: "POST",
+    headers: idempotencyHeaders(options),
     body: JSON.stringify(body),
   });
 }
@@ -52,10 +55,12 @@ export function recordPurchasePayment(
   token: string | null,
   businessId: string,
   purchaseId: string,
-  amount: string
+  amount: string,
+  options?: IdempotencyOptions
 ): Promise<PurchaseResponse> {
   return apiFetch<PurchaseResponse>(`/businesses/${businessId}/purchases/${purchaseId}/payments`, token, {
     method: "POST",
+    headers: idempotencyHeaders(options),
     body: JSON.stringify({ amount }),
   });
 }

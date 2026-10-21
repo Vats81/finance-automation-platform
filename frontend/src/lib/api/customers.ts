@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
 import {
   CreateCustomerRequest,
   CustomerResponse,
@@ -21,10 +22,12 @@ export function getCustomer(
 export function createCustomer(
   token: string | null,
   businessId: string,
-  body: CreateCustomerRequest
+  body: CreateCustomerRequest,
+  options?: IdempotencyOptions
 ): Promise<CustomerResponse> {
   return apiFetch<CustomerResponse>(`/businesses/${businessId}/customers`, token, {
     method: "POST",
+    headers: idempotencyHeaders(options),
     body: JSON.stringify(body),
   });
 }

@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { createPurchase } from "@/lib/api/purchases";
 import { listBusinessVendors } from "@/lib/api/businessVendors";
 import { listProducts } from "@/lib/api/products";
+import { ApiError } from "@/lib/api/client";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
+import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ProductResponse } from "@/types/product";
 import { CreatePurchaseRequest } from "@/types/purchase";
@@ -17,6 +19,7 @@ export default function NewPurchasePage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
+  const submission = useSubmissionKey();
   const [vendors, setVendors] = useState<VendorResponse[]>([]);
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,9 +42,10 @@ export default function NewPurchasePage() {
     setError(null);
     try {
       const token = getAccessToken();
-      const purchase = await createPurchase(token, currentBusinessId, data);
+      const purchase = await createPurchase(token, currentBusinessId, data, { idempotencyKey: submission.key() });
       router.push(`/app/purchases/${purchase.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
       setError(err instanceof Error ? err.message : "Failed to record purchase");
       setIsSubmitting(false);
     }

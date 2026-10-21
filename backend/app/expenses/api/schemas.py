@@ -13,7 +13,7 @@ class CreateExpenseRequest(BaseModel):
     expense_date: date
     category: str = Field(min_length=1, max_length=100)
     description: str = Field(min_length=1, max_length=500)
-    amount: Decimal = Field(ge=0)
+    amount: Decimal = Field(gt=0)
     payment_method: PaymentMethod
     vendor_id: uuid.UUID | None = None
     tax: Decimal | None = None

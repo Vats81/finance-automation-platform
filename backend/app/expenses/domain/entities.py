@@ -6,7 +6,15 @@ from app.expenses.domain.events import ExpenseDetailsUpdated, ExpenseRecorded, E
 from app.expenses.domain.exceptions import ExpenseAlreadyVoidException
 from app.expenses.domain.value_objects import ExpenseStatus, PaymentMethod
 from app.shared.domain.aggregate_root import AggregateRoot
+from app.shared.domain.exceptions import ValidationException
 from app.shared.domain.value_objects import Money
+
+
+def _check_amounts(amount: Money, tax: Money | None) -> None:
+    if amount.amount <= 0:
+        raise ValidationException("Expense amount must be greater than zero")
+    if tax is not None and tax.amount < 0:
+        raise ValidationException("Tax cannot be negative")
 
 
 class Expense(AggregateRoot):
@@ -65,6 +73,7 @@ class Expense(AggregateRoot):
         is_recurring: bool = False,
         notes: str | None = None,
     ) -> "Expense":
+        _check_amounts(amount, tax)
         expense = cls(
             business_id=business_id,
             expense_date=expense_date,
@@ -102,6 +111,8 @@ class Expense(AggregateRoot):
         is_recurring: bool | None = None,
         notes: str | None = None,
     ) -> None:
+        if amount is not None or tax is not None:
+            _check_amounts(amount if amount is not None else self.amount, tax)
         changed: list[str] = []
         if category is not None and category != self.category:
             self.category = category

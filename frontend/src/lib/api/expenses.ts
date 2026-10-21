@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
 import {
   CreateExpenseRequest,
   ExpenseResponse,
@@ -21,10 +22,12 @@ export function getExpense(
 export function createExpense(
   token: string | null,
   businessId: string,
-  body: CreateExpenseRequest
+  body: CreateExpenseRequest,
+  options?: IdempotencyOptions
 ): Promise<ExpenseResponse> {
   return apiFetch<ExpenseResponse>(`/businesses/${businessId}/expenses`, token, {
     method: "POST",
+    headers: idempotencyHeaders(options),
     body: JSON.stringify(body),
   });
 }

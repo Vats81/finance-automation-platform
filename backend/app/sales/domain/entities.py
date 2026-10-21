@@ -10,7 +10,20 @@ from app.sales.domain.exceptions import (
 )
 from app.sales.domain.value_objects import SaleLineItem, SalePaymentStatus, SaleStatus
 from app.shared.domain.aggregate_root import AggregateRoot
+from app.shared.domain.exceptions import ValidationException
 from app.shared.domain.value_objects import Money
+
+
+def _check_adjustments(subtotal: Money, discount: Money, tax: Money) -> None:
+    """A negative discount or tax, or a discount larger than the subtotal,
+    produced negative sales (and a negative revenue figure on the dashboard).
+    """
+    if discount.amount < 0:
+        raise ValidationException("Discount cannot be negative")
+    if tax.amount < 0:
+        raise ValidationException("Tax cannot be negative")
+    if discount.amount > subtotal.amount:
+        raise ValidationException("Discount cannot be larger than the sale subtotal")
 
 
 class Sale(AggregateRoot):
@@ -71,6 +84,11 @@ class Sale(AggregateRoot):
     ) -> "Sale":
         if not line_items:
             raise EmptySaleException("A sale requires at least one line item")
+        _check_adjustments(
+            sum((i.line_total for i in line_items), Money(amount=Decimal("0"))),
+            discount or Money(amount=Decimal("0")),
+            tax or Money(amount=Decimal("0")),
+        )
 
         sale = cls(
             business_id=business_id,
@@ -169,6 +187,7 @@ class Sale(AggregateRoot):
         new_subtotal = Money(amount=Decimal("0"))
         for item in line_items:
             new_subtotal = new_subtotal + item.line_total
+        _check_adjustments(new_subtotal, discount, tax)
         new_total = new_subtotal - discount + tax
         if self.amount_received.cents > new_total.cents:
             raise PaymentExceedsOutstandingException(

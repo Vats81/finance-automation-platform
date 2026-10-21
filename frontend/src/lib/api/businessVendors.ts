@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
 import { CreateVendorRequest, PagedVendorsResponse, UpdateVendorRequest, VendorResponse } from "@/types/vendor";
 
 // Hits the SMB product's tenant-scoped /businesses/{businessId}/vendors
@@ -21,10 +22,12 @@ export function getBusinessVendor(
 export function createBusinessVendor(
   token: string | null,
   businessId: string,
-  body: CreateVendorRequest
+  body: CreateVendorRequest,
+  options?: IdempotencyOptions
 ): Promise<VendorResponse> {
   return apiFetch<VendorResponse>(`/businesses/${businessId}/vendors`, token, {
     method: "POST",
+    headers: idempotencyHeaders(options),
     body: JSON.stringify(body),
   });
 }
