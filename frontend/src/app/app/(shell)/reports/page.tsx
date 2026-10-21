@@ -264,9 +264,13 @@ export default function ReportsPage() {
           </>
         ) : (
           <p className="text-sm text-slate-500">
-            Not enough data yet — import sales or expenses from the{" "}
-            <Link href="/app/data-upload" className="text-brand-600 underline">
-              Data Upload Centre
+            Not enough data yet — record a{" "}
+            <Link href="/app/sales/new" className="text-brand-600 underline">
+              sale
+            </Link>{" "}
+            or an{" "}
+            <Link href="/app/expenses/new" className="text-brand-600 underline">
+              expense
             </Link>{" "}
             to see a report here.
           </p>

@@ -278,9 +278,13 @@ export default function DashboardPage() {
           <RevenueExpenseChart trend={trend} />
         ) : (
           <p className="text-sm text-slate-500">
-            Not enough data yet — import sales or expenses from the{" "}
-            <Link href="/app/data-upload" className="text-brand-600 underline">
-              Data Upload Centre
+            Not enough data yet — record a{" "}
+            <Link href="/app/sales/new" className="text-brand-600 underline">
+              sale
+            </Link>{" "}
+            or an{" "}
+            <Link href="/app/expenses/new" className="text-brand-600 underline">
+              expense
             </Link>{" "}
             to see a trend here.
           </p>
@@ -342,11 +346,19 @@ export default function DashboardPage() {
       <Card className="mt-6">
         <h2 className="mb-2 text-sm font-semibold">Get started</h2>
         <p className="text-sm text-slate-600">
-          Import your sales, expenses, or inventory data from the{" "}
+          Record your first{" "}
+          <Link href="/app/sales/new" className="text-brand-600 underline">
+            sale
+          </Link>{" "}
+          or{" "}
+          <Link href="/app/expenses/new" className="text-brand-600 underline">
+            expense
+          </Link>
+          , or bring in customers, vendors, products or expenses from a CSV file via the{" "}
           <Link href="/app/data-upload" className="text-brand-600 underline">
             Data Upload Centre
-          </Link>{" "}
-          to see these numbers update, or head to{" "}
+          </Link>
+          , to see these numbers update — or head to{" "}
           <Link href="/app/reports" className="text-brand-600 underline">
             Reports
           </Link>{" "}
