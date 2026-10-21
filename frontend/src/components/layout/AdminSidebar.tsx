@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/admin/businesses", label: "Businesses" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/contact-requests", label: "Demo requests" },
+  { href: "/admin/beta-waitlist", label: "Beta waitlist" },
 ];
 
 /**

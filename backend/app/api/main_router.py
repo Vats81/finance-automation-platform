@@ -14,6 +14,8 @@ def include_context_routers() -> None:
     from app.approvals.api.routes import router as approvals_router
     from app.audit.api.business_routes import router as business_audit_router
     from app.audit.api.routes import router as audit_router
+    from app.beta_waitlist.api.routes import admin_router as beta_waitlist_admin_router
+    from app.beta_waitlist.api.routes import router as beta_waitlist_router
     from app.business.api.billing_routes import router as billing_router
     from app.business.api.billing_routes import webhook_router as billing_webhook_router
     from app.business.api.routes import router as business_router
@@ -44,6 +46,8 @@ def include_context_routers() -> None:
     api_router.include_router(billing_router)
     api_router.include_router(billing_webhook_router)
     api_router.include_router(contact_router)
+    api_router.include_router(beta_waitlist_router)
+    api_router.include_router(beta_waitlist_admin_router)
     api_router.include_router(customers_router)
     api_router.include_router(dashboard_router)
     api_router.include_router(data_import_router)
