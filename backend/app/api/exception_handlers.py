@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -53,7 +54,12 @@ def register_exception_handlers(app: FastAPI) -> None:
             title="Request Validation Error",
             detail="One or more fields failed validation.",
             instance=str(request.url.path),
-            extra={"errors": exc.errors()},
+            # jsonable_encoder, not the raw list: pydantic's details for a
+            # violated Decimal constraint contain a Decimal (ctx={'ge':
+            # Decimal('0')}), which JSONResponse can't serialise — so the
+            # error response itself used to crash and every negative amount
+            # came back as a 500 instead of a clear 422.
+            extra={"errors": jsonable_encoder(exc.errors())},
         )
 
     @app.exception_handler(Exception)

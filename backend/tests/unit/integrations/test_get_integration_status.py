@@ -112,11 +112,19 @@ async def test_twilio_sandbox_number_is_reported_as_limited() -> None:
         assert "Sandbox" in status.whatsapp.detail
 
 
-async def test_twilio_with_a_business_number_is_fully_connected() -> None:
-    status = GetIntegrationStatusUseCase(
-        Settings(WHATSAPP_PROVIDER="twilio", TWILIO_WHATSAPP_FROM="+919876543210")
-    ).execute()
+async def test_twilio_with_any_other_number_is_still_limited() -> None:
+    # Regression test from a QA report: only the sandbox number used to be
+    # flagged, so a different configured sender showed a plain "Connected" /
+    # "Sending real WhatsApp messages". The limit isn't about the number —
+    # this app has no template support, so with ANY sender WhatsApp only
+    # delivers to people who messaged within the last 24 hours.
+    for number in ("+919876543210", "+447700900123", "whatsapp:+12025550123"):
+        status = GetIntegrationStatusUseCase(
+            Settings(WHATSAPP_PROVIDER="twilio", TWILIO_WHATSAPP_FROM=number)
+        ).execute()
 
-    assert status.whatsapp.connected is True
-    assert status.whatsapp.limited is False
+        assert status.whatsapp.connected is True, number
+        assert status.whatsapp.limited is True, number
+        assert "24" in status.whatsapp.detail
+        assert "real WhatsApp messages" not in status.whatsapp.detail
 

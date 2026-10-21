@@ -86,7 +86,19 @@ class GetIntegrationStatusUseCase:
                     "hours of their last message to the sandbox. Sending to real customers needs an "
                     "approved WhatsApp Business sender and message templates.",
                 )
-            return ProviderStatus(connected=True, detail="Sending real WhatsApp messages via Twilio.")
+            # Limited for ANY Twilio sender, not just the sandbox number: this
+            # app sends plain text and has no support for approved message
+            # templates, and WhatsApp only allows plain-text messages to
+            # people who messaged the number within the last 24 hours. (A
+            # previous version only flagged Twilio's sandbox number, so a
+            # different configured number showed a misleading "Connected".)
+            return ProviderStatus(
+                connected=True,
+                limited=True,
+                detail="Sending via Twilio. Messages are plain text only (no approved templates), so "
+                "WhatsApp delivers them only to people who messaged this number within the last 24 "
+                "hours; it can't start a conversation with a new contact.",
+            )
         return ProviderStatus(
             connected=False,
             detail="Not configured — set WHATSAPP_PROVIDER=twilio along with TWILIO_ACCOUNT_SID, "

@@ -65,6 +65,38 @@ async def test_successful_invite_creates_active_membership_and_sends_email() -> 
     assert email_sender.sent[0]["to"] == "teammate@example.com"
 
 
+class _FailingEmailSender(FakeEmailSender):
+    async def send(self, *, to, subject, body, attachments=None) -> None:  # type: ignore[override]
+        raise RuntimeError("email provider rejected the recipient")
+
+
+async def test_invite_succeeds_even_when_the_notification_email_fails() -> None:
+    # Regression test, found by a live QA pass: the membership is already
+    # committed when the email is sent, and an unguarded send turned any
+    # provider failure (Resend's sandbox only delivers to the account owner)
+    # into a 500 — an error response for an invite that had in fact worked.
+    uow = FakeUnitOfWork()
+    owner_id = uuid.uuid4()
+    business = await RegisterBusinessUseCase(uow).execute(
+        RegisterBusinessCommand(owner_user_id=owner_id, name="Acme")
+    )
+    invitee = seed_user(uow, "teammate@example.com")
+
+    membership = await InviteTeamMemberUseCase(uow, _FailingEmailSender()).execute(
+        InviteTeamMemberCommand(
+            business_id=business.id,
+            invited_by_user_id=owner_id,
+            email="teammate@example.com",
+            role=BusinessRole.VIEWER,
+        )
+    )
+
+    assert membership.user_id == invitee.id
+    assert membership.is_active is True
+    members = await uow.business_memberships.list_for_business(business.id)
+    assert any(m.user_id == invitee.id and m.is_active for m in members)
+
+
 async def test_invite_blocked_at_plan_member_limit() -> None:
     uow = FakeUnitOfWork()
     owner_id = uuid.uuid4()

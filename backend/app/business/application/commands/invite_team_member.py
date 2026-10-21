@@ -1,3 +1,4 @@
+import logging
 import uuid
 from dataclasses import dataclass
 
@@ -12,6 +13,8 @@ from app.business.domain.exceptions import (
 )
 from app.business.domain.value_objects import BusinessRole
 from app.shared.application.ports import IEmailSender
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -66,12 +69,23 @@ class InviteTeamMemberUseCase:
         self._uow.business_memberships.add(membership)
         await self._uow.commit()
 
-        await self._email_sender.send(
-            to=command.email,
-            subject=f"You've been added to {business.name} on FinanceAI",
-            body=(
-                f"You've been added to {business.name} as a {command.role.value}. "
-                "Log in to FinanceAI to get started."
-            ),
-        )
+        # The membership is already committed, so a notification failure must
+        # not turn a successful invite into an error. (It did: Resend's
+        # sandbox only delivers to the account owner, so inviting anyone else
+        # raised here, the API returned 500, and the UI said "Failed to
+        # invite" for someone who had in fact been added.) The invitee still
+        # has access; they just aren't emailed.
+        try:
+            await self._email_sender.send(
+                to=command.email,
+                subject=f"You've been added to {business.name} on FinanceAI",
+                body=(
+                    f"You've been added to {business.name} as a {command.role.value}. "
+                    "Log in to FinanceAI to get started."
+                ),
+            )
+        except Exception:  # noqa: BLE001 - email is best-effort once the invite is saved
+            logger.exception(
+                "Invited %s to business %s but the notification email failed.", command.email, business.id
+            )
         return membership
