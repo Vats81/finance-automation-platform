@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import date
+from decimal import Decimal
 from typing import Any
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
@@ -10,6 +11,7 @@ from app.dashboard.application.queries.get_dashboard_summary import (
     GetDashboardSummaryUseCase,
 )
 from app.expenses.application.queries.list_expenses import ListExpensesQuery, ListExpensesUseCase
+from app.expenses.domain.value_objects import ExpenseStatus
 from app.inventory.application.queries.list_products import ListProductsQuery, ListProductsUseCase
 from app.purchases.application.queries.list_outstanding_purchases import (
     ListOutstandingPurchasesQuery,
@@ -32,15 +34,32 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
     {
         "name": "get_business_summary",
         "description": (
-            "Get total revenue, total expenses, net profit, and outstanding receivables for a date range."
+            "Get total revenue (sales), total expenses, net profit, and outstanding receivables. "
+            "These are computed exactly by the system; report them verbatim. If the user does not name a "
+            "period, OMIT both dates to get all-time totals (and say the figures are all-time)."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "start_date": {"type": "string", "description": "ISO date, e.g. 2026-07-01"},
-                "end_date": {"type": "string", "description": "ISO date, e.g. 2026-07-31"},
+                "start_date": {"type": "string", "description": "Optional ISO date, e.g. 2026-07-01"},
+                "end_date": {"type": "string", "description": "Optional ISO date, e.g. 2026-07-31"},
             },
-            "required": ["start_date", "end_date"],
+        },
+    },
+    {
+        "name": "get_top_expenses",
+        "description": (
+            "Get the largest expenses (sorted by amount, computed exactly by the system) and total "
+            "spending per category. Use this for 'biggest expense' / 'where does my money go' questions. "
+            "Omit the dates for all-time."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "description": "How many top expenses, default 5"},
+                "start_date": {"type": "string", "description": "Optional ISO date"},
+                "end_date": {"type": "string", "description": "Optional ISO date"},
+            },
         },
     },
     {
@@ -70,9 +89,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "description": "List the most recently recorded expenses.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "description": "Max number of expenses, default 10"}
-            },
+            "properties": {"limit": {"type": "integer", "description": "Max number of expenses, default 10"}},
         },
     },
     {
@@ -88,17 +105,24 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
 ]
 
 
+def _parse_date(value: str | None) -> date | None:
+    return date.fromisoformat(value) if value else None
+
+
 async def _handle_get_business_summary(
-    uow: AppUnitOfWork, business_id: uuid.UUID, *, start_date: str, end_date: str
+    uow: AppUnitOfWork, business_id: uuid.UUID, *, start_date: str | None = None, end_date: str | None = None
 ) -> dict[str, Any]:
     summary = await GetDashboardSummaryUseCase(uow).execute(
         GetDashboardSummaryQuery(
-            business_id=business_id,
-            start_date=date.fromisoformat(start_date),
-            end_date=date.fromisoformat(end_date),
+            business_id=business_id, start_date=_parse_date(start_date), end_date=_parse_date(end_date)
         )
     )
     return {
+        "period": (
+            f"{start_date or 'beginning'} to {end_date or 'today'}"
+            if (start_date or end_date)
+            else "all time"
+        ),
         "total_revenue": str(summary.total_revenue),
         "total_expenses": str(summary.total_expenses),
         "net_profit": str(summary.net_profit),
@@ -184,6 +208,49 @@ async def _handle_list_recent_expenses(
     }
 
 
+async def _handle_get_top_expenses(
+    uow: AppUnitOfWork,
+    business_id: uuid.UUID,
+    *,
+    limit: int = 5,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict[str, Any]:
+    start, end = _parse_date(start_date), _parse_date(end_date)
+    expenses, _ = await uow.expenses.list_for_business(business_id, offset=0, limit=10_000)
+    live = [
+        e
+        for e in expenses
+        if e.status != ExpenseStatus.VOID
+        and (start is None or e.expense_date >= start)
+        and (end is None or e.expense_date <= end)
+    ]
+    ranked = sorted(live, key=lambda e: e.total_amount.amount, reverse=True)
+    by_category: dict[str, Decimal] = {}
+    for e in live:
+        by_category[e.category] = by_category.get(e.category, Decimal("0")) + e.total_amount.amount
+    return {
+        "period": f"{start_date or 'beginning'} to {end_date or 'today'}"
+        if (start_date or end_date)
+        else "all time",
+        "expense_count": len(live),
+        "total_spent": str(sum((e.total_amount.amount for e in live), Decimal("0"))),
+        "top_expenses": [
+            {
+                "expense_date": e.expense_date.isoformat(),
+                "category": e.category,
+                "description": e.description,
+                "total_amount": str(e.total_amount.amount),
+            }
+            for e in ranked[: max(1, min(limit, 50))]
+        ],
+        "by_category": [
+            {"category": name, "total": str(total)}
+            for name, total in sorted(by_category.items(), key=lambda item: item[1], reverse=True)
+        ],
+    }
+
+
 async def _handle_list_customers(
     uow: AppUnitOfWork, business_id: uuid.UUID, *, limit: int = 20
 ) -> dict[str, Any]:
@@ -225,5 +292,6 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "list_outstanding_purchases": _handle_list_outstanding_purchases,
     "list_low_stock_products": _handle_list_low_stock_products,
     "list_recent_expenses": _handle_list_recent_expenses,
+    "get_top_expenses": _handle_get_top_expenses,
     "list_customers": _handle_list_customers,
 }

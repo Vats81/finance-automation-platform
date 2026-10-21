@@ -1,6 +1,7 @@
 import io
 from datetime import date, timedelta
 from decimal import Decimal
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -18,7 +19,9 @@ _MONTH_ABBR = [name[:3] for name in _MONTH_NAMES]
 
 
 def _format_currency(amount: Decimal) -> str:
-    return f"${amount:,.2f}"
+    """-$5.00, not $-5.00, for a loss."""
+    sign = "-" if amount < 0 else ""
+    return f"{sign}${abs(amount):,.2f}"
 
 
 def _format_short_date(value: date, *, with_year: bool) -> str:
@@ -40,7 +43,13 @@ def _format_period_label(period_start: date, granularity: Granularity) -> str:
     return f"{start_label} - {end_label}"
 
 
-def generate_profit_loss_pdf(business_name: str, trend: DashboardTrend) -> bytes:
+def generate_profit_loss_pdf(
+    business_name: str,
+    trend: DashboardTrend,
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> bytes:
     """Renders the same Profit & Loss breakdown as the Reports page's
     on-screen table (frontend/src/app/app/(shell)/reports/page.tsx) as a
     downloadable PDF — same period-label formatting logic, a third copy per
@@ -93,9 +102,16 @@ def generate_profit_loss_pdf(business_name: str, trend: DashboardTrend) -> bytes
         )
     )
 
+    # Say exactly what was exported, so a printed copy can be checked against
+    # the dashboard for the same business and dates. Money is USD-only today.
+    scope = "Currency: USD"
+    if start_date and end_date:
+        period = f"Period: {start_date.isoformat()} to {end_date.isoformat()}"
+        scope = f"{period}  |  Granularity: {trend.granularity}  |  {scope}"
     elements = [
-        Paragraph(business_name, styles["Title"]),
+        Paragraph(escape(business_name), styles["Title"]),
         Paragraph("Profit &amp; Loss", styles["Heading2"]),
+        Paragraph(scope, styles["Normal"]),
         Spacer(1, 0.25 * inch),
         table,
     ]

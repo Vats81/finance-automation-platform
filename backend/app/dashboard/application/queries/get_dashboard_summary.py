@@ -68,7 +68,7 @@ class GetDashboardSummaryUseCase:
                 if sale.status != SaleStatus.VOID
                 and _in_range(sale.invoice_date, query.start_date, query.end_date)
             ),
-            Decimal("0"),
+            Decimal("0.00"),
         )
         total_expenses = sum(
             (
@@ -77,7 +77,7 @@ class GetDashboardSummaryUseCase:
                 if expense.status != ExpenseStatus.VOID
                 and _in_range(expense.expense_date, query.start_date, query.end_date)
             ),
-            Decimal("0"),
+            Decimal("0.00"),
         )
         outstanding_receivables = sum(
             (
@@ -85,7 +85,7 @@ class GetDashboardSummaryUseCase:
                 for sale in sales
                 if sale.status != SaleStatus.VOID and sale.payment_status != SalePaymentStatus.PAID
             ),
-            Decimal("0"),
+            Decimal("0.00"),
         )
 
         return DashboardSummary(

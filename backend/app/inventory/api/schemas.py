@@ -14,9 +14,9 @@ class CreateProductRequest(BaseModel):
     selling_price: Decimal = Field(ge=0)
     purchase_cost: Decimal = Field(ge=0)
     category: str | None = None
-    current_quantity: Decimal = Field(default=Decimal("0"), ge=0)
-    minimum_stock_level: Decimal = Field(default=Decimal("0"), ge=0)
-    reorder_quantity: Decimal = Field(default=Decimal("0"), ge=0)
+    current_quantity: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=4)
+    minimum_stock_level: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=4)
+    reorder_quantity: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=4)
     unit_of_measurement: str = "unit"
     vendor_id: uuid.UUID | None = None
 
@@ -31,7 +31,7 @@ class UpdateProductRequest(BaseModel):
 
 
 class AdjustStockRequest(BaseModel):
-    delta: Decimal
+    delta: Decimal = Field(decimal_places=4)
     reason: str = Field(min_length=1, max_length=255)
 
 

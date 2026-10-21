@@ -47,7 +47,9 @@ class SendReportEmailUseCase:
                 granularity=command.granularity,
             )
         )
-        pdf_bytes = generate_profit_loss_pdf(business.name, trend)
+        pdf_bytes = generate_profit_loss_pdf(
+            business.name, trend, start_date=command.start_date, end_date=command.end_date
+        )
 
         await self._email_sender.send(
             to=command.recipient_email,
