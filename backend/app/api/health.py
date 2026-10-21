@@ -2,11 +2,12 @@ import os
 from datetime import datetime, timezone
 
 import redis.asyncio as redis
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.db_probe import probe_database_endpoint
 from app.bootstrap.container import get_db_session
 from app.config.settings import Settings, get_settings
 
@@ -21,6 +22,7 @@ _STARTED_AT = datetime.now(timezone.utc).isoformat(timespec="seconds")
 async def health_check(
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
+    probe: str | None = Query(default=None, description="'db' adds a protocol-level database probe"),
 ) -> JSONResponse:
     """Liveness/readiness probe. Postgres is always critical: if it can't be
     reached the API can't serve anything, so that is 503 "unhealthy". Redis
@@ -58,11 +60,19 @@ async def health_check(
     else:
         status, status_code = "healthy", 200
 
+    content: dict[str, object] = {
+        "status": status,
+        "checks": checks,
+    }
+    if probe == "db":
+        # Opt-in (it opens extra connections): where exactly does reaching
+        # the database fail? See app/api/db_probe.py.
+        content["db_probe"] = await probe_database_endpoint(settings.database_url)
+
     return JSONResponse(
         status_code=status_code,
         content={
-            "status": status,
-            "checks": checks,
+            **content,
             # Which build is actually running, and what TLS setting this
             # process actually read. When a config change "doesn't work",
             # these say whether the new build is live and whether it saw the

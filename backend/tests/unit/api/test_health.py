@@ -45,6 +45,7 @@ def _client(
     app.dependency_overrides[get_db_session] = lambda: _Session(postgres_ok)
     app.dependency_overrides[get_settings] = lambda: SimpleNamespace(
         redis_url="redis://x",
+        database_url="postgresql+asyncpg://u:p@dpg-testhost-a/db",
         redis_required=redis_required,
         database_ssl="",
         effective_database_ssl="require",
@@ -108,4 +109,24 @@ def test_postgres_error_names_the_exception_type(monkeypatch: pytest.MonkeyPatch
     body = _client(monkeypatch, postgres_ok=False, redis_ok=True, redis_required=False).get("/health").json()
 
     assert body["checks"]["postgres"].startswith("error: ConnectionError: ")
+
+
+def test_probe_is_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    async def fake_probe(url: str, **_kwargs) -> dict[str, str]:
+        calls.append(url)
+        return {"tcp": "ok"}
+
+    monkeypatch.setattr(health_module, "probe_database_endpoint", fake_probe)
+    client = _client(monkeypatch, postgres_ok=False, redis_ok=True, redis_required=False)
+
+    plain = client.get("/health").json()
+    probed = client.get("/health", params={"probe": "db"}).json()
+
+    assert "db_probe" not in plain
+    assert calls == [calls[0]] and len(calls) == 1  # only the opted-in request probed
+    assert probed["db_probe"] == {"tcp": "ok"}
+    # The status contract is unchanged by probing.
+    assert probed["status"] == "unhealthy"
 
