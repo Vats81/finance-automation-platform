@@ -130,3 +130,15 @@ def test_probe_is_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
     # The status contract is unchanged by probing.
     assert probed["status"] == "unhealthy"
 
+
+def test_ping_is_alive_without_touching_the_database(monkeypatch: pytest.MonkeyPatch) -> None:
+    # /ping exists so uptime monitors don't run a query every few minutes
+    # (which would keep a scale-to-zero database awake all month). It must
+    # answer 200 even when the database is completely down.
+    client = _client(monkeypatch, postgres_ok=False, redis_ok=False, redis_required=True)
+
+    response = client.get("/ping")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+

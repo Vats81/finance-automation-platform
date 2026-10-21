@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
 
+from app.config.database_url import normalize_database_urls
+
 
 class Settings(BaseSettings):
     """Central application configuration, sourced from environment variables (.env)."""
@@ -160,6 +162,11 @@ class Settings(BaseSettings):
     # --- One-time demo-account seeding (free-tier hosts with no shell access) ---
     # Blank by default, which disables the endpoint entirely (see api/seed.py).
     seed_secret: str = Field(default="", alias="SEED_SECRET")
+    # Optional fixed passwords for the seeded accounts (see
+    # shared/application/seed_demo_data.py). Blank = a random password per
+    # account, returned once by the seed call. Never commit real values.
+    seed_admin_password: str = Field(default="", alias="SEED_ADMIN_PASSWORD")
+    seed_user_password: str = Field(default="", alias="SEED_USER_PASSWORD")
 
     # --- Stripe billing ---
     stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
@@ -175,6 +182,24 @@ class Settings(BaseSettings):
     # Blank by default — no error tracking at all until a real DSN is set,
     # same swap-by-config idea as every other optional integration here.
     sentry_dsn: str = Field(default="", alias="SENTRY_DSN")
+
+    @model_validator(mode="after")
+    def _normalize_database_urls(self) -> "Settings":
+        """Accept a provider's connection string verbatim in DATABASE_URL
+        (see app/config/database_url.py). DATABASE_URL_SYNC is then optional:
+        derived from DATABASE_URL unless set explicitly.
+        """
+        try:
+            async_url, sync_url = normalize_database_urls(self.database_url)
+            self.database_url = async_url
+            if "database_url_sync" in self.model_fields_set:
+                _, sync_url = normalize_database_urls(self.database_url_sync)
+            self.database_url_sync = sync_url
+        except ArgumentError:
+            # Unparseable: leave it alone so the failure surfaces where the
+            # URL is actually used, with SQLAlchemy's own message.
+            pass
+        return self
 
     @model_validator(mode="after")
     def _dev_auth_only_in_local(self) -> "Settings":
@@ -201,7 +226,8 @@ class Settings(BaseSettings):
             host = make_url(self.database_url).host or ""
         except ArgumentError:
             return ""
-        if host.endswith(".render.com"):
+        # Hosted providers that only accept TLS connections.
+        if host.endswith((".render.com", ".neon.tech")):
             return "require"
         return ""
 

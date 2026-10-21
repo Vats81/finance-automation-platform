@@ -18,6 +18,18 @@ router = APIRouter(tags=["health"])
 _STARTED_AT = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+@router.get("/ping")
+async def ping() -> dict[str, str]:
+    """Liveness only: answers if the process is up, and deliberately does
+    NOT touch the database. Point uptime monitors / keep-alive pings here.
+    /health runs a query, and on a database that scales to zero when idle
+    (Neon's free plan suspends after 5 minutes) a monitor hitting /health
+    every few minutes would keep the database awake around the clock and use
+    up its monthly compute allowance for nothing.
+    """
+    return {"status": "ok"}
+
+
 @router.get("/health")
 async def health_check(
     session: AsyncSession = Depends(get_db_session),

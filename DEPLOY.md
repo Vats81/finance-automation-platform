@@ -25,11 +25,26 @@ you already.
 Create an empty repo on GitHub (any visibility), then hand the URL back so it
 can be pushed.
 
-## 2. Backend + Postgres on Render
+## 2. Postgres on Neon, backend on Render
 
-1. Create a free Render account.
-2. **New → PostgreSQL** (free plan). Once it's up, open it and copy the
-   **"External Database URL"** (looks like `postgres://user:pass@host/db`).
+**Use Neon (or another host with a permanent free tier) for the database, not
+Render's own free Postgres.** Render's free Postgres expires after 30 days and
+is then deleted, which means rebuilding the database and re-seeding every
+month, and a free instance eventually goes dark without warning (this took the
+backend offline for weeks in October 2026).
+
+1. Create a free [Neon](https://neon.com) account (no credit card) and a
+   project. Pick the AWS region nearest your Render service (Render's Oregon
+   = AWS `us-west-2`).
+2. Click **Connect** on the project and copy the **direct** connection string
+   (untick "Connection pooling" so the host has no `-pooler` in it). Paste it
+   as-is — scheme and TLS parameters are converted automatically. Neon's free
+   plan is permanent, scales to zero after 5 idle minutes (the first query
+   after that takes about a second), and includes 1 GB and 100 compute
+   hours/month. Don't point an uptime monitor at `/health` — see section 10.
+   *(Alternative: Render Postgres — **New → PostgreSQL**, then its Internal
+   Database URL if the backend is in the same region — but it expires every
+   30 days.)*
 3. **New → Web Service**, connect the GitHub repo. On the creation form,
    explicitly set **Language** to **Docker** (don't let it auto-detect —
    it can guess wrong on a monorepo). **Root Directory**: `backend`.
@@ -52,10 +67,10 @@ can be pushed.
    |---|---|
    | `APP_ENV` | `production` |
    | `AUTH_DEV_MODE` | `false` |
-   | `JWT_SECRET_KEY` | `f7fbc779f6300013e245e86060058bd296f1b6219c5aa35a4a66e5ebc6053264` |
-   | `DATABASE_URL` | the External Database URL from step 2, with `postgres://` replaced by `postgresql+asyncpg://` |
-   | `DATABASE_URL_SYNC` | the same URL, with `postgres://` replaced by `postgresql+psycopg2://` |
-   | `DATABASE_SSL` | *(optional)* TLS mode for the database. Leave unset on Render: Render's external hostnames (`*.render.com`) automatically get `require`; the short internal `dpg-...` name keeps the driver default. Set it only to override (e.g. `disable`). `/health` shows the value in effect. |
+   | `JWT_SECRET_KEY` | a long random string you generate yourself: `python -c "import secrets; print(secrets.token_hex(32))"`. **Never put the real value in the repo or in this document.** (An earlier version of this file contained a real key, and it remains in the git history — any deployment that used it must generate a new one; changing it signs everyone out.) |
+   | `DATABASE_URL` | the connection string exactly as the provider gives it (e.g. Neon's `postgresql://user:pass@ep-….neon.tech/db?sslmode=require`). The `postgresql+asyncpg://` scheme and the driver-specific TLS parameter are set for you. |
+   | `DATABASE_URL_SYNC` | *(leave unset)* — derived from `DATABASE_URL` for migrations. Set it only if migrations must use a different URL. |
+   | `DATABASE_SSL` | *(optional)* TLS mode for the database. Leave unset: `*.neon.tech` and `*.render.com` hosts automatically get `require`; Render's short internal `dpg-...` names and local Postgres keep the driver default. Set it only to override (e.g. `disable`). `/health` shows the value in effect. |
    | `CORS_ALLOWED_ORIGINS` | leave as `http://localhost:3000` for now — comes back in step 4 below |
    | `FRONTEND_BASE_URL` | same, leave as-is for now |
 
@@ -97,7 +112,9 @@ Render's **free** plan doesn't include Shell access, so
    ```
    https://<your-backend-url>/internal/seed-demo-users?secret=<your-secret>
    ```
-   It returns JSON listing which accounts were created.
+   It returns JSON listing which accounts were created **and the password of
+   each one — shown only this once, so save it** (e.g. in a password
+   manager) before closing the tab.
 4. Optional but recommended: blank out `SEED_SECRET` again afterward to
    lock the endpoint back down.
 
@@ -105,16 +122,20 @@ Render's **free** plan doesn't include Shell access, so
 run from the Shell tab does the same thing and never needs the endpoint at all.)
 
 This creates the accounts below, pre-verified. Safe to re-run — it skips
-whatever already exists.
+whatever already exists (and so doesn't show the password of an account
+created on an earlier run).
 
-| Email | Password | Role |
-|---|---|---|
-| `admin@financeai.app` | `Admin@FinanceAI2026!` | Platform admin (`/admin`) |
-| `friend1@financeai-test.app` | `Friend1@Test2026!` | Regular user |
-| `friend2@financeai-test.app` | `Friend2@Test2026!` | Regular user |
-| `friend3@financeai-test.app` | `Friend3@Test2026!` | Regular user |
-| `friend4@financeai-test.app` | `Friend4@Test2026!` | Regular user |
-| `friend5@financeai-test.app` | `Friend5@Test2026!` | Regular user |
+| Email | Role |
+|---|---|
+| `admin@financeai.app` | Platform admin (`/admin`) |
+| `friend1@financeai-test.app` … `friend5@financeai-test.app` | Regular users |
+
+**Passwords are never written down in this repository** — it's public, and
+these accounts exist on the live site (one is the platform admin). Each
+account gets a random password, returned once by the seed call. To choose
+them yourself instead, set `SEED_ADMIN_PASSWORD` (the admin) and/or
+`SEED_USER_PASSWORD` (one shared value for the friend accounts) in Render
+before seeding. Hand each friend their own login privately.
 
 Each friend account lands on the onboarding screen on first login and creates
 their own business from there — that flow is worth testing too, so it isn't
@@ -285,10 +306,12 @@ so that doesn't happen. It needs no secrets.
   keep-alive needs a gap under ~15 minutes, so treat this as a backup. For
   a dependable one, add a free external uptime monitor (e.g. UptimeRobot or
   cron-job.org, 5-minute interval) pointed at
-  `https://<your-backend>.onrender.com/health`. A healthy or degraded
-  backend answers 200, so the monitor will only report "down" when it
-  really is (503 = database unreachable, no answer = the service isn't
-  running).
+  `https://<your-backend>.onrender.com/ping`. **Use `/ping`, not `/health`**:
+  `/ping` only checks the process is up, whereas `/health` runs a database
+  query, and a monitor hitting it every 5 minutes would keep a scale-to-zero
+  database (Neon's free plan) awake all month and burn its compute allowance.
+  Use `/health` by hand when you want to know whether the database is
+  reachable.
 - Always-on consumes Render's free monthly instance hours (750h; one
   service 24/7 is ~744h). Those hours are shared across all free web
   services on the account — a second always-on service would exceed them.
