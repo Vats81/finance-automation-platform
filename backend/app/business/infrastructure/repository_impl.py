@@ -1,11 +1,12 @@
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.business.domain.entities import Business, BusinessMembership
 from app.business.domain.exceptions import BusinessNotFoundException
 from app.business.domain.repository import IBusinessMembershipRepository, IBusinessRepository
+from app.business.domain.value_objects import MembershipStatus
 from app.business.infrastructure.mappers import (
     apply_business_domain_to_existing_model,
     apply_membership_domain_to_existing_model,
@@ -70,12 +71,23 @@ class SqlAlchemyBusinessMembershipRepository(IBusinessMembershipRepository):
     async def get_for_user_and_business(
         self, *, user_id: uuid.UUID, business_id: uuid.UUID
     ) -> BusinessMembership | None:
-        stmt = select(BusinessMembershipModel).where(
-            BusinessMembershipModel.user_id == user_id,
-            BusinessMembershipModel.business_id == business_id,
+        # Prefer the active row. Older data can hold a removed row and a
+        # re-invited one for the same pair; scalar_one_or_none() raised on
+        # that and turned every request from the user into a 500.
+        stmt = (
+            select(BusinessMembershipModel)
+            .where(
+                BusinessMembershipModel.user_id == user_id,
+                BusinessMembershipModel.business_id == business_id,
+            )
+            .order_by(
+                case((BusinessMembershipModel.status == MembershipStatus.ACTIVE.value, 0), else_=1),
+                BusinessMembershipModel.joined_at.desc(),
+            )
+            .limit(1)
         )
         result = await self._session.execute(stmt)
-        model = result.scalar_one_or_none()
+        model = result.scalars().first()
         return membership_model_to_domain(model) if model else None
 
     async def list_for_user(self, user_id: uuid.UUID) -> list[BusinessMembership]:

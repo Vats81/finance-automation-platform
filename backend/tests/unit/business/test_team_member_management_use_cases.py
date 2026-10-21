@@ -230,3 +230,28 @@ async def test_a_removed_member_can_be_invited_again_and_gets_access_back() -> N
 
     assert again.is_active
     assert again.role == BusinessRole.ACCOUNTANT
+
+
+async def test_reinviting_a_removed_member_reuses_their_membership_row() -> None:
+    # A second row for the same (user, business) made the lookup ambiguous and
+    # every request from that user a 500 in production.
+    uow = FakeUnitOfWork()
+    business_id, owner_id, membership_id = await setup_business_with_member(uow)
+    await RemoveTeamMemberUseCase(uow).execute(
+        RemoveTeamMemberCommand(business_id=business_id, membership_id=membership_id)
+    )
+
+    again = await InviteTeamMemberUseCase(uow, FakeEmailSender()).execute(
+        InviteTeamMemberCommand(
+            business_id=business_id,
+            invited_by_user_id=owner_id,
+            email="teammate@example.com",
+            role=BusinessRole.VIEWER,
+        )
+    )
+
+    assert again.id == membership_id
+    rows = [m for m in await uow.business_memberships.list_for_business(business_id) if m.id == membership_id]
+    assert len(rows) == 1
+    all_for_business = await uow.business_memberships.list_for_business(business_id)
+    assert len(all_for_business) == 2  # owner + the one teammate, no duplicate

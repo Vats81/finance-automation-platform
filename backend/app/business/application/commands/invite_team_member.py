@@ -65,13 +65,22 @@ class InviteTeamMemberUseCase:
         if any(m.user_id == invitee.id and m.is_active for m in existing_members):
             raise UserAlreadyMemberException(f"{command.email} is already a member of this business.")
 
-        membership = BusinessMembership.invite(
-            business_id=business.id,
-            user_id=invitee.id,
-            role=command.role,
-            invited_by_user_id=command.invited_by_user_id,
+        previous = await self._uow.business_memberships.get_for_user_and_business(
+            user_id=invitee.id, business_id=business.id
         )
-        self._uow.business_memberships.add(membership)
+        if previous is not None:
+            # A removed member coming back: reuse their row (one per pair).
+            previous.reinstate(role=command.role, invited_by_user_id=command.invited_by_user_id)
+            await self._uow.business_memberships.update(previous)
+            membership = previous
+        else:
+            membership = BusinessMembership.invite(
+                business_id=business.id,
+                user_id=invitee.id,
+                role=command.role,
+                invited_by_user_id=command.invited_by_user_id,
+            )
+            self._uow.business_memberships.add(membership)
         await self._uow.commit()
 
         # The membership is already committed, so a notification failure must

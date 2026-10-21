@@ -241,6 +241,25 @@ class BusinessMembership(AggregateRoot):
         )
         return membership
 
+    def reinstate(self, *, role: BusinessRole, invited_by_user_id: uuid.UUID) -> None:
+        """Brings a removed member back by reusing their existing row, so a
+        user never has two memberships in one business (a second row made the
+        (user, business) lookup ambiguous and every request from that user a
+        500).
+        """
+        self.status = MembershipStatus.ACTIVE
+        self.role = role
+        self.invited_by_user_id = invited_by_user_id
+        self.joined_at = datetime.now(timezone.utc)
+        self._record_event(
+            MembershipCreated(
+                aggregate_id=self.id,
+                business_id=self.business_id,
+                user_id=str(self.user_id),
+                role=role.value,
+            )
+        )
+
     def remove(self) -> None:
         if self.status == MembershipStatus.REMOVED:
             return

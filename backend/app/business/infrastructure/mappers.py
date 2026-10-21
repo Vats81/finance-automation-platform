@@ -101,4 +101,5 @@ def apply_membership_domain_to_existing_model(
 ) -> None:
     model.role = membership.role.value
     model.status = membership.status.value
+    model.invited_by_user_id = membership.invited_by_user_id
     model.joined_at = membership.joined_at
