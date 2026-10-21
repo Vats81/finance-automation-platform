@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     # unless this is explicitly enabled (e.g. in an Entra-based deployment).
     enable_legacy_ap_api: bool = Field(default=False, alias="ENABLE_LEGACY_AP_API")
 
+    # Set in an isolated restore/drill environment that runs the app against
+    # restored data: forces the email and WhatsApp senders to their console
+    # (log-only) implementations and blanks the Stripe keys, so nothing can
+    # reach a real customer or payment account. See docs/RECOVERY_RUNBOOK.md.
+    disable_external_side_effects: bool = Field(default=False, alias="DISABLE_EXTERNAL_SIDE_EFFECTS")
+
     # --- Landing-page "request a demo" form ---
     # Where to email a notification for each submission. Blank = no email,
     # requests are still saved and listed in the admin panel. With Resend's

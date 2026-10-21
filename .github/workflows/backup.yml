@@ -1,10 +1,16 @@
 name: Scheduled backup
 
-# Daily logical backup of every SMB table, taken by calling the app's own
-# admin backup endpoint (no DB credentials needed here) and stored as an
-# encrypted GitHub artifact. This repo is public and the dump contains
-# customer PII, so it is GPG/AES-256 encrypted BEFORE it is uploaded —
-# artifacts on a public repo are otherwise world-downloadable.
+# Daily logical backup of every table, taken by calling the app's own admin
+# backup endpoint (no DB credentials needed here), integrity-checked, and
+# stored as an encrypted GitHub artifact (30-day rolling retention). The dump
+# holds customer data and password hashes and this repo is public, so it is
+# AES-256 encrypted BEFORE it is uploaded - artifacts on a public repo are
+# otherwise world-downloadable.
+#
+# A backup that is empty, truncated, or at an unknown schema version FAILS this
+# job (GitHub emails the repo owner). backup-monitor.yml separately alerts if
+# no good backup has been produced recently. restore-drill.yml proves a backup
+# can actually be restored.
 #
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   BACKUP_ADMIN_EMAIL             a platform-admin account's email
@@ -13,8 +19,7 @@ name: Scheduled backup
 # Optional repository variable:
 #   BACKUP_API_BASE_URL           defaults to the Render URL below
 #
-# Restore: download the artifact, then
-#   gpg --batch --yes --passphrase '<passphrase>' --decrypt backup-XXXX.json.gpg > backup.json
+# Restore: see docs/RECOVERY_RUNBOOK.md.
 
 on:
   schedule:
@@ -32,7 +37,15 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Take and encrypt backup
+      - name: Check out the verification script
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            backend/scripts/verify_backup.py
+            backend/app/shared/infrastructure/backup_format.py
+          sparse-checkout-cone-mode: false
+
+      - name: Take, verify and encrypt backup
         env:
           BASE_URL: ${{ vars.BACKUP_API_BASE_URL || 'https://finance-automation-platform-1.onrender.com/api/v1' }}
           ADMIN_EMAIL: ${{ secrets.BACKUP_ADMIN_EMAIL }}
@@ -63,7 +76,7 @@ jobs:
             sleep 20
           done
           if [ -z "${token}" ]; then
-            echo "::error::Could not authenticate as platform admin — check the BACKUP_ADMIN_* secrets."
+            echo "::error::Could not authenticate as platform admin - check the BACKUP_ADMIN_* secrets."
             exit 1
           fi
 
@@ -79,19 +92,30 @@ jobs:
             exit 1
           fi
 
-          # Validate: parseable JSON containing all ten expected tables.
-          for key in users businesses business_memberships customers vendors products sales purchases expenses contact_requests; do
-            jq -e "has(\"${key}\")" "${plain}" >/dev/null || {
-              echo "::error::Backup JSON is missing top-level key: ${key}"
-              exit 1
-            }
-          done
-          rows="$(jq '[.[] | length] | add' "${plain}")"
-          echo "Backup valid: ${rows} rows across 10 tables, $(wc -c < "${plain}") bytes."
+          # Integrity: manifest present, schema version recorded, every table's
+          # row count and checksum match its data, users/businesses non-empty,
+          # generated within the last hour.
+          if ! summary="$(python3 backend/scripts/verify_backup.py "${plain}" --max-age-hours 1)"; then
+            echo "::error::${summary}"
+            exit 1
+          fi
+          echo "${summary}"
+          size_bytes="$(wc -c < "${plain}")"
+          if [ "${size_bytes}" -lt 2000 ]; then
+            echo "::error::Backup is suspiciously small (${size_bytes} bytes)."
+            exit 1
+          fi
 
           gpg --batch --yes --symmetric --cipher-algo AES256 \
             --passphrase "${PASSPHRASE}" --output "${plain}.gpg" "${plain}"
           rm -f "${plain}"
+
+          sha="$(sha256sum "${plain}.gpg" | cut -d' ' -f1)"
+          {
+            echo "### Backup ${stamp}"
+            echo "- ${summary}"
+            echo "- plaintext size: ${size_bytes} bytes; encrypted file sha256: \`${sha}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
           echo "ARTIFACT_NAME=backup-${stamp}" >> "${GITHUB_ENV}"
           echo "ARTIFACT_PATH=${plain}.gpg" >> "${GITHUB_ENV}"
@@ -101,5 +125,5 @@ jobs:
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_PATH }}
-          retention-days: 90
+          retention-days: 30
           if-no-files-found: error

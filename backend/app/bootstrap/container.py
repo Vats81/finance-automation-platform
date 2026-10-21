@@ -134,6 +134,8 @@ def get_local_token_validator() -> LocalTokenValidator:
 @lru_cache
 def get_email_sender() -> IEmailSender:
     settings = get_settings()
+    if settings.disable_external_side_effects:
+        return ConsoleEmailSender()
     if settings.resend_api_key:
         return ResendApiEmailSender(api_key=settings.resend_api_key, from_address=settings.smtp_from_address)
     if settings.smtp_configured:
@@ -150,6 +152,8 @@ def get_email_sender() -> IEmailSender:
 @lru_cache
 def get_whatsapp_sender() -> IWhatsAppSender:
     settings = get_settings()
+    if settings.disable_external_side_effects:
+        return ConsoleWhatsAppSender()
     if settings.whatsapp_provider == "twilio":
         return TwilioWhatsAppSender(
             account_sid=settings.twilio_account_sid,
@@ -180,4 +184,6 @@ def get_payment_gateway() -> IPaymentGateway:
     are the only things that pull this in.
     """
     settings = get_settings()
+    if settings.disable_external_side_effects:
+        return StripeGateway(secret_key="", webhook_secret="")
     return StripeGateway(secret_key=settings.stripe_secret_key, webhook_secret=settings.stripe_webhook_secret)

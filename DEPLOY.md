@@ -355,3 +355,18 @@ server), and says why:
 If `status` is `"degraded"` the database is fine and only Redis (not used
 here) is down, which is expected.
 
+
+## 13. Beta hardening settings
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ENABLE_LEGACY_AP_API` | `false` | Mounts the original AP-automation endpoints (`/vendors`, `/invoices`, `/payments`, `/purchase-orders`, `/approvals`, `/audit-log`, `/me`, `/users`). They are not scoped to a business and use Entra sign-in, so they stay off for the SMB product. |
+| `DISABLE_EXTERNAL_SIDE_EFFECTS` | `false` | Set to `true` only in an isolated restore/drill environment. Email and WhatsApp become log-only and Stripe keys are blanked, so a restored copy can never contact customers or charge anyone. |
+
+Migration `0022` (the per-business audit trail) runs automatically at
+container start like every other migration.
+
+Backups, monitoring and the restore drill are described in
+[`docs/RECOVERY_RUNBOOK.md`](docs/RECOVERY_RUNBOOK.md). To enable the monthly
+drill add the repository secret `DRILL_DATABASE_URL` (a separate empty database
+whose name contains `drill`).

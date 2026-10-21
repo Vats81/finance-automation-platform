@@ -1,0 +1,130 @@
+name: Restore drill
+
+# Proves the newest backup can actually be restored: downloads it, decrypts it,
+# verifies its checksums, loads it into an ISOLATED empty Postgres database
+# (never production), and reconciles every table, every business's totals, and
+# all memberships against the backup. Records how long each step took.
+#
+# Run: monthly, and manually (Actions -> Restore drill -> Run workflow) before
+# beta, and after any major schema change.
+#
+# One-time setup (you, not the app):
+#   1. Create a SEPARATE empty Postgres database whose NAME CONTAINS "drill"
+#      (e.g. a new Neon project called finance-restore-drill). It must not be
+#      the production database. It is wiped (--truncate) on every drill.
+#   2. Add its connection string as repository secret DRILL_DATABASE_URL.
+#   3. BACKUP_ENCRYPTION_PASSPHRASE is already set for the backup workflow.
+#
+# The drill runs the restore script only: it does not start the app, so no email,
+# WhatsApp, Stripe or scheduled job can fire. The full reconciliation report is
+# uploaded ENCRYPTED (it names businesses and shows their totals); the job
+# summary shows aggregate numbers only.
+
+on:
+  schedule:
+    - cron: "30 4 1 * *" # 04:30 UTC on the 1st of each month
+  workflow_dispatch:
+    inputs:
+      backup_run_id:
+        description: "Backup workflow run id to restore (default: newest successful)"
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      RESTORE_DATABASE_URL: ${{ secrets.DRILL_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Guard rails
+        run: |
+          set -eu
+          if [ -z "${RESTORE_DATABASE_URL}" ] || [ -z "${PASSPHRASE}" ]; then
+            echo "::error::Set DRILL_DATABASE_URL and BACKUP_ENCRYPTION_PASSPHRASE secrets first (see the header of this workflow)."
+            exit 1
+          fi
+          case "${RESTORE_DATABASE_URL}" in
+            *drill*) ;;
+            *) echo "::error::DRILL_DATABASE_URL must point at a database whose name contains 'drill'. Refusing: this step exists so a mistaken secret can never wipe a real database."; exit 1 ;;
+          esac
+
+      - name: Install the app (migrations + restore tool)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e backend
+
+      - name: Download and decrypt the backup
+        id: fetch
+        run: |
+          set -euo pipefail
+          started="$(date -u +%s)"
+          echo "started=${started}" >> "${GITHUB_OUTPUT}"
+
+          run_id="${{ github.event.inputs.backup_run_id }}"
+          if [ -z "${run_id}" ]; then
+            run_id="$(gh api "repos/${REPO}/actions/workflows/backup.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].id')"
+          fi
+          echo "Restoring the backup from run ${run_id}."
+          mkdir -p dl
+          gh run download "${run_id}" --repo "${REPO}" --dir dl
+          enc="$(ls dl/*/*.gpg | head -n1)"
+          gpg --batch --yes --passphrase "${PASSPHRASE}" --decrypt "${enc}" > backup.json
+          python backend/scripts/verify_backup.py backup.json
+          echo "download_seconds=$(( $(date -u +%s) - started ))" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore into the isolated database and reconcile
+        run: |
+          set -euo pipefail
+          cd backend
+          python scripts/restore_backup.py ../backup.json \
+            --confirm-isolated --migrate --truncate --report ../restore-report.json
+
+      - name: Record the measurements
+        if: always()
+        run: |
+          set -eu
+          [ -f restore-report.json ] || exit 0
+          finished="$(date -u +%s)"
+          total="$(( finished - ${{ steps.fetch.outputs.started }} ))"
+          generated="$(jq -r '.restore.backup_generated_at' restore-report.json)"
+          age_h="$(( ( finished - $(date -u -d "${generated}" +%s) ) / 3600 ))"
+          {
+            echo "### Restore drill"
+            echo "- result: **$(jq -r 'if .ok then "PASSED" else "FAILED" end' restore-report.json)**"
+            echo "- backup taken: ${generated} (${age_h}h before this drill; app commit $(jq -r '.restore.backup_commit' restore-report.json))"
+            echo "- schema version: $(jq -r '.schema_version.restored' restore-report.json)"
+            echo "- rows restored: $(jq -r '.restore.rows_restored' restore-report.json) in $(jq -r '.restore.restore_seconds' restore-report.json)s"
+            echo "- total drill time (download -> reconciled): ${total}s  (target: under 4h)"
+            echo "- businesses reconciled: $(jq '.per_business | length' restore-report.json)"
+            echo "- tables with matching checksums: $(jq '[.per_table[] | select(.checksum_match)] | length' restore-report.json) / $(jq '.per_table | length' restore-report.json)"
+            echo "- orphaned rows: $(jq '.orphans | length' restore-report.json)"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "${PASSPHRASE}" \
+            --output restore-report.json.gpg restore-report.json
+          rm -f restore-report.json backup.json
+
+      - name: Upload the encrypted report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-drill-report
+          path: restore-report.json.gpg
+          retention-days: 90
+          if-no-files-found: ignore
