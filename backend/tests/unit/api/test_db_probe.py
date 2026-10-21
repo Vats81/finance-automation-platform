@@ -7,6 +7,7 @@ plain threaded sockets so the tests don't depend on the Python version.
 import datetime
 import socket
 import ssl
+import struct
 import threading
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -137,24 +138,102 @@ def _self_signed_context(tmp_path: Path) -> ssl.SSLContext:
     return context
 
 
-async def test_full_success_path_reports_the_tls_version(serve, tmp_path: Path) -> None:
+def _tls_postgres(
+    serve,
+    tmp_path: Path,
+    on_startup: Callable[[ssl.SSLSocket, bytes], None],
+    user: str = "bob",
+    db: str = "shop",
+) -> str:
+    """A server that says 'S', completes a real TLS handshake, reads the
+    client's startup message, then lets `on_startup` play the server's reply.
+    Returns the DATABASE_URL to probe (carrying the given user and database).
+    """
     context = _self_signed_context(tmp_path)
 
-    def tls_postgres(conn: socket.socket) -> None:
+    def handler(conn: socket.socket) -> None:
         _read_ssl_request(conn)
         conn.sendall(b"S")
         with context.wrap_socket(conn, server_side=True) as tls:
-            tls.settimeout(2)
+            tls.settimeout(3)
             try:
-                tls.recv(1)  # hold the connection open until the probe hangs up
+                on_startup(tls, tls.recv(4096))
             except (OSError, ssl.SSLError):
                 pass
 
-    report = await probe_database_endpoint(serve(tls_postgres), timeout=5)
+    url = serve(handler)
+    return url.replace("u:p@", f"{user}:secretpw@").rsplit("/", 1)[0] + f"/{db}"
+
+
+def _error_message(severity: str, code: str, message: str) -> bytes:
+    body = b"S" + severity.encode() + b"\x00C" + code.encode() + b"\x00M" + message.encode() + b"\x00\x00"
+    return b"E" + struct.pack("!I", len(body) + 4) + body
+
+
+async def test_live_server_asking_for_a_password_is_reported_alive(serve, tmp_path: Path) -> None:
+    seen: list[bytes] = []
+
+    def reply_md5(tls: ssl.SSLSocket, startup: bytes) -> None:
+        seen.append(startup)
+        tls.sendall(b"R" + struct.pack("!III", 12, 5, 0x01020304))  # AuthenticationMD5Password
+
+    report = await probe_database_endpoint(_tls_postgres(serve, tmp_path, reply_md5), timeout=5)
 
     assert report["tcp"] == "ok"
     assert report["sslrequest_reply"] == "S (server accepts TLS)"
     assert report["tls_handshake"].startswith("ok (TLSv1")
+    assert report["startup_reply"] == (
+        "R: server requests authentication (md5 password) - it is alive and talking"
+    )
+    # What the probe sent: the protocol 3.0 startup message with the user and
+    # database name — and no password, ever.
+    assert seen[0][4:8] == b"\x00\x03\x00\x00"
+    assert b"user\x00bob\x00database\x00shop\x00" in seen[0]
+    assert b"secretpw" not in seen[0]
+
+
+async def test_server_error_text_is_reported_with_user_db_and_ip_redacted(serve, tmp_path: Path) -> None:
+    def reply_error(tls: ssl.SSLSocket, startup: bytes) -> None:
+        tls.sendall(
+            _error_message(
+                "FATAL",
+                "28000",
+                'no pg_hba.conf entry for host "10.9.8.7", user "bob", database "shop", SSL encryption',
+            )
+        )
+
+    report = await probe_database_endpoint(_tls_postgres(serve, tmp_path, reply_error), timeout=5)
+
+    reply = report["startup_reply"]
+    assert reply.startswith("E: FATAL 28000 no pg_hba.conf entry for host")
+    assert '"<ip>"' in reply and '"<user>"' in reply and '"<database>"' in reply
+    for leaked in ("10.9.8.7", "bob", "shop", "secretpw"):
+        assert leaked not in str(report)
+
+
+async def test_proxy_that_hangs_up_after_tls_is_distinguished_from_a_postgres_error(
+    serve, tmp_path: Path
+) -> None:
+    # The suspected real-world case: TLS works, then the connection is
+    # closed before Postgres ever answers.
+    def hang_up(tls: ssl.SSLSocket, startup: bytes) -> None:
+        return None
+
+    report = await probe_database_endpoint(_tls_postgres(serve, tmp_path, hang_up), timeout=5)
+
+    assert report["tls_handshake"].startswith("ok (TLSv1")
+    assert report["startup_reply"] == (
+        "connection closed with no reply (dropped after TLS, before the server answered)"
+    )
+
+
+async def test_unexpected_message_type_is_reported(serve, tmp_path: Path) -> None:
+    def reply_odd(tls: ssl.SSLSocket, startup: bytes) -> None:
+        tls.sendall(b"Z" + struct.pack("!IB", 5, 73))
+
+    report = await probe_database_endpoint(_tls_postgres(serve, tmp_path, reply_odd), timeout=5)
+
+    assert report["startup_reply"] == "unexpected message type b'Z'"
 
 
 async def test_unparseable_url_is_reported_not_raised() -> None:

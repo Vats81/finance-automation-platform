@@ -185,13 +185,15 @@ class Settings(BaseSettings):
     @property
     def effective_database_ssl(self) -> str:
         """The TLS mode actually used for database connections. An explicit
-        DATABASE_SSL always wins (including "disable"). Otherwise, hosts that
-        are recognisably Render-managed Postgres — `dpg-...` instance names
-        or `*.render.com` — get "require": Render's databases answer
-        "SSL/TLS required" to anything else, and the drivers' opportunistic
-        negotiation stopped getting through, which took the whole backend
-        offline. Anything else (local Postgres, a docker-compose service,
-        CI) keeps the driver default so nothing outside Render changes.
+        DATABASE_SSL always wins (including "disable"). Otherwise, Render's
+        *external* hostnames (`*.render.com`) get "require": that endpoint
+        answers "SSL/TLS required" to a plaintext attempt, and asyncpg's
+        default "prefer" mode silently retries without TLS whenever the TLS
+        attempt is closed, so any hiccup there surfaces as that misleading
+        message. Anything else keeps the driver default: local Postgres, a
+        docker-compose service, CI, and Render's short *internal* names
+        (`dpg-...` with no domain), which are reached over Render's private
+        network rather than the TLS-terminating external proxy.
         """
         if self.database_ssl:
             return self.database_ssl
@@ -199,7 +201,7 @@ class Settings(BaseSettings):
             host = make_url(self.database_url).host or ""
         except ArgumentError:
             return ""
-        if host.startswith("dpg-") or host.endswith(".render.com"):
+        if host.endswith(".render.com"):
             return "require"
         return ""
 

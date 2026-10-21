@@ -11,18 +11,20 @@ def _ssl(url: str, explicit: str = "") -> str:
 @pytest.mark.parametrize(
     "url",
     [
-        "postgresql+asyncpg://u:p@dpg-abc123xyz-a/fap_db",  # Render internal host
         "postgresql+asyncpg://u:p@dpg-abc123xyz-a.oregon-postgres.render.com/fap_db",  # external
         "postgresql+asyncpg://u:p@something.render.com:5432/fap_db",
     ],
 )
-def test_render_managed_hosts_get_tls_automatically(url: str) -> None:
+def test_render_external_hosts_get_tls_automatically(url: str) -> None:
     assert _ssl(url) == "require"
 
 
 @pytest.mark.parametrize(
     "url",
     [
+        # Render's short internal name: reached over the private network, not
+        # the TLS-terminating external proxy, so it keeps the driver default.
+        "postgresql+asyncpg://u:p@dpg-abc123xyz-a/fap_db",
         "postgresql+asyncpg://u:p@localhost:5432/db",
         "postgresql+asyncpg://u:p@127.0.0.1:5432/db",
         "postgresql+asyncpg://u:p@postgres:5432/db",  # docker-compose service name
