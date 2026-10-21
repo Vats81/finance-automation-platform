@@ -6,6 +6,7 @@ from app.api.rate_limit import limiter
 from app.bootstrap.container import get_email_sender, get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
+from app.business.api.permissions import CAN_MANAGE_TEAM
 from app.business.api.schemas import (
     InviteTeamMemberRequest,
     TeamMemberResponse,
@@ -24,7 +25,6 @@ from app.business.application.commands.update_team_member_role import (
     UpdateTeamMemberRoleUseCase,
 )
 from app.business.application.queries.list_team_members import ListTeamMembersQuery, ListTeamMembersUseCase
-from app.business.domain.value_objects import BusinessRole
 from app.config.settings import get_settings
 from app.identity.domain.entities import User
 from app.shared.application.ports import IEmailSender
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/businesses/{business_id}/team-members", tags=["team-
 
 settings = get_settings()
 
-_can_write = (BusinessRole.OWNER, BusinessRole.ADMIN)
+_can_write = CAN_MANAGE_TEAM
 
 
 @router.get("", response_model=list[TeamMemberResponse])
@@ -73,11 +73,13 @@ async def update_team_member_role(
     business_id: uuid.UUID,
     membership_id: uuid.UUID,
     body: UpdateTeamMemberRoleRequest,
-    _actor: User = Depends(require_business_role(*_can_write)),
+    actor: User = Depends(require_business_role(*_can_write)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> TeamMemberResponse:
     await UpdateTeamMemberRoleUseCase(uow).execute(
-        UpdateTeamMemberRoleCommand(business_id=business_id, membership_id=membership_id, role=body.role)
+        UpdateTeamMemberRoleCommand(
+            business_id=business_id, membership_id=membership_id, role=body.role, actor_user_id=actor.id
+        )
     )
     views = await ListTeamMembersUseCase(uow).execute(ListTeamMembersQuery(business_id=business_id))
     view = next(v for v in views if v.membership_id == membership_id)

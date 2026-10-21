@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, Response
 from app.bootstrap.container import get_clock, get_email_sender, get_uow, get_whatsapp_sender
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
+from app.business.api.permissions import CAN_EXPORT, CAN_WRITE
 from app.business.domain.exceptions import BusinessNotFoundException
-from app.business.domain.value_objects import BusinessRole
 from app.dashboard.api.schemas import (
     BusinessHealthScoreResponse,
     DashboardSummaryResponse,
@@ -41,7 +41,7 @@ from app.shared.application.ports import IClock, IEmailSender, IWhatsAppSender
 
 router = APIRouter(prefix="/businesses/{business_id}/dashboard", tags=["dashboard"])
 
-_can_write = (BusinessRole.OWNER, BusinessRole.ADMIN, BusinessRole.ACCOUNTANT)
+_can_write = CAN_WRITE
 
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
@@ -83,7 +83,7 @@ async def get_profit_loss_pdf(
     start_date: date,
     end_date: date,
     granularity: Literal["day", "week", "month"] | None = None,
-    _actor: User = Depends(require_business_role()),
+    _actor: User = Depends(require_business_role(*CAN_EXPORT)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> Response:
     business = await uow.businesses.get_by_id(business_id)

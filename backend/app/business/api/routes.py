@@ -6,6 +6,7 @@ from app.api.rate_limit import limiter
 from app.bootstrap.container import get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
+from app.business.api.permissions import CAN_EDIT_SETTINGS, OWNER_ONLY
 from app.business.api.schemas import (
     BusinessResponse,
     ChangePlanRequest,
@@ -30,7 +31,6 @@ from app.business.application.queries.list_my_businesses import (
     ListMyBusinessesQuery,
     ListMyBusinessesUseCase,
 )
-from app.business.domain.value_objects import BusinessRole
 from app.config.settings import get_settings
 from app.identity.api.dependencies import get_current_local_user
 from app.identity.domain.entities import User
@@ -80,7 +80,7 @@ async def complete_onboarding(
     request: Request,
     business_id: uuid.UUID,
     body: CompleteOnboardingRequest,
-    _actor: User = Depends(require_business_role(BusinessRole.OWNER, BusinessRole.ADMIN)),
+    _actor: User = Depends(require_business_role(*CAN_EDIT_SETTINGS)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> BusinessResponse:
     use_case = CompleteOnboardingUseCase(uow)
@@ -108,7 +108,7 @@ async def change_business_plan(
     request: Request,
     business_id: uuid.UUID,
     body: ChangePlanRequest,
-    _actor: User = Depends(require_business_role(BusinessRole.OWNER)),
+    _actor: User = Depends(require_business_role(*OWNER_ONLY)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> BusinessResponse:
     use_case = ChangeBusinessPlanUseCase(uow, settings)

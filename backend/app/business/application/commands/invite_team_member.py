@@ -8,6 +8,7 @@ from app.business.domain.entities import BusinessMembership
 from app.business.domain.exceptions import (
     BusinessNotFoundException,
     InviteeNotRegisteredException,
+    OwnerRoleNotAssignableException,
     TeamMemberLimitExceededException,
     UserAlreadyMemberException,
 )
@@ -37,6 +38,10 @@ class InviteTeamMemberUseCase:
         self._email_sender = email_sender
 
     async def execute(self, command: InviteTeamMemberCommand) -> BusinessMembership:
+        # Checked first: no one, Admin included, can mint a second Owner.
+        if command.role == BusinessRole.OWNER:
+            raise OwnerRoleNotAssignableException("The Owner role cannot be granted to a team member.")
+
         business = await self._uow.businesses.get_by_id(command.business_id)
         if business is None:
             raise BusinessNotFoundException(f"Business {command.business_id} not found")

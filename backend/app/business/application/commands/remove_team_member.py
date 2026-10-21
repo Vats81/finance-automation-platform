@@ -8,6 +8,7 @@ from app.business.domain.exceptions import (
     CannotModifyOwnerMembershipException,
     MembershipNotFoundException,
 )
+from app.business.domain.value_objects import BusinessRole
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,7 @@ class RemoveTeamMemberUseCase:
         if membership is None or membership.business_id != command.business_id:
             raise MembershipNotFoundException(f"Membership {command.membership_id} not found")
 
-        if membership.user_id == business.owner_user_id:
+        if membership.user_id == business.owner_user_id or membership.role == BusinessRole.OWNER:
             raise CannotModifyOwnerMembershipException("The business owner cannot be removed.")
 
         membership.remove()

@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from app.config.settings import get_settings
+
 # Each bounded context registers its router here as it is built. Kept as a
 # single composition point so app_factory.py never needs to know about
 # individual contexts.
@@ -10,6 +12,7 @@ def include_context_routers() -> None:
     from app.admin.api.routes import router as admin_router
     from app.ai_assistant.api.routes import router as ai_assistant_router
     from app.approvals.api.routes import router as approvals_router
+    from app.audit.api.business_routes import router as business_audit_router
     from app.audit.api.routes import router as audit_router
     from app.business.api.billing_routes import router as billing_router
     from app.business.api.billing_routes import webhook_router as billing_webhook_router
@@ -33,7 +36,6 @@ def include_context_routers() -> None:
     from app.vendors.api.business_routes import router as business_vendors_router
     from app.vendors.api.routes import router as vendors_router
 
-    api_router.include_router(identity_router)
     api_router.include_router(auth_router)
     api_router.include_router(admin_router)
     api_router.include_router(ai_assistant_router)
@@ -51,13 +53,17 @@ def include_context_routers() -> None:
     api_router.include_router(sales_router)
     api_router.include_router(inventory_router)
     api_router.include_router(purchases_router)
-    api_router.include_router(vendors_router)
     api_router.include_router(business_vendors_router)
-    api_router.include_router(purchase_orders_router)
-    api_router.include_router(invoices_router)
-    api_router.include_router(approvals_router)
-    api_router.include_router(payments_router)
-    api_router.include_router(audit_router)
+    api_router.include_router(business_audit_router)
+
+    if get_settings().enable_legacy_ap_api:
+        api_router.include_router(identity_router)
+        api_router.include_router(vendors_router)
+        api_router.include_router(purchase_orders_router)
+        api_router.include_router(invoices_router)
+        api_router.include_router(approvals_router)
+        api_router.include_router(payments_router)
+        api_router.include_router(audit_router)
 
 
 include_context_routers()

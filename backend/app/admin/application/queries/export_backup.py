@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.infrastructure.models import BusinessAuditEventModel
 from app.business.infrastructure.models import BusinessMembershipModel, BusinessModel
 from app.contact.infrastructure.models import ContactRequestModel
 from app.customers.infrastructure.models import CustomerModel
@@ -31,6 +32,7 @@ _TABLES: dict[str, type] = {
     "purchases": PurchaseModel,
     "expenses": ExpenseModel,
     "contact_requests": ContactRequestModel,
+    "business_audit_events": BusinessAuditEventModel,
 }
 
 # Fields excluded per table, regardless of how harmless they look — a

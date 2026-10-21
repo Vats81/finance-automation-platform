@@ -105,6 +105,13 @@ class Settings(BaseSettings):
     # when running with workers/Entra, where Redis really is a hard dependency.
     redis_required: bool = Field(default=False, alias="REDIS_REQUIRED")
 
+    # The original AP-automation endpoints (/vendors, /invoices, /payments,
+    # /purchase-orders, /approvals, /audit-log, /me, /users) authenticate with
+    # Entra ID, are not scoped to a business, and answer 500 to the platform's
+    # own logins. They are not part of the SMB product and are not mounted
+    # unless this is explicitly enabled (e.g. in an Entra-based deployment).
+    enable_legacy_ap_api: bool = Field(default=False, alias="ENABLE_LEGACY_AP_API")
+
     # --- Landing-page "request a demo" form ---
     # Where to email a notification for each submission. Blank = no email,
     # requests are still saved and listed in the admin panel. With Resend's

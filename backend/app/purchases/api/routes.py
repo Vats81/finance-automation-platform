@@ -6,7 +6,7 @@ from app.api.rate_limit import limiter
 from app.bootstrap.container import get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
-from app.business.domain.value_objects import BusinessRole
+from app.business.api.permissions import CAN_WRITE
 from app.config.settings import get_settings
 from app.identity.domain.entities import User
 from app.purchases.api.schemas import (
@@ -43,7 +43,7 @@ router = APIRouter(prefix="/businesses/{business_id}/purchases", tags=["purchase
 
 settings = get_settings()
 
-_can_write = (BusinessRole.OWNER, BusinessRole.ADMIN, BusinessRole.ACCOUNTANT)
+_can_write = CAN_WRITE
 
 
 @router.post("", response_model=PurchaseResponse, status_code=201)

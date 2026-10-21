@@ -13,7 +13,8 @@ import { IMPORT_DATA_TYPES, ImportDataType } from "@/types/dataImport";
 
 export default function DataUploadPage() {
   const { getAccessToken } = useLocalAuth();
-  const { currentBusinessId } = useCurrentBusiness();
+  const { currentBusinessId, currentBusiness } = useCurrentBusiness();
+  const canImport = currentBusiness?.role !== "viewer";
   const [dataType, setDataType] = useState<ImportDataType>("customers");
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -54,7 +55,11 @@ export default function DataUploadPage() {
       </Card>
 
       <Card>
-        {currentBusinessId ? (
+        {currentBusinessId && !canImport ? (
+          <p className="text-sm text-slate-500">
+            Your role is view-only. Owners, admins and accountants can import data.
+          </p>
+        ) : currentBusinessId ? (
           <ImportWizard
             key={dataType}
             token={getAccessToken()}

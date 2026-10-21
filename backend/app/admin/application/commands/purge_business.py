@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit.infrastructure.models import BusinessAuditEventModel
 from app.business.domain.exceptions import BusinessNotFoundException
 from app.business.infrastructure.models import BusinessMembershipModel, BusinessModel
 from app.customers.infrastructure.models import CustomerModel
@@ -28,6 +29,7 @@ BUSINESS_SCOPED_MODELS: tuple[type, ...] = (
     CustomerModel,
     VendorModel,
     BusinessMembershipModel,
+    BusinessAuditEventModel,
 )
 
 

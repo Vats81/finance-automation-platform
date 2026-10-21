@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { csvRow } from "@/lib/csv";
 import { downloadProfitLossPdf, getDashboardTrend, sendReportEmail, sendReportWhatsApp } from "@/lib/api/dashboard";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
@@ -75,7 +76,7 @@ function downloadCsv(rows: DashboardTrendPoint[], granularity: DashboardGranular
   const totalExpenses = rows.reduce((sum, r) => sum + Number(r.expenses), 0);
   lines.push(["Total", totalRevenue.toFixed(2), totalExpenses.toFixed(2), (totalRevenue - totalExpenses).toFixed(2)]);
 
-  const csv = [header, ...lines].map((line) => line.join(",")).join("\n");
+  const csv = [header, ...lines].map(csvRow).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -89,7 +90,9 @@ function downloadCsv(rows: DashboardTrendPoint[], granularity: DashboardGranular
 
 export default function ReportsPage() {
   const { getAccessToken } = useLocalAuth();
-  const { currentBusinessId } = useCurrentBusiness();
+  const { currentBusinessId, currentBusiness } = useCurrentBusiness();
+  // Viewers are read-only in the beta: they can see the numbers but not export or send them.
+  const canExport = currentBusiness?.role !== "viewer";
   const [period, setPeriod] = useState<DashboardPeriod>("this_year");
   const [granularity, setGranularity] = useState<DashboardGranularity>("month");
   const [points, setPoints] = useState<DashboardTrendPoint[] | null>(null);
@@ -220,14 +223,20 @@ export default function ReportsPage() {
           <p className="text-sm text-slate-500">Loading...</p>
         ) : hasActivity ? (
           <>
-            <div className="mb-4 flex justify-end gap-3">
-              <Button variant="secondary" onClick={() => downloadCsv(points, granularity)}>
-                Download CSV
-              </Button>
-              <Button variant="secondary" onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
-                {isDownloadingPdf ? "Downloading..." : "Download PDF"}
-              </Button>
-            </div>
+            {canExport ? (
+              <div className="mb-4 flex justify-end gap-3">
+                <Button variant="secondary" onClick={() => downloadCsv(points, granularity)}>
+                  Download CSV
+                </Button>
+                <Button variant="secondary" onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
+                  {isDownloadingPdf ? "Downloading..." : "Download PDF"}
+                </Button>
+              </div>
+            ) : (
+              <p className="mb-4 text-right text-xs text-slate-500">
+                Your role is view-only. Owners, admins and accountants can export and send reports.
+              </p>
+            )}
             <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-white">
@@ -277,7 +286,7 @@ export default function ReportsPage() {
         )}
       </Card>
 
-      {points && hasActivity && (
+      {points && hasActivity && canExport && (
         <Card className="mt-6">
           <h2 className="mb-4 text-sm font-semibold">Send report</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

@@ -2,6 +2,7 @@ import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.audit_middleware import AuditMiddleware, record_to_database
 from app.api.exception_handlers import register_exception_handlers
 from app.api.health import router as health_router
 from app.api.main_router import api_router
@@ -41,6 +42,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(CorrelationIdMiddleware)
+    app.add_middleware(AuditMiddleware)
+    app.state.audit_recorder = record_to_database
 
     register_exception_handlers(app)
     register_rate_limiting(app)

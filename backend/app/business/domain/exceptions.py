@@ -19,6 +19,14 @@ class NotABusinessMemberException(UnauthorizedDomainActionException):
     error_code = "not_a_business_member"
 
 
+class BusinessSuspendedException(UnauthorizedDomainActionException):
+    """The business has been suspended by a platform admin. Every member loses
+    access until it is reactivated.
+    """
+
+    error_code = "business_suspended"
+
+
 class InvalidOnboardingDataException(ValidationException):
     error_code = "invalid_onboarding_data"
 
@@ -73,3 +81,15 @@ class NoStripeCustomerException(NotFoundException):
     """
 
     error_code = "no_stripe_customer"
+
+
+class OwnerRoleNotAssignableException(ValidationException):
+    """The Owner role is held only by the founding owner. It can't be granted
+    through invites or role changes (ownership transfer is not supported yet).
+    """
+
+    error_code = "owner_role_not_assignable"
+
+
+class CannotChangeOwnRoleException(ValidationException):
+    error_code = "cannot_change_own_role"
