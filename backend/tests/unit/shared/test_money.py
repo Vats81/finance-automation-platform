@@ -45,3 +45,17 @@ def test_money_comparison() -> None:
 def test_money_rejects_non_usd_currency() -> None:
     with pytest.raises(ValidationException):
         Money(amount=Decimal("10.00"), currency="EUR")
+
+
+def test_money_rejects_absurdly_large_amounts() -> None:
+    # 99999999999999999999.99 overflowed the BigInteger cents column -> 500.
+    with pytest.raises(ValidationException):
+        Money(amount=Decimal("99999999999999999999.99"))
+    with pytest.raises(ValidationException):
+        Money(amount=Decimal("1e999"))
+
+
+def test_money_rejects_non_finite_amounts() -> None:
+    for bad in ("NaN", "Infinity", "-Infinity"):
+        with pytest.raises(ValidationException):
+            Money(amount=Decimal(bad))

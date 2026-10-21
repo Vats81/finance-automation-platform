@@ -71,3 +71,19 @@ async def test_import_customers_remaps_columns() -> None:
     customers, _ = await uow.customers.list_for_business(business_id)
     assert customers[0].name == "Jane's Diner"
     assert customers[0].phone == "555-0100"
+
+
+async def test_import_customers_reports_over_long_values_as_row_errors() -> None:
+    # A 1000-char name used to hit the String(255) column, raise a DB error
+    # mid-import and 500 the whole upload.
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    rows = [{"Customer Name": "x" * 1000}, {"Customer Name": "Fine Co"}]
+
+    summary = await ImportCustomersUseCase(uow).execute(
+        business_id=business_id, rows=rows, column_mapping=MAPPING
+    )
+
+    assert summary.created == 1
+    assert [e.row_number for e in summary.errors] == [1]
+    assert "too long" in summary.errors[0].message

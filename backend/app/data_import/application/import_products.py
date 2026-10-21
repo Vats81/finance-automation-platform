@@ -3,6 +3,12 @@ from decimal import Decimal, InvalidOperation
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.data_import.application.dtos import ImportRowError, ImportSummary
+from app.data_import.application.row_validation import (
+    length_error,
+    mapped_value,
+    parse_amount,
+    unexpected_row_failure,
+)
 from app.inventory.application.commands.create_product import CreateProductCommand, CreateProductUseCase
 from app.shared.domain.exceptions import DomainException
 
@@ -18,20 +24,7 @@ CANONICAL_FIELDS = [
     "unit_of_measurement",
 ]
 REQUIRED_FIELDS = ["name", "sku", "selling_price", "purchase_cost"]
-
-
-def _mapped_value(raw_row: dict[str, str], column_mapping: dict[str, str], field: str) -> str | None:
-    header = column_mapping.get(field)
-    if not header:
-        return None
-    value = raw_row.get(header)
-    return value.strip() if value else None
-
-
-def _parse_decimal(value: str | None, default: Decimal) -> Decimal:
-    if not value:
-        return default
-    return Decimal(value)
+_MAX_LENGTHS = {"name": 255, "sku": 100, "category": 100, "unit_of_measurement": 30}
 
 
 class ImportProductsUseCase:
@@ -54,12 +47,12 @@ class ImportProductsUseCase:
         errors: list[ImportRowError] = []
 
         for row_number, raw_row in enumerate(rows, start=1):
-            name = _mapped_value(raw_row, column_mapping, "name")
-            sku = _mapped_value(raw_row, column_mapping, "sku")
+            name = mapped_value(raw_row, column_mapping, "name")
+            sku = mapped_value(raw_row, column_mapping, "sku")
             missing = [
                 field
                 for field in REQUIRED_FIELDS
-                if not _mapped_value(raw_row, column_mapping, field)
+                if not mapped_value(raw_row, column_mapping, field)
             ]
             if missing:
                 errors.append(
@@ -74,25 +67,43 @@ class ImportProductsUseCase:
                 skipped_duplicates += 1
                 continue
 
+            category = mapped_value(raw_row, column_mapping, "category")
+            unit = mapped_value(raw_row, column_mapping, "unit_of_measurement")
+            too_long = length_error(
+                {"name": name, "sku": sku, "category": category, "unit_of_measurement": unit}, _MAX_LENGTHS
+            )
+            if too_long:
+                errors.append(ImportRowError(row_number=row_number, message=too_long))
+                continue
+
             try:
                 command = CreateProductCommand(
                     business_id=business_id,
                     name=name or "",
                     sku=sku,
-                    selling_price=Decimal(_mapped_value(raw_row, column_mapping, "selling_price") or "0"),
-                    purchase_cost=Decimal(_mapped_value(raw_row, column_mapping, "purchase_cost") or "0"),
-                    category=_mapped_value(raw_row, column_mapping, "category"),
-                    current_quantity=_parse_decimal(
-                        _mapped_value(raw_row, column_mapping, "current_quantity"), Decimal("0")
+                    selling_price=parse_amount(
+                        mapped_value(raw_row, column_mapping, "selling_price"), "selling_price"
                     ),
-                    minimum_stock_level=_parse_decimal(
-                        _mapped_value(raw_row, column_mapping, "minimum_stock_level"), Decimal("0")
+                    purchase_cost=parse_amount(
+                        mapped_value(raw_row, column_mapping, "purchase_cost"), "purchase_cost"
                     ),
-                    reorder_quantity=_parse_decimal(
-                        _mapped_value(raw_row, column_mapping, "reorder_quantity"), Decimal("0")
+                    category=category,
+                    current_quantity=parse_amount(
+                        mapped_value(raw_row, column_mapping, "current_quantity"),
+                        "current_quantity",
+                        default=Decimal("0"),
                     ),
-                    unit_of_measurement=_mapped_value(raw_row, column_mapping, "unit_of_measurement")
-                    or "unit",
+                    minimum_stock_level=parse_amount(
+                        mapped_value(raw_row, column_mapping, "minimum_stock_level"),
+                        "minimum_stock_level",
+                        default=Decimal("0"),
+                    ),
+                    reorder_quantity=parse_amount(
+                        mapped_value(raw_row, column_mapping, "reorder_quantity"),
+                        "reorder_quantity",
+                        default=Decimal("0"),
+                    ),
+                    unit_of_measurement=unit or "unit",
                 )
                 await CreateProductUseCase(self._uow).execute(command)
                 existing_skus.add(sku.lower())
@@ -101,6 +112,8 @@ class ImportProductsUseCase:
                 errors.append(ImportRowError(row_number=row_number, message=exc.message))
             except (InvalidOperation, ValueError) as exc:
                 errors.append(ImportRowError(row_number=row_number, message=f"Invalid number: {exc}"))
+            except Exception as exc:  # noqa: BLE001 - one bad row must not abort the import
+                errors.append(await unexpected_row_failure(self._uow, row_number, exc))
 
         return ImportSummary(
             total_rows=len(rows), created=created, skipped_duplicates=skipped_duplicates, errors=errors

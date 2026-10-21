@@ -15,13 +15,43 @@ from app.config.settings import get_settings
 from app.data_import.api.schemas import ImportDataType, ImportSummaryResponse, PreviewResponse
 from app.data_import.application import import_customers, import_expenses, import_products, import_vendors
 from app.identity.domain.entities import User
-from app.shared.infrastructure.csv_parser import parse_csv
+from app.shared.domain.exceptions import ValidationException
+from app.shared.infrastructure.csv_parser import MAX_UPLOAD_BYTES, parse_csv
 
 router = APIRouter(prefix="/businesses/{business_id}/imports", tags=["data-import"])
 
 settings = get_settings()
 
 _can_write = (BusinessRole.OWNER, BusinessRole.ADMIN, BusinessRole.ACCOUNTANT)
+
+
+
+def _parse_column_mapping(raw: str) -> dict[str, str]:
+    """The mapping arrives as a JSON string in a form field, so it is
+    untrusted: anything other than an object of field -> header was a 500.
+    """
+    try:
+        parsed = json.loads(raw)
+    except ValueError as exc:
+        raise ValidationException("column_mapping must be valid JSON.") from exc
+    if not isinstance(parsed, dict):
+        raise ValidationException('column_mapping must be a JSON object, e.g. {"name": "Customer"}.')
+    mapping: dict[str, str] = {}
+    for field, header in parsed.items():
+        if header is None or header == "":
+            continue
+        if not isinstance(header, str):
+            raise ValidationException(f"column_mapping[{field!r}] must be a column name (text) or null.")
+        mapping[str(field)] = header
+    return mapping
+
+
+async def _read_upload(file: UploadFile) -> bytes:
+    # Read one byte past the cap so an oversized file is rejected without
+    # buffering all of it in memory.
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    return content
+
 
 _IMPORTER_MODULES = {
     ImportDataType.CUSTOMERS: import_customers,
@@ -41,7 +71,7 @@ async def preview_import(
     _actor: User = Depends(require_business_role(*_can_write)),
 ) -> PreviewResponse:
     module = _IMPORTER_MODULES[data_type]
-    content = await file.read()
+    content = await _read_upload(file)
     headers, rows = parse_csv(content)
     return PreviewResponse(
         headers=headers,
@@ -63,9 +93,9 @@ async def run_import(
     _actor: User = Depends(require_business_role(*_can_write)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> ImportSummaryResponse:
-    content = await file.read()
+    mapping = _parse_column_mapping(column_mapping)
+    content = await _read_upload(file)
     _headers, rows = parse_csv(content)
-    mapping: dict[str, str] = json.loads(column_mapping)
 
     if data_type == ImportDataType.CUSTOMERS:
         summary = await import_customers.ImportCustomersUseCase(uow).execute(

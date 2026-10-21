@@ -5,6 +5,10 @@ from app.shared.domain.base_value_object import ValueObject
 from app.shared.domain.exceptions import ValidationException
 
 _CENTS = Decimal("0.01")
+# Sanity ceiling, far above any real figure and well inside the BigInteger-cents
+# columns. Without it an absurd amount reached the database and surfaced as a
+# 500 (integer overflow) instead of a validation error.
+MAX_MONEY_AMOUNT = Decimal("1000000000000")
 
 
 @dataclass(frozen=True)
@@ -24,6 +28,10 @@ class Money(ValueObject):
     def __post_init__(self) -> None:
         if self.currency != "USD":
             raise ValidationException("Only USD is supported in the foundation slice")
+        if not self.amount.is_finite():
+            raise ValidationException("Amount must be a finite number")
+        if abs(self.amount) > MAX_MONEY_AMOUNT:
+            raise ValidationException("Amount is too large")
         quantized = self.amount.quantize(_CENTS, rounding=ROUND_HALF_UP)
         object.__setattr__(self, "amount", quantized)
 

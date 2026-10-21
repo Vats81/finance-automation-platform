@@ -3,6 +3,7 @@ import uuid
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.customers.application.commands.create_customer import CreateCustomerCommand, CreateCustomerUseCase
 from app.data_import.application.dtos import ImportRowError, ImportSummary
+from app.data_import.application.row_validation import length_error, mapped_value, unexpected_row_failure
 from app.shared.domain.exceptions import DomainException
 
 CANONICAL_FIELDS = [
@@ -17,14 +18,17 @@ CANONICAL_FIELDS = [
     "gst_number",
 ]
 REQUIRED_FIELDS = ["name"]
-
-
-def _mapped_value(raw_row: dict[str, str], column_mapping: dict[str, str], field: str) -> str | None:
-    header = column_mapping.get(field)
-    if not header:
-        return None
-    value = raw_row.get(header)
-    return value.strip() if value else None
+_MAX_LENGTHS = {
+    "name": 255,
+    "phone": 32,
+    "email": 320,
+    "street": 255,
+    "city": 120,
+    "state": 120,
+    "postal_code": 20,
+    "country": 2,
+    "gst_number": 30,
+}
 
 
 class ImportCustomersUseCase:
@@ -48,7 +52,7 @@ class ImportCustomersUseCase:
         errors: list[ImportRowError] = []
 
         for row_number, raw_row in enumerate(rows, start=1):
-            name = _mapped_value(raw_row, column_mapping, "name")
+            name = mapped_value(raw_row, column_mapping, "name")
             if not name:
                 errors.append(ImportRowError(row_number=row_number, message="Missing required field: name"))
                 continue
@@ -56,24 +60,32 @@ class ImportCustomersUseCase:
                 skipped_duplicates += 1
                 continue
 
+            values = {field: mapped_value(raw_row, column_mapping, field) for field in CANONICAL_FIELDS}
+            too_long = length_error(values, _MAX_LENGTHS)
+            if too_long:
+                errors.append(ImportRowError(row_number=row_number, message=too_long))
+                continue
+
             try:
                 command = CreateCustomerCommand(
                     business_id=business_id,
                     name=name,
-                    phone=_mapped_value(raw_row, column_mapping, "phone"),
-                    email=_mapped_value(raw_row, column_mapping, "email"),
-                    street=_mapped_value(raw_row, column_mapping, "street"),
-                    city=_mapped_value(raw_row, column_mapping, "city"),
-                    state=_mapped_value(raw_row, column_mapping, "state"),
-                    postal_code=_mapped_value(raw_row, column_mapping, "postal_code"),
-                    country=_mapped_value(raw_row, column_mapping, "country") or "US",
-                    gst_number=_mapped_value(raw_row, column_mapping, "gst_number"),
+                    phone=values["phone"],
+                    email=values["email"],
+                    street=values["street"],
+                    city=values["city"],
+                    state=values["state"],
+                    postal_code=values["postal_code"],
+                    country=values["country"] or "US",
+                    gst_number=values["gst_number"],
                 )
                 await CreateCustomerUseCase(self._uow).execute(command)
                 existing_names.add(name.lower())
                 created += 1
             except DomainException as exc:
                 errors.append(ImportRowError(row_number=row_number, message=exc.message))
+            except Exception as exc:  # noqa: BLE001 - one bad row must not abort the import
+                errors.append(await unexpected_row_failure(self._uow, row_number, exc))
 
         return ImportSummary(
             total_rows=len(rows), created=created, skipped_duplicates=skipped_duplicates, errors=errors

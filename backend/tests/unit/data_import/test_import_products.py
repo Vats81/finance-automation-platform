@@ -104,3 +104,29 @@ async def test_import_products_remaps_columns() -> None:
     products, _ = await uow.products.list_for_business(business_id)
     assert products[0].name == "Widget"
     assert products[0].sku == "WID-001"
+
+
+async def test_import_products_rejects_negative_price_and_stock() -> None:
+    uow = FakeUnitOfWork()
+    base = {"Name": "Widget", "SKU": "W-1", "Price": "10", "Cost": "5"}
+    mapping = {
+        "name": "Name",
+        "sku": "SKU",
+        "selling_price": "Price",
+        "purchase_cost": "Cost",
+        "current_quantity": "Qty",
+    }
+    rows = [
+        {**base, "Price": "-10"},
+        {**base, "SKU": "W-2", "Cost": "-1"},
+        {**base, "SKU": "W-3", "Qty": "-4"},
+        {**base, "SKU": "W-4", "Qty": "3"},
+    ]
+
+    summary = await ImportProductsUseCase(uow).execute(
+        business_id=uuid.uuid4(), rows=rows, column_mapping=mapping
+    )
+
+    assert summary.created == 1
+    assert [e.row_number for e in summary.errors] == [1, 2, 3]
+    assert all("negative" in e.message for e in summary.errors)
