@@ -5,7 +5,7 @@ from typing import Any
 import anthropic
 import httpx
 
-from app.shared.application.ports import AiResponse, AiToolCall, IAiClient
+from app.shared.application.ports import AiProviderError, AiResponse, AiToolCall, IAiClient
 
 logger = logging.getLogger(__name__)
 
@@ -101,19 +101,30 @@ class GroqAiClient(IAiClient):
         if tools:
             payload["tools"] = [_to_openai_tool(tool) for tool in tools]
 
+        data: dict[str, Any] = {}
         async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(
-                _GROQ_CHAT_URL,
-                headers={"Authorization": f"Bearer {self._api_key}"},
-                json=payload,
-            )
-            if response.is_error:
-                # Groq's JSON error body (code/message) is far more useful
-                # than httpx's generic "400 Bad Request" — log it before
-                # raising so it shows up in production logs.
-                logger.error("Groq request failed (%s): %s", response.status_code, response.text)
-            response.raise_for_status()
-            data = response.json()
+            for attempt in (1, 2):
+                try:
+                    response = await client.post(
+                        _GROQ_CHAT_URL,
+                        headers={"Authorization": f"Bearer {self._api_key}"},
+                        json=payload,
+                    )
+                except httpx.HTTPError as exc:
+                    logger.error("Groq request could not be sent: %s", exc)
+                    raise AiProviderError("The AI service could not be reached.") from exc
+                if response.is_error:
+                    # Groq's JSON error body (code/message) is far more useful
+                    # than httpx's generic "400 Bad Request" - log it.
+                    logger.error("Groq request failed (%s): %s", response.status_code, response.text)
+                    # The model occasionally emits a tool call that fails the
+                    # provider's schema validation (code tool_use_failed). It is
+                    # non-deterministic, so one retry usually succeeds.
+                    if attempt == 1 and response.status_code == 400 and "tool_use_failed" in response.text:
+                        continue
+                    raise AiProviderError(f"The AI service returned an error ({response.status_code}).")
+                data = response.json()
+                break
 
         choice = data["choices"][0]
         oai_message = choice["message"]

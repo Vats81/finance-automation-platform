@@ -209,3 +209,20 @@ def test_every_tool_is_read_only_and_has_a_handler() -> None:
 
     assert names == set(TOOL_HANDLERS)
     assert all(n.startswith(("get_", "list_")) for n in names)
+
+
+async def test_a_provider_failure_gives_a_clear_message_not_an_exception() -> None:
+    from app.shared.application.ports import AiProviderError
+
+    class BrokenClient(FakeAiClient):
+        async def send(self, *, system: str, messages: list[dict], tools: list[dict]) -> AiResponse:
+            raise AiProviderError("down")
+
+    uow = FakeUnitOfWork()
+
+    result = await AskAssistantUseCase(uow, BrokenClient([])).execute(
+        AskAssistantCommand(business_id=uuid.uuid4(), question="What is my profit?")
+    )
+
+    assert "try again" in result.answer
+    assert result.history[-1]["role"] == "assistant"

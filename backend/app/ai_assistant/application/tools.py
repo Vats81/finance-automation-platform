@@ -41,8 +41,11 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "start_date": {"type": "string", "description": "Optional ISO date, e.g. 2026-07-01"},
-                "end_date": {"type": "string", "description": "Optional ISO date, e.g. 2026-07-31"},
+                "start_date": {
+                    "type": ["string", "null"],
+                    "description": "Optional ISO date, e.g. 2026-07-01",
+                },
+                "end_date": {"type": ["string", "null"], "description": "Optional ISO date, e.g. 2026-07-31"},
             },
         },
     },
@@ -56,9 +59,9 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "limit": {"type": "integer", "description": "How many top expenses, default 5"},
-                "start_date": {"type": "string", "description": "Optional ISO date"},
-                "end_date": {"type": "string", "description": "Optional ISO date"},
+                "limit": {"type": ["integer", "null"], "description": "How many top expenses, default 5"},
+                "start_date": {"type": ["string", "null"], "description": "Optional ISO date"},
+                "end_date": {"type": ["string", "null"], "description": "Optional ISO date"},
             },
         },
     },
@@ -212,7 +215,7 @@ async def _handle_get_top_expenses(
     uow: AppUnitOfWork,
     business_id: uuid.UUID,
     *,
-    limit: int = 5,
+    limit: int | None = 5,
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> dict[str, Any]:
@@ -242,7 +245,7 @@ async def _handle_get_top_expenses(
                 "description": e.description,
                 "total_amount": str(e.total_amount.amount),
             }
-            for e in ranked[: max(1, min(limit, 50))]
+            for e in ranked[: max(1, min(limit or 5, 50))]
         ],
         "by_category": [
             {"category": name, "total": str(total)}

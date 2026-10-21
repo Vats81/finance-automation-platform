@@ -5,7 +5,7 @@ from datetime import date
 
 from app.ai_assistant.application.tools import TOOL_HANDLERS, TOOL_SCHEMAS, filter_tool_input
 from app.bootstrap.unit_of_work import AppUnitOfWork
-from app.shared.application.ports import IAiClient
+from app.shared.application.ports import AiProviderError, IAiClient
 
 _SYSTEM_PROMPT = (
     "You are FinanceAI's business assistant. Answer questions about the user's business using the "
@@ -26,6 +26,10 @@ _SYSTEM_PROMPT = (
 )
 
 _MAX_TOOL_ROUND_TRIPS = 5
+_PROVIDER_ERROR_MESSAGE = (
+    "The AI service had a problem answering that just now. "
+    "Nothing was changed - please try again in a moment."
+)
 _FALLBACK_MESSAGE = "I wasn't able to finish answering that — could you try rephrasing your question?"
 
 
@@ -86,7 +90,15 @@ class AskAssistantUseCase:
         messages.append({"role": "user", "content": command.question})
 
         for _ in range(_MAX_TOOL_ROUND_TRIPS):
-            response = await self._ai_client.send(system=system_prompt, messages=messages, tools=TOOL_SCHEMAS)
+            try:
+                response = await self._ai_client.send(
+                    system=system_prompt, messages=messages, tools=TOOL_SCHEMAS
+                )
+            except AiProviderError:
+                # Already logged by the adapter. Tell the user plainly rather
+                # than answering with a 500 or a made-up reply.
+                messages.append({"role": "assistant", "content": _PROVIDER_ERROR_MESSAGE})
+                return AskAssistantResult(answer=_PROVIDER_ERROR_MESSAGE, history=messages)
 
             if response.stop_reason != "tool_use" or not response.tool_calls:
                 answer = response.text or _FALLBACK_MESSAGE

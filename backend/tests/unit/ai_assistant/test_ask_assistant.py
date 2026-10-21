@@ -19,9 +19,7 @@ from tests.fakes.fake_unit_of_work import FakeUnitOfWork
 
 async def test_answers_directly_with_no_tool_calls() -> None:
     uow = FakeUnitOfWork()
-    ai_client = FakeAiClient(
-        [AiResponse(text="Hi, how can I help?", tool_calls=[], stop_reason="end_turn")]
-    )
+    ai_client = FakeAiClient([AiResponse(text="Hi, how can I help?", tool_calls=[], stop_reason="end_turn")])
 
     result = await AskAssistantUseCase(uow, ai_client).execute(
         AskAssistantCommand(business_id=uuid.uuid4(), question="Hello")

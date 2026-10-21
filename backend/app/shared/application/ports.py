@@ -110,6 +110,13 @@ class AiToolCall:
     input: dict
 
 
+class AiProviderError(Exception):
+    """The AI provider rejected or failed a request (bad tool call, rate limit,
+    outage). Adapters raise this instead of leaking their HTTP library's
+    exceptions, so callers can degrade gracefully rather than return a 500.
+    """
+
+
 @dataclass(frozen=True)
 class AiResponse:
     text: str | None
