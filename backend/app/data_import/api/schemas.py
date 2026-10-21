@@ -1,8 +1,10 @@
 import enum
+import uuid
 
 from pydantic import BaseModel
 
 from app.data_import.application.dtos import ImportSummary
+from app.data_import.application.jobs import ImportJob, ImportJobStatus
 
 
 class ImportDataType(str, enum.Enum):
@@ -46,4 +48,24 @@ class ImportSummaryResponse(BaseModel):
             errors=[
                 ImportRowErrorResponse(row_number=e.row_number, message=e.message) for e in summary.errors
             ],
+        )
+
+
+class ImportJobResponse(BaseModel):
+    job_id: uuid.UUID
+    status: ImportJobStatus
+    processed_rows: int
+    total_rows: int
+    summary: ImportSummaryResponse | None = None
+    error: str | None = None
+
+    @classmethod
+    def from_job(cls, job: ImportJob) -> "ImportJobResponse":
+        return cls(
+            job_id=job.id,
+            status=job.status,
+            processed_rows=job.processed_rows,
+            total_rows=job.total_rows,
+            summary=ImportSummaryResponse.from_domain(job.summary) if job.summary else None,
+            error=job.error,
         )

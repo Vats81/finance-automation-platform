@@ -27,4 +27,13 @@ export interface ImportSummaryResponse {
   errors: ImportRowErrorResponse[];
 }
 
+export interface ImportJobResponse {
+  job_id: string;
+  status: "running" | "done" | "failed";
+  processed_rows: number;
+  total_rows: number;
+  summary: ImportSummaryResponse | null;
+  error: string | null;
+}
+
 export type ColumnMapping = Record<string, string>;

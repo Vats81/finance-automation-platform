@@ -1,4 +1,8 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
+
+# (rows processed so far, total rows)
+ProgressCallback = Callable[[int, int], None]
 
 
 @dataclass(frozen=True)

@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ApiError } from "@/lib/api/client";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
-import { previewImport, runImport } from "@/lib/api/dataImport";
+import { getImportJob, previewImport, startImportJob } from "@/lib/api/dataImport";
 import { ColumnMapping, ImportDataType, ImportSummaryResponse, PreviewResponse } from "@/types/dataImport";
 
-type Step = "pick" | "mapping" | "result";
+type Step = "pick" | "mapping" | "running" | "result";
+
+const POLL_INTERVAL_MS = 1000;
+// Poll hiccups (a dropped request, a brief cold start) shouldn't abandon an
+// import that is still running fine on the server.
+const MAX_CONSECUTIVE_POLL_FAILURES = 5;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function bestEffortMapping(canonicalFields: string[], headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};
@@ -36,8 +44,20 @@ export function ImportWizard({
   const [summary, setSummary] = useState<ImportSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ processed: number; total: number }>({ processed: 0, total: 0 });
+  // Set when the wizard is left/reset so a running poll loop stops.
+  const cancelled = useRef(false);
+
+  useEffect(
+    () => () => {
+      cancelled.current = true;
+    },
+    []
+  );
 
   function reset() {
+    cancelled.current = true;
+    setProgress({ processed: 0, total: 0 });
     setStep("pick");
     setFile(null);
     setPreview(null);
@@ -64,14 +84,46 @@ export function ImportWizard({
 
   async function handleImport() {
     if (!file) return;
+    cancelled.current = false;
     setIsLoading(true);
     setError(null);
     try {
-      const result = await runImport(token, businessId, dataType, file, mapping);
-      setSummary(result);
-      setStep("result");
+      const started = await startImportJob(token, businessId, dataType, file, mapping);
+      setProgress({ processed: started.processed_rows, total: started.total_rows });
+      setStep("running");
+
+      let failures = 0;
+      for (;;) {
+        await sleep(POLL_INTERVAL_MS);
+        if (cancelled.current) return;
+        try {
+          const job = await getImportJob(token, businessId, started.job_id);
+          failures = 0;
+          setProgress({ processed: job.processed_rows, total: job.total_rows });
+          if (job.status === "done" && job.summary) {
+            setSummary(job.summary);
+            setStep("result");
+            return;
+          }
+          if (job.status === "failed") {
+            setError(job.error ?? "The import stopped unexpectedly.");
+            setStep("mapping");
+            return;
+          }
+        } catch (err) {
+          // 404 = the server forgot the job (restart); retrying can't help.
+          if (err instanceof ApiError && err.status === 404) throw err;
+          failures += 1;
+          if (failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+            throw new Error(
+              "Lost contact with the server while importing. Rows already imported are kept; upload the file again to finish (duplicates are skipped)."
+            );
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import file");
+      setStep("mapping");
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +216,32 @@ export function ImportWizard({
             {isLoading ? "Importing..." : "Import"}
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (step === "running") {
+    const percent =
+      progress.total > 0 ? Math.min(100, Math.round((progress.processed / progress.total) * 100)) : 0;
+    return (
+      <div className="space-y-3" aria-live="polite">
+        <p className="text-sm text-slate-700">
+          Importing <span className="font-medium">{progress.processed.toLocaleString()}</span> of{" "}
+          <span className="font-medium">{progress.total.toLocaleString()}</span> rows...
+        </p>
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          aria-label="Import progress"
+          className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
+        >
+          <div className="h-full bg-brand-600 transition-all" style={{ width: `${percent}%` }} />
+        </div>
+        <p className="text-xs text-slate-500">
+          Large files can take a minute or two. Keep this page open until it finishes.
+        </p>
       </div>
     );
   }

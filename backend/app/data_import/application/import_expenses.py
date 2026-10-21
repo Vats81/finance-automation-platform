@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
-from app.data_import.application.dtos import ImportRowError, ImportSummary
+from app.data_import.application.dtos import ImportRowError, ImportSummary, ProgressCallback
 from app.data_import.application.row_validation import (
     length_error,
     mapped_value,
@@ -54,7 +54,12 @@ class ImportExpensesUseCase:
         self._uow = uow
 
     async def execute(
-        self, *, business_id: uuid.UUID, rows: list[dict[str, str]], column_mapping: dict[str, str]
+        self,
+        *,
+        business_id: uuid.UUID,
+        rows: list[dict[str, str]],
+        column_mapping: dict[str, str],
+        on_progress: ProgressCallback | None = None,
     ) -> ImportSummary:
         existing, _ = await self._uow.expenses.list_for_business(business_id, offset=0, limit=10_000)
         remaining = Counter(
@@ -67,6 +72,8 @@ class ImportExpensesUseCase:
         errors: list[ImportRowError] = []
 
         for row_number, raw_row in enumerate(rows, start=1):
+            if on_progress:
+                on_progress(row_number - 1, len(rows))
             missing = [
                 field
                 for field in REQUIRED_FIELDS
@@ -125,6 +132,9 @@ class ImportExpensesUseCase:
                 errors.append(ImportRowError(row_number=row_number, message=f"Invalid value: {exc}"))
             except Exception as exc:  # noqa: BLE001 - one bad row must not abort the import
                 errors.append(await unexpected_row_failure(self._uow, row_number, exc))
+
+        if on_progress:
+            on_progress(len(rows), len(rows))
 
         return ImportSummary(
             total_rows=len(rows), created=created, skipped_duplicates=skipped_duplicates, errors=errors

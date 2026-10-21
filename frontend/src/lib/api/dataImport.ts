@@ -1,5 +1,11 @@
-import { ApiError } from "@/lib/api/client";
-import { ColumnMapping, ImportDataType, ImportSummaryResponse, PreviewResponse } from "@/types/dataImport";
+import { ApiError, apiFetch } from "@/lib/api/client";
+import {
+  ColumnMapping,
+  ImportDataType,
+  ImportJobResponse,
+  ImportSummaryResponse,
+  PreviewResponse,
+} from "@/types/dataImport";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -58,6 +64,32 @@ export function runImport(
     token,
     formData
   );
+}
+
+// Starts the import in the background; poll getImportJob for progress.
+export function startImportJob(
+  token: string | null,
+  businessId: string,
+  dataType: ImportDataType,
+  file: File,
+  columnMapping: ColumnMapping
+): Promise<ImportJobResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("column_mapping", JSON.stringify(columnMapping));
+  return multipartFetch<ImportJobResponse>(
+    `/businesses/${businessId}/imports/${dataType}/jobs`,
+    token,
+    formData
+  );
+}
+
+export function getImportJob(
+  token: string | null,
+  businessId: string,
+  jobId: string
+): Promise<ImportJobResponse> {
+  return apiFetch<ImportJobResponse>(`/businesses/${businessId}/imports/jobs/${jobId}`, token);
 }
 
 export async function downloadImportTemplate(

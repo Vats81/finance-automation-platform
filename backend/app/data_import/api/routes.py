@@ -3,17 +3,24 @@ import io
 import json
 import uuid
 
-from fastapi import APIRouter, Depends, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from app.api.rate_limit import limiter
-from app.bootstrap.container import get_uow
+from app.bootstrap.container import get_container, get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
 from app.business.domain.value_objects import BusinessRole
 from app.config.settings import get_settings
-from app.data_import.api.schemas import ImportDataType, ImportSummaryResponse, PreviewResponse
+from app.data_import.api.schemas import (
+    ImportDataType,
+    ImportJobResponse,
+    ImportSummaryResponse,
+    PreviewResponse,
+)
 from app.data_import.application import import_customers, import_expenses, import_products, import_vendors
+from app.data_import.application.dtos import ImportSummary, ProgressCallback
+from app.data_import.application.jobs import ImportJobRegistry, get_import_job_registry
 from app.identity.domain.entities import User
 from app.shared.domain.exceptions import ValidationException
 from app.shared.infrastructure.csv_parser import MAX_UPLOAD_BYTES, parse_csv
@@ -51,6 +58,31 @@ async def _read_upload(file: UploadFile) -> bytes:
     # buffering all of it in memory.
     content = await file.read(MAX_UPLOAD_BYTES + 1)
     return content
+
+
+async def _execute_import(
+    uow: AppUnitOfWork,
+    data_type: ImportDataType,
+    business_id: uuid.UUID,
+    rows: list[dict[str, str]],
+    mapping: dict[str, str],
+    on_progress: ProgressCallback | None = None,
+) -> ImportSummary:
+    if data_type == ImportDataType.CUSTOMERS:
+        return await import_customers.ImportCustomersUseCase(uow).execute(
+            business_id=business_id, rows=rows, column_mapping=mapping, on_progress=on_progress
+        )
+    if data_type == ImportDataType.VENDORS:
+        return await import_vendors.ImportVendorsUseCase(uow).execute(
+            business_id=business_id, rows=rows, column_mapping=mapping, on_progress=on_progress
+        )
+    if data_type == ImportDataType.PRODUCTS:
+        return await import_products.ImportProductsUseCase(uow).execute(
+            business_id=business_id, rows=rows, column_mapping=mapping, on_progress=on_progress
+        )
+    return await import_expenses.ImportExpensesUseCase(uow).execute(
+        business_id=business_id, rows=rows, column_mapping=mapping, on_progress=on_progress
+    )
 
 
 _IMPORTER_MODULES = {
@@ -97,24 +129,65 @@ async def run_import(
     content = await _read_upload(file)
     _headers, rows = parse_csv(content)
 
-    if data_type == ImportDataType.CUSTOMERS:
-        summary = await import_customers.ImportCustomersUseCase(uow).execute(
-            business_id=business_id, rows=rows, column_mapping=mapping
-        )
-    elif data_type == ImportDataType.VENDORS:
-        summary = await import_vendors.ImportVendorsUseCase(uow).execute(
-            business_id=business_id, rows=rows, column_mapping=mapping
-        )
-    elif data_type == ImportDataType.PRODUCTS:
-        summary = await import_products.ImportProductsUseCase(uow).execute(
-            business_id=business_id, rows=rows, column_mapping=mapping
-        )
-    else:
-        summary = await import_expenses.ImportExpensesUseCase(uow).execute(
-            business_id=business_id, rows=rows, column_mapping=mapping
-        )
+    summary = await _execute_import(uow, data_type, business_id, rows, mapping)
 
     return ImportSummaryResponse.from_domain(summary)
+
+
+@router.post("/{data_type}/jobs", response_model=ImportJobResponse, status_code=202)
+@limiter.limit(settings.rate_limit_write)
+async def start_import_job(
+    request: Request,
+    business_id: uuid.UUID,
+    data_type: ImportDataType,
+    file: UploadFile,
+    column_mapping: str = Form(...),
+    _actor: User = Depends(require_business_role(*_can_write)),
+    registry: ImportJobRegistry = Depends(get_import_job_registry),
+) -> ImportJobResponse:
+    """Starts the import in the background and returns at once; poll
+    GET /imports/jobs/{job_id} for progress. Same validation as the blocking
+    endpoint, done up front so a bad file still fails fast with a 422.
+    """
+    mapping = _parse_column_mapping(column_mapping)
+    content = await _read_upload(file)
+    _headers, rows = parse_csv(content)
+
+    if registry.running_for_business(business_id) is not None:
+        raise HTTPException(
+            status_code=409, detail="An import is already running for this business. Wait for it to finish."
+        )
+
+    session_factory = get_container().session_factory
+
+    async def run(on_progress: ProgressCallback) -> ImportSummary:
+        # The request's session is closed once this response is sent, so the
+        # background task opens its own.
+        async with session_factory() as session:
+            return await _execute_import(
+                AppUnitOfWork(session), data_type, business_id, rows, mapping, on_progress
+            )
+
+    job = registry.start(business_id=business_id, total_rows=len(rows), runner=run)
+    return ImportJobResponse.from_job(job)
+
+
+@router.get("/jobs/{job_id}", response_model=ImportJobResponse)
+async def get_import_job(
+    business_id: uuid.UUID,
+    job_id: uuid.UUID,
+    _actor: User = Depends(require_business_role(*_can_write)),
+    registry: ImportJobRegistry = Depends(get_import_job_registry),
+) -> ImportJobResponse:
+    job = registry.get(job_id)
+    # A job belonging to another business is reported as unknown, not forbidden.
+    if job is None or job.business_id != business_id:
+        raise HTTPException(
+            status_code=404,
+            detail="This import is no longer tracked (the server may have restarted). "
+            "Rows already imported are kept; upload the file again to finish — duplicates are skipped.",
+        )
+    return ImportJobResponse.from_job(job)
 
 
 @router.get("/{data_type}/template")
