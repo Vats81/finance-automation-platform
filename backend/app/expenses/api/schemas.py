@@ -74,6 +74,13 @@ class PagedExpensesResponse(BaseModel):
     limit: int
 
 
+class ScannedLineItemResponse(BaseModel):
+    description: str
+    quantity: Decimal
+    unit_price: Decimal
+    line_total: Decimal
+
+
 class ScannedReceiptResponse(BaseModel):
     vendor_name: str | None
     amount: Decimal | None
@@ -81,6 +88,11 @@ class ScannedReceiptResponse(BaseModel):
     category_guess: str | None
     description_guess: str | None
     raw_text: str
+    invoice_number: str | None = None
+    tax: Decimal | None = None
+    line_items: list[ScannedLineItemResponse] = []
+    items_total: Decimal | None = None
+    totals_match: bool | None = None
 
     @classmethod
     def from_domain(cls, data: ScannedReceiptData) -> "ScannedReceiptResponse":
@@ -91,4 +103,17 @@ class ScannedReceiptResponse(BaseModel):
             category_guess=data.category_guess,
             description_guess=data.description_guess,
             raw_text=data.raw_text,
+            invoice_number=data.invoice_number,
+            tax=data.tax,
+            line_items=[
+                ScannedLineItemResponse(
+                    description=i.description,
+                    quantity=i.quantity,
+                    unit_price=i.unit_price,
+                    line_total=i.line_total,
+                )
+                for i in data.line_items
+            ],
+            items_total=data.items_total,
+            totals_match=data.totals_match,
         )

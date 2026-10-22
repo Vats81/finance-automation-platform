@@ -37,6 +37,13 @@ export interface CreateExpenseRequest {
   notes?: string;
 }
 
+export interface ScannedLineItem {
+  description: string;
+  quantity: string;
+  unit_price: string;
+  line_total: string;
+}
+
 export interface ScannedReceiptResponse {
   vendor_name: string | null;
   amount: string | null;
@@ -44,4 +51,9 @@ export interface ScannedReceiptResponse {
   category_guess: string | null;
   description_guess: string | null;
   raw_text: string;
+  invoice_number?: string | null;
+  tax?: string | null;
+  line_items?: ScannedLineItem[];
+  items_total?: string | null;
+  totals_match?: boolean | null;
 }

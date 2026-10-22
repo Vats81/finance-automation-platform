@@ -276,3 +276,89 @@ async def test_only_the_first_pages_are_read() -> None:
     sent = ai_client.calls[0]["messages"][0]["content"]
     assert "marker number 1" in sent and "marker number 3" in sent
     assert "marker number 4" not in sent
+
+
+# ------------------------------------------------------------- line items (bill scanning)
+
+
+def _bill_json(**overrides: object) -> str:
+    body: dict[str, object] = {
+        "vendor_name": "Metro Wholesale",
+        "invoice_number": "INV-8841",
+        "amount": 124.50,
+        "tax": 4.50,
+        "expense_date": "2026-10-18",
+        "category_guess": "Supplies",
+        "description_guess": "Stock purchase",
+        "line_items": [
+            {"description": "Flour 25kg", "quantity": 4, "unit_price": 20, "line_total": 80},
+            {"description": "Sugar 10kg", "quantity": "3", "unit_price": "13.33", "line_total": "40.00"},
+        ],
+    }
+    body.update(overrides)
+    return json.dumps(body)
+
+
+async def _scan(model_text: str):  # type: ignore[no-untyped-def]
+    ai_client = FakeAiClient([AiResponse(text=model_text, tool_calls=[], stop_reason="end_turn")])
+    return await ScanReceiptUseCase(ai_client).execute(
+        ScanReceiptCommand(content_type="image/png", image_bytes=b"img")
+    )
+
+
+async def test_a_bill_yields_its_line_items_bill_number_and_tax() -> None:
+    result = await _scan(_bill_json())
+
+    assert result.invoice_number == "INV-8841"
+    assert result.tax == Decimal("4.50")
+    assert [(i.description, i.quantity, i.unit_price, i.line_total) for i in result.line_items] == [
+        ("Flour 25kg", Decimal("4"), Decimal("20.00"), Decimal("80.00")),
+        ("Sugar 10kg", Decimal("3"), Decimal("13.33"), Decimal("40.00")),
+    ]
+
+
+async def test_the_system_checks_that_items_plus_tax_match_the_bill_total() -> None:
+    ok = await _scan(_bill_json())  # 80 + 40 + 4.50 = 124.50
+    wrong = await _scan(_bill_json(amount=200))
+
+    assert ok.items_total == Decimal("120.00") and ok.totals_match is True
+    assert wrong.totals_match is False
+
+
+async def test_unusable_rows_are_dropped_and_gaps_are_filled_in() -> None:
+    result = await _scan(
+        _bill_json(
+            line_items=[
+                {"description": "  ", "quantity": 1, "unit_price": 5, "line_total": 5},  # no description
+                {"description": "Discount", "quantity": 1, "unit_price": -5, "line_total": -5},  # negative
+                {"description": "Eggs", "unit_price": 3, "line_total": None},  # no qty, no total
+                {"description": "Milk", "quantity": 2, "line_total": 7},  # no unit price
+                {"description": "Junk", "quantity": 1, "unit_price": "abc", "line_total": "xyz"},
+                "not an object",
+                {"description": "Huge", "quantity": 1, "unit_price": 1e20, "line_total": 1e20},
+            ]
+        )
+    )
+
+    assert [(i.description, i.quantity, i.unit_price, i.line_total) for i in result.line_items] == [
+        ("Eggs", Decimal("1"), Decimal("3.00"), Decimal("3.00")),
+        ("Milk", Decimal("2"), Decimal("3.50"), Decimal("7.00")),
+    ]
+
+
+async def test_line_items_are_capped_and_a_bad_shape_is_ignored() -> None:
+    many = [{"description": f"Item {n}", "quantity": 1, "unit_price": 1, "line_total": 1} for n in range(80)]
+
+    capped = await _scan(_bill_json(line_items=many))
+    not_a_list = await _scan(_bill_json(line_items="Flour x4"))
+    missing = await _scan(json.dumps({"vendor_name": "A", "amount": 5}))
+
+    assert len(capped.line_items) == 50
+    assert not_a_list.line_items == [] and not_a_list.totals_match is None
+    assert missing.line_items == [] and missing.vendor_name == "A"
+
+
+async def test_a_response_that_is_json_but_not_an_object_degrades_gracefully() -> None:
+    result = await _scan("[1, 2, 3]")
+
+    assert result.vendor_name is None and result.line_items == []
