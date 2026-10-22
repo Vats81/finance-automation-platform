@@ -38,7 +38,8 @@ export default function EditPurchasePage() {
       .then((purchase) =>
         setInitialValues({
           purchase_number: purchase.purchase_number,
-          vendor_id: purchase.vendor_id,
+          vendor_id: purchase.vendor_id ?? undefined,
+          vendor_name: purchase.vendor_name ?? undefined,
           purchase_date: purchase.purchase_date,
           due_date: purchase.due_date ?? undefined,
           line_items: purchase.line_items.map((item) => ({

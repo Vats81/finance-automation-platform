@@ -7,7 +7,7 @@ from app.shared.domain.domain_event import DomainEvent
 class PurchaseRecorded(DomainEvent):
     business_id: str
     purchase_number: str
-    vendor_id: str
+    vendor_id: str | None
     total_amount_cents: int
 
 

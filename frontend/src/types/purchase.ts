@@ -14,7 +14,8 @@ export interface PurchaseResponse {
   id: string;
   business_id: string;
   purchase_number: string;
-  vendor_id: string;
+  vendor_id: string | null;
+  vendor_name?: string | null;
   purchase_date: string;
   due_date: string | null;
   line_items: PurchaseLineItem[];
@@ -46,7 +47,9 @@ export interface CreatePurchaseLineItemRequest {
 
 export interface CreatePurchaseRequest {
   purchase_number: string;
-  vendor_id: string;
+  // Either a saved vendor, or a typed supplier name for a one-off shop.
+  vendor_id?: string;
+  vendor_name?: string;
   purchase_date: string;
   due_date?: string;
   line_items: CreatePurchaseLineItemRequest[];

@@ -14,7 +14,9 @@ class PurchaseModel(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     business_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     purchase_number: Mapped[str] = mapped_column(String(100), nullable=False)
-    vendor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    vendor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    # Typed supplier name, used when the purchase is not tied to a saved vendor.
+    vendor_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     purchase_date: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # Line items are value objects (see purchases/domain/value_objects.py

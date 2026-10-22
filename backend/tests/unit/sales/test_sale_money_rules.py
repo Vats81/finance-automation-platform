@@ -136,3 +136,70 @@ def test_expenses_must_be_positive_with_non_negative_tax() -> None:
         expense.update_details(amount=_money("0"))
     with pytest.raises(ValidationException):
         expense.update_details(tax=_money("-2"))
+
+
+# ---- a purchase may name its supplier by typed text (scanned bills from one-off shops)
+
+
+def _purchase(vendor_id: uuid.UUID | None, vendor_name: str | None) -> Purchase:
+    item = PurchaseLineItem(line_number=1, description="Flour", quantity=Decimal("4"), unit_cost=_money("20"))
+    return Purchase.create(
+        business_id=uuid.uuid4(),
+        purchase_number="P-1",
+        vendor_id=vendor_id,
+        purchase_date=date(2026, 10, 1),
+        due_date=None,
+        line_items=[item],
+        vendor_name=vendor_name,
+    )
+
+
+def test_a_purchase_can_be_recorded_with_only_a_typed_vendor_name() -> None:
+    purchase = _purchase(None, "  Corner   Wholesale  ")
+
+    assert purchase.vendor_id is None
+    assert purchase.vendor_name == "Corner Wholesale"  # whitespace tidied
+
+
+def test_a_saved_vendor_wins_over_a_typed_name() -> None:
+    vendor_id = uuid.uuid4()
+
+    purchase = _purchase(vendor_id, "ignored text")
+
+    assert purchase.vendor_id == vendor_id and purchase.vendor_name is None
+
+
+@pytest.mark.parametrize("name", [None, "", "   ", "x" * 201])
+def test_a_purchase_without_a_usable_vendor_is_rejected(name: str | None) -> None:
+    with pytest.raises(ValidationException):
+        _purchase(None, name)
+
+
+def test_editing_a_purchase_can_switch_between_a_typed_and_a_saved_vendor() -> None:
+    purchase = _purchase(None, "Corner Wholesale")
+    vendor_id = uuid.uuid4()
+    item = PurchaseLineItem(line_number=1, description="Flour", quantity=Decimal("4"), unit_cost=_money("20"))
+
+    purchase.update_details(
+        purchase_number="P-1",
+        vendor_id=vendor_id,
+        vendor_name=None,
+        purchase_date=date(2026, 10, 1),
+        due_date=None,
+        line_items=[item],
+        tax=_money("0"),
+        notes=None,
+    )
+    assert purchase.vendor_id == vendor_id and purchase.vendor_name is None
+
+    with pytest.raises(ValidationException):
+        purchase.update_details(
+            purchase_number="P-1",
+            vendor_id=None,
+            vendor_name="",
+            purchase_date=date(2026, 10, 1),
+            due_date=None,
+            line_items=[item],
+            tax=_money("0"),
+            notes=None,
+        )

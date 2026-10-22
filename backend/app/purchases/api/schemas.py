@@ -27,7 +27,8 @@ class CreatePurchaseLineItemRequest(BaseModel):
 
 class CreatePurchaseRequest(BaseModel):
     purchase_number: str = Field(min_length=1, max_length=100)
-    vendor_id: uuid.UUID
+    vendor_id: uuid.UUID | None = None
+    vendor_name: str | None = Field(default=None, max_length=200)
     purchase_date: date
     due_date: date | None = None
     line_items: list[CreatePurchaseLineItemRequest] = Field(min_length=1)
@@ -37,7 +38,8 @@ class CreatePurchaseRequest(BaseModel):
 
 class UpdatePurchaseRequest(BaseModel):
     purchase_number: str = Field(min_length=1, max_length=100)
-    vendor_id: uuid.UUID
+    vendor_id: uuid.UUID | None = None
+    vendor_name: str | None = Field(default=None, max_length=200)
     purchase_date: date
     line_items: list[CreatePurchaseLineItemRequest] = Field(min_length=1)
     due_date: date | None = None
@@ -53,7 +55,8 @@ class PurchaseResponse(BaseModel):
     id: uuid.UUID
     business_id: uuid.UUID
     purchase_number: str
-    vendor_id: uuid.UUID
+    vendor_id: uuid.UUID | None
+    vendor_name: str | None
     purchase_date: date
     due_date: date | None
     line_items: list[PurchaseLineItemSchema]
@@ -74,6 +77,7 @@ class PurchaseResponse(BaseModel):
             business_id=purchase.business_id,
             purchase_number=purchase.purchase_number,
             vendor_id=purchase.vendor_id,
+            vendor_name=purchase.vendor_name,
             purchase_date=purchase.purchase_date,
             due_date=purchase.due_date,
             line_items=[

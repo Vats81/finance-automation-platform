@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { PurchaseTable } from "@/components/purchases/PurchaseTable";
 import { ScanBillDialog } from "@/components/purchases/ScanBillDialog";
+import { listBusinessVendors } from "@/lib/api/businessVendors";
 import { listPurchases } from "@/lib/api/purchases";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
@@ -18,6 +19,7 @@ export default function PurchasesPage() {
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   const router = useRouter();
   const [scanning, setScanning] = useState(false);
+  const [vendorNames, setVendorNames] = useState<Record<string, string>>({});
   const canWrite = currentBusiness?.role !== "viewer";
   const [purchases, setPurchases] = useState<PurchaseResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,9 @@ export default function PurchasesPage() {
   useEffect(() => {
     if (!currentBusinessId) return;
     const token = getAccessToken();
+    listBusinessVendors(token, currentBusinessId)
+      .then((page) => setVendorNames(Object.fromEntries(page.items.map((v) => [v.id, v.legal_name]))))
+      .catch(() => setVendorNames({}));
     listPurchases(token, currentBusinessId)
       .then((page) => setPurchases(page.items))
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load purchases"));
@@ -62,7 +67,7 @@ export default function PurchasesPage() {
             <Spinner />
           </div>
         ) : (
-          <PurchaseTable purchases={purchases ?? []} />
+          <PurchaseTable purchases={purchases ?? []} vendorNames={vendorNames} />
         )}
       </Card>
     </div>

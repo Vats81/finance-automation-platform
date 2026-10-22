@@ -22,12 +22,13 @@ class CreatePurchaseLineItemInput:
 class CreatePurchaseCommand:
     business_id: uuid.UUID
     purchase_number: str
-    vendor_id: uuid.UUID
+    vendor_id: uuid.UUID | None
     purchase_date: date
     line_items: list[CreatePurchaseLineItemInput]
     due_date: date | None = None
     tax: Decimal | None = None
     notes: str | None = None
+    vendor_name: str | None = None
 
 
 class CreatePurchaseUseCase:
@@ -49,6 +50,7 @@ class CreatePurchaseUseCase:
             business_id=command.business_id,
             purchase_number=command.purchase_number,
             vendor_id=command.vendor_id,
+            vendor_name=command.vendor_name,
             purchase_date=command.purchase_date,
             due_date=command.due_date,
             line_items=line_items,

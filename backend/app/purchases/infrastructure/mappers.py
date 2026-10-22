@@ -33,6 +33,7 @@ def model_to_domain(model: PurchaseModel) -> Purchase:
         business_id=model.business_id,
         purchase_number=model.purchase_number,
         vendor_id=model.vendor_id,
+        vendor_name=model.vendor_name,
         purchase_date=model.purchase_date,
         due_date=model.due_date,
         line_items=[_dict_to_line_item(item) for item in model.line_items],
@@ -50,6 +51,7 @@ def domain_to_model(purchase: Purchase) -> PurchaseModel:
         business_id=purchase.business_id,
         purchase_number=purchase.purchase_number,
         vendor_id=purchase.vendor_id,
+        vendor_name=purchase.vendor_name,
         purchase_date=purchase.purchase_date,
         due_date=purchase.due_date,
         line_items=[_line_item_to_dict(item) for item in purchase.line_items],
@@ -64,6 +66,7 @@ def domain_to_model(purchase: Purchase) -> PurchaseModel:
 def apply_domain_to_existing_model(purchase: Purchase, model: PurchaseModel) -> None:
     model.purchase_number = purchase.purchase_number
     model.vendor_id = purchase.vendor_id
+    model.vendor_name = purchase.vendor_name
     model.purchase_date = purchase.purchase_date
     model.due_date = purchase.due_date
     model.line_items = [_line_item_to_dict(item) for item in purchase.line_items]

@@ -79,7 +79,7 @@ function purchasesToRows(purchases: PurchaseResponse[], vendorNames: Record<stri
   return purchases.map((purchase) => ({
     id: purchase.id,
     reference: purchase.purchase_number,
-    counterparty: vendorNames[purchase.vendor_id] ?? "—",
+    counterparty: purchase.vendor_name ?? (purchase.vendor_id ? vendorNames[purchase.vendor_id] : undefined) ?? "—",
     dueDate: purchase.due_date,
     outstandingAmount: purchase.outstanding_amount,
     paymentStatus: purchase.payment_status,

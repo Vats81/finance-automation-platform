@@ -61,6 +61,7 @@ async def create_purchase(
             business_id=business_id,
             purchase_number=body.purchase_number,
             vendor_id=body.vendor_id,
+            vendor_name=body.vendor_name,
             purchase_date=body.purchase_date,
             due_date=body.due_date,
             line_items=[
@@ -143,6 +144,7 @@ async def update_purchase(
             purchase_id=purchase_id,
             purchase_number=body.purchase_number,
             vendor_id=body.vendor_id,
+            vendor_name=body.vendor_name,
             purchase_date=body.purchase_date,
             due_date=body.due_date,
             line_items=[

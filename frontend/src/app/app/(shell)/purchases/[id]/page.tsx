@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import { getBusinessVendor } from "@/lib/api/businessVendors";
 import { getPurchase, recordPurchasePayment, voidPurchase } from "@/lib/api/purchases";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
@@ -29,12 +30,19 @@ export default function PurchaseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [vendorName, setVendorName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!currentBusinessId) return;
     const token = getAccessToken();
     try {
-      setPurchase(await getPurchase(token, currentBusinessId, id));
+      const loaded = await getPurchase(token, currentBusinessId, id);
+      setPurchase(loaded);
+      if (loaded.vendor_id) {
+        getBusinessVendor(token, currentBusinessId, loaded.vendor_id)
+          .then((vendor) => setVendorName(vendor.legal_name))
+          .catch(() => setVendorName(null));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load purchase");
     }
@@ -88,7 +96,10 @@ export default function PurchaseDetailPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{purchase.purchase_number}</h1>
-          <p className="text-sm text-slate-500">{purchase.purchase_date}</p>
+          <p className="text-sm text-slate-500">
+            {purchase.purchase_date}
+            {(purchase.vendor_name ?? vendorName) && ` · ${purchase.vendor_name ?? vendorName}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {purchase.status === "void" && <Badge tone="neutral">void</Badge>}

@@ -19,6 +19,21 @@ from app.shared.domain.exceptions import ValidationException
 from app.shared.domain.value_objects import Money
 
 
+def _clean_vendor(vendor_id: uuid.UUID | None, vendor_name: str | None) -> str | None:
+    """A purchase names its supplier either by a saved vendor or by a typed name
+    (e.g. a one-off shop that was never set up as a vendor). When a saved
+    vendor is given it wins and no free-text name is kept.
+    """
+    if vendor_id is not None:
+        return None
+    cleaned = " ".join((vendor_name or "").split())
+    if not cleaned:
+        raise ValidationException("A purchase needs a vendor: choose one or type the vendor name")
+    if len(cleaned) > 200:
+        raise ValidationException("Vendor name is too long (200 characters maximum)")
+    return cleaned
+
+
 class Purchase(AggregateRoot):
     """A recorded purchase from a vendor — the AP-side mirror of `Sale`
     (sales/domain/entities.py). References Vendor (required — a purchase
@@ -33,7 +48,8 @@ class Purchase(AggregateRoot):
         entity_id: uuid.UUID | None = None,
         business_id: uuid.UUID,
         purchase_number: str,
-        vendor_id: uuid.UUID,
+        vendor_id: uuid.UUID | None = None,
+        vendor_name: str | None = None,
         purchase_date: date,
         due_date: date | None = None,
         line_items: list[PurchaseLineItem],
@@ -47,6 +63,7 @@ class Purchase(AggregateRoot):
         self.business_id = business_id
         self.purchase_number = purchase_number
         self.vendor_id = vendor_id
+        self.vendor_name = vendor_name
         self.purchase_date = purchase_date
         self.due_date = due_date
         self.line_items = line_items
@@ -62,15 +79,17 @@ class Purchase(AggregateRoot):
         *,
         business_id: uuid.UUID,
         purchase_number: str,
-        vendor_id: uuid.UUID,
+        vendor_id: uuid.UUID | None,
         purchase_date: date,
         due_date: date | None,
         line_items: list[PurchaseLineItem],
         tax: Money | None = None,
         notes: str | None = None,
+        vendor_name: str | None = None,
     ) -> "Purchase":
         if not line_items:
             raise EmptyPurchaseException("A purchase requires at least one line item")
+        vendor_name = _clean_vendor(vendor_id, vendor_name)
         if tax is not None and tax.amount < 0:
             raise ValidationException("Tax cannot be negative")
 
@@ -78,6 +97,7 @@ class Purchase(AggregateRoot):
             business_id=business_id,
             purchase_number=purchase_number,
             vendor_id=vendor_id,
+            vendor_name=vendor_name,
             purchase_date=purchase_date,
             due_date=due_date,
             line_items=line_items,
@@ -89,7 +109,7 @@ class Purchase(AggregateRoot):
                 aggregate_id=purchase.id,
                 business_id=str(business_id),
                 purchase_number=purchase_number,
-                vendor_id=str(vendor_id),
+                vendor_id=str(vendor_id) if vendor_id else None,
                 total_amount_cents=purchase.total_amount.cents,
             )
         )
@@ -146,12 +166,13 @@ class Purchase(AggregateRoot):
         self,
         *,
         purchase_number: str,
-        vendor_id: uuid.UUID,
+        vendor_id: uuid.UUID | None,
         purchase_date: date,
         due_date: date | None,
         line_items: list[PurchaseLineItem],
         tax: Money,
         notes: str | None,
+        vendor_name: str | None = None,
     ) -> None:
         """Full-replacement edit — see Sale.update_details' docstring for
         why this doesn't use the Vendor/Customer-style
@@ -161,6 +182,7 @@ class Purchase(AggregateRoot):
             raise PurchaseAlreadyVoidException(f"Purchase {self.id} is void and cannot be edited")
         if not line_items:
             raise EmptyPurchaseException("A purchase requires at least one line item")
+        vendor_name = _clean_vendor(vendor_id, vendor_name)
 
         new_subtotal = Money(amount=Decimal("0"))
         for item in line_items:
@@ -181,6 +203,9 @@ class Purchase(AggregateRoot):
         if vendor_id != self.vendor_id:
             self.vendor_id = vendor_id
             changed.append("vendor_id")
+        if vendor_name != self.vendor_name:
+            self.vendor_name = vendor_name
+            changed.append("vendor_name")
         if purchase_date != self.purchase_date:
             self.purchase_date = purchase_date
             changed.append("purchase_date")

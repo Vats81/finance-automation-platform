@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { ApiError } from "@/lib/api/client";
 import { scanReceipt } from "@/lib/api/expenses";
 import { listBusinessVendors } from "@/lib/api/businessVendors";
@@ -56,7 +54,7 @@ export function ScanBillDialog({
   const [step, setStep] = useState<Step>("pick");
   const [error, setError] = useState<string | null>(null);
   const [vendors, setVendors] = useState<VendorResponse[]>([]);
-  const [vendorId, setVendorId] = useState("");
+  const [vendorText, setVendorText] = useState("");
   const [scannedVendor, setScannedVendor] = useState<string | null>(null);
   const [billNumber, setBillNumber] = useState("");
   const [billDate, setBillDate] = useState(todayISO());
@@ -102,11 +100,6 @@ export function ScanBillDialog({
       setScannedVendor(scan.vendor_name);
       setNotFoundTotals(scan.totals_match === false);
       setNotes(`Scanned from ${file.name}`);
-      if (scan.vendor_name) {
-        const wanted = scan.vendor_name.trim().toLowerCase();
-        const match = vendors.find((v) => v.legal_name.trim().toLowerCase() === wanted);
-        if (match) setVendorId(match.id);
-      }
       const newRows: Row[] =
         found.length > 0
           ? found.map((item) => ({
@@ -138,11 +131,14 @@ export function ScanBillDialog({
   const taxCents = cents(tax) ?? 0;
   const totalCents = subtotal + taxCents;
   const hasInvalidRow = rows.some((r) => r.description.trim() === "" || lineCents(r) === null);
-  const vendorMissing = scannedVendor && !vendors.some((v) => v.id === vendorId);
+  // The vendor is typed by the user. If it matches a saved vendor (ignoring case), the purchase
+  // is linked to that vendor; otherwise the typed name is stored on the purchase as-is.
+  const typedVendor = vendorText.trim();
+  const savedVendor = vendors.find((v) => v.legal_name.trim().toLowerCase() === typedVendor.toLowerCase());
   const mismatch =
     scannedTotal !== null && Math.abs(totalCents - Math.round(Number(scannedTotal) * 100)) > 5;
   const isSaving = step === "saving";
-  const canConfirm = Boolean(vendorId && billNumber.trim() && validRows.length > 0 && !hasInvalidRow);
+  const canConfirm = Boolean(typedVendor && billNumber.trim() && validRows.length > 0 && !hasInvalidRow);
 
   function updateRow(key: number, patch: Partial<Row>) {
     setRows((current) => current.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -157,7 +153,8 @@ export function ScanBillDialog({
         businessId,
         {
           purchase_number: billNumber.trim(),
-          vendor_id: vendorId,
+          vendor_id: savedVendor?.id,
+          vendor_name: savedVendor ? undefined : typedVendor,
           purchase_date: billDate,
           line_items: validRows.map((r, index) => ({
             line_number: index + 1,
@@ -232,23 +229,31 @@ export function ScanBillDialog({
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1 block font-medium">Vendor</span>
-                <Select value={vendorId} onChange={(e) => setVendorId(e.target.value)} required>
-                  <option value="">Choose a vendor</option>
+                <span className="mb-1 block font-medium">Vendor name</span>
+                <Input
+                  required
+                  list="scan-bill-vendors"
+                  maxLength={200}
+                  placeholder="Type who this bill is from"
+                  value={vendorText}
+                  onChange={(e) => setVendorText(e.target.value)}
+                />
+                <datalist id="scan-bill-vendors">
                   {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.legal_name}
-                    </option>
+                    <option key={v.id} value={v.legal_name} />
                   ))}
-                </Select>
-                {vendorMissing && (
-                  <span className="mt-1 block text-xs text-amber-700">
-                    The bill is from &ldquo;{scannedVendor}&rdquo;, which isn&apos;t one of your vendors yet.{" "}
-                    <Link href="/app/vendors/new" target="_blank" className="underline">
-                      Add it
-                    </Link>{" "}
-                    in a new tab, then reopen this window and scan again.
-                  </span>
+                </datalist>
+                {scannedVendor && !vendorText && (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs text-brand-700 underline"
+                    onClick={() => setVendorText(scannedVendor)}
+                  >
+                    The bill seems to say &ldquo;{scannedVendor}&rdquo; — use this
+                  </button>
+                )}
+                {savedVendor && (
+                  <span className="mt-1 block text-xs text-slate-500">Linked to your saved vendor.</span>
                 )}
               </label>
               <label className="block text-sm">

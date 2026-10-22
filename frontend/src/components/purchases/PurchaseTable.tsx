@@ -8,7 +8,13 @@ const STATUS_TONE: Record<PurchasePaymentStatus, "success" | "warning" | "neutra
   unpaid: "neutral",
 };
 
-export function PurchaseTable({ purchases }: { purchases: PurchaseResponse[] }) {
+export function PurchaseTable({
+  purchases,
+  vendorNames = {},
+}: {
+  purchases: PurchaseResponse[];
+  vendorNames?: Record<string, string>;
+}) {
   if (purchases.length === 0) {
     return <p className="text-sm text-slate-500">No purchases recorded yet.</p>;
   }
@@ -18,6 +24,7 @@ export function PurchaseTable({ purchases }: { purchases: PurchaseResponse[] }) 
       <thead>
         <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
           <th className="py-2 pr-4">Purchase #</th>
+          <th className="py-2 pr-4">Vendor</th>
           <th className="py-2 pr-4">Date</th>
           <th className="py-2 pr-4">Total</th>
           <th className="py-2 pr-4">Outstanding</th>
@@ -35,6 +42,9 @@ export function PurchaseTable({ purchases }: { purchases: PurchaseResponse[] }) 
                 {purchase.purchase_number}
               </Link>
               {purchase.status === "void" && <span className="ml-2 text-xs text-slate-400">(void)</span>}
+            </td>
+            <td className="py-2 pr-4 text-slate-600">
+              {purchase.vendor_name ?? (purchase.vendor_id ? vendorNames[purchase.vendor_id] : undefined) ?? "—"}
             </td>
             <td className="py-2 pr-4 text-slate-600">{purchase.purchase_date}</td>
             <td className="py-2 pr-4 text-slate-600">${purchase.total_amount}</td>

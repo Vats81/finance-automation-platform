@@ -33,6 +33,7 @@ export function PurchaseForm({
     initialValues?.purchase_date ?? new Date().toISOString().slice(0, 10)
   );
   const [vendorId, setVendorId] = useState(initialValues?.vendor_id ?? "");
+  const [vendorName, setVendorName] = useState(initialValues?.vendor_name ?? "");
   const [lines, setLines] = useState<CreatePurchaseLineItemRequest[]>(
     initialValues?.line_items ?? [emptyLine(1)]
   );
@@ -60,7 +61,8 @@ export function PurchaseForm({
     event.preventDefault();
     onSubmit({
       purchase_number: purchaseNumber,
-      vendor_id: vendorId,
+      vendor_id: vendorId || undefined,
+      vendor_name: vendorId ? undefined : vendorName.trim(),
       purchase_date: purchaseDate,
       line_items: lines,
       tax,
@@ -84,10 +86,8 @@ export function PurchaseForm({
       </div>
 
       <FormField label="Vendor">
-        <Select required value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
-          <option value="" disabled>
-            Select a vendor
-          </option>
+        <Select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
+          <option value="">Not a saved vendor (type a name below)</option>
           {vendors.map((vendor) => (
             <option key={vendor.id} value={vendor.id}>
               {vendor.legal_name}
@@ -95,6 +95,17 @@ export function PurchaseForm({
           ))}
         </Select>
       </FormField>
+      {!vendorId && (
+        <FormField label="Vendor name">
+          <Input
+            required
+            maxLength={200}
+            placeholder="Who is this purchase from?"
+            value={vendorName}
+            onChange={(e) => setVendorName(e.target.value)}
+          />
+        </FormField>
+      )}
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">Line items</label>
