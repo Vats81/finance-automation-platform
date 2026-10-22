@@ -278,6 +278,11 @@ class ScanReceiptUseCase:
             raise ReceiptScannerUnavailableException(
                 "The scanner is busy or unavailable right now. Nothing was saved - please try again "
                 "in a moment, or enter the details by hand."
+                + (
+                    f" (reference: provider {exc.status_code} {exc.code or ''})".replace(" )", ")")
+                    if exc.status_code
+                    else ""
+                )
             ) from exc
 
         raw_text = response.text or ""

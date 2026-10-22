@@ -140,7 +140,11 @@ class GroqAiClient(IAiClient):
                     if transient and not last:
                         await asyncio.sleep(attempt)
                         continue
-                    raise AiProviderError(f"The AI service returned an error ({response.status_code}).")
+                    raise AiProviderError(
+                        f"The AI service returned an error ({response.status_code}).",
+                        status_code=response.status_code,
+                        code=_error_code(response),
+                    )
                 try:
                     data = response.json()
                     choice = data["choices"][0]
@@ -173,6 +177,15 @@ class GroqAiClient(IAiClient):
             tool_calls=tool_calls,
             stop_reason=stop_reason,
         )
+
+
+def _error_code(response: httpx.Response) -> str | None:
+    try:
+        error = response.json().get("error", {})
+        code = error.get("code") or error.get("type")
+        return str(code)[:60] if code else None
+    except Exception:  # noqa: BLE001 - the body is not necessarily JSON
+        return None
 
 
 def _loads_dict_or_empty(raw: str | None) -> dict:

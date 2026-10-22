@@ -114,7 +114,14 @@ class AiProviderError(Exception):
     """The AI provider rejected or failed a request (bad tool call, rate limit,
     outage). Adapters raise this instead of leaking their HTTP library's
     exceptions, so callers can degrade gracefully rather than return a 500.
+    `status_code` / `code` carry the provider's own HTTP status and error code
+    (never request content) so a support reference can say what failed.
     """
+
+    def __init__(self, message: str, *, status_code: int | None = None, code: str | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
 
 
 @dataclass(frozen=True)
