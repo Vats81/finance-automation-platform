@@ -379,3 +379,19 @@ async def test_a_provider_failure_is_a_clear_503_style_error_not_a_crash() -> No
 
     assert caught.value.http_status == 503
     assert "Nothing was saved" in caught.value.message
+
+
+async def test_a_rate_limited_scan_tells_the_user_to_wait_not_that_something_broke() -> None:
+    from app.expenses.domain.exceptions import ReceiptScannerUnavailableException
+    from app.shared.application.ports import AiProviderError
+
+    class Limited(FakeAiClient):
+        async def send(self, *, system: str, messages: list[dict], tools: list[dict]) -> AiResponse:
+            raise AiProviderError("limit", status_code=429, code="rate_limit_exceeded")
+
+    with pytest.raises(ReceiptScannerUnavailableException) as caught:
+        await ScanReceiptUseCase(Limited([])).execute(
+            ScanReceiptCommand(content_type="image/png", image_bytes=b"img")
+        )
+
+    assert "usage limit" in caught.value.message and "429" in caught.value.message

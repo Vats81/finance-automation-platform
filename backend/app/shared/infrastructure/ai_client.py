@@ -62,6 +62,7 @@ class AnthropicAiClient(IAiClient):
 
 
 _MAX_ATTEMPTS = 3
+_MAX_RETRY_WAIT_SECONDS = 8.0
 _RETRYABLE_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
 
@@ -138,7 +139,7 @@ class GroqAiClient(IAiClient):
                         response.status_code == 400 and "tool_use_failed" in response.text
                     )
                     if transient and not last:
-                        await asyncio.sleep(attempt)
+                        await asyncio.sleep(_retry_delay(response, attempt))
                         continue
                     raise AiProviderError(
                         f"The AI service returned an error ({response.status_code}).",
@@ -177,6 +178,18 @@ class GroqAiClient(IAiClient):
             tool_calls=tool_calls,
             stop_reason=stop_reason,
         )
+
+
+def _retry_delay(response: httpx.Response, attempt: int) -> float:
+    """How long to wait before retrying: the provider's own Retry-After hint
+    when it gives one (rate limits do), capped so a request never hangs, else a
+    short growing backoff.
+    """
+    try:
+        hinted = float(response.headers.get("retry-after", ""))
+    except ValueError:
+        return float(attempt)
+    return max(0.5, min(hinted, _MAX_RETRY_WAIT_SECONDS))
 
 
 def _error_code(response: httpx.Response) -> str | None:

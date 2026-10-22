@@ -140,3 +140,39 @@ async def test_a_flaky_empty_answer_then_a_good_one_succeeds(monkeypatch: pytest
     _client_with(monkeypatch, [httpx.Response(200, json={"choices": []}), httpx.Response(200, json=_OK)])
 
     assert (await _send()).text == "Done"  # type: ignore[attr-defined]
+
+
+async def test_a_rate_limit_waits_as_long_as_the_provider_asks_up_to_a_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    waits: list[float] = []
+
+    async def record(seconds: float) -> None:
+        waits.append(seconds)
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", record)
+    _client_with(
+        monkeypatch,
+        [
+            httpx.Response(429, headers={"retry-after": "3"}, text="slow down"),
+            httpx.Response(429, headers={"retry-after": "120"}, text="slow down"),
+            httpx.Response(200, json=_OK),
+        ],
+    )
+
+    assert (await _send()).text == "Done"  # type: ignore[attr-defined]
+    assert waits == [3.0, 8.0]  # the second hint is capped so a request can't hang
+
+
+async def test_the_provider_status_and_code_travel_with_the_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def no_sleep(_: float) -> None: ...
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", no_sleep)
+    _client_with(
+        monkeypatch, [httpx.Response(429, json={"error": {"code": "rate_limit_exceeded", "message": "x"}})]
+    )
+
+    with pytest.raises(AiProviderError) as caught:
+        await _send()
+
+    assert caught.value.status_code == 429 and caught.value.code == "rate_limit_exceeded"

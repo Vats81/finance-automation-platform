@@ -275,9 +275,15 @@ class ScanReceiptUseCase:
                 tools=[],
             )
         except AiProviderError as exc:
+            busy = (
+                "The scanner has reached its usage limit for the moment - wait about a minute and "
+                "try again, or enter the details by hand. Nothing was saved."
+                if exc.status_code == 429
+                else "The scanner is unavailable right now. Nothing was saved - please try again in a "
+                "moment, or enter the details by hand."
+            )
             raise ReceiptScannerUnavailableException(
-                "The scanner is busy or unavailable right now. Nothing was saved - please try again "
-                "in a moment, or enter the details by hand."
+                busy
                 + (
                     f" (reference: provider {exc.status_code} {exc.code or ''})".replace(" )", ")")
                     if exc.status_code
