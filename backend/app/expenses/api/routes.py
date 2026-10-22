@@ -20,7 +20,7 @@ from app.expenses.application.commands.update_expense import UpdateExpenseComman
 from app.expenses.application.commands.void_expense import VoidExpenseCommand, VoidExpenseUseCase
 from app.expenses.application.queries.get_expense import GetExpenseQuery, GetExpenseUseCase
 from app.expenses.application.queries.list_expenses import ListExpensesQuery, ListExpensesUseCase
-from app.expenses.application.scan_receipt import ScanReceiptCommand, ScanReceiptUseCase
+from app.expenses.application.scan_receipt import MAX_RECEIPT_BYTES, ScanReceiptCommand, ScanReceiptUseCase
 from app.identity.domain.entities import User
 from app.shared.application.pagination import PageRequest
 from app.shared.application.ports import IAiClient
@@ -68,7 +68,8 @@ async def scan_receipt(
     _actor: User = Depends(require_business_role(*_can_write)),
     ai_client: IAiClient = Depends(get_ai_client),
 ) -> ScannedReceiptResponse:
-    content = await file.read()
+    # One byte past the limit is enough for the use case to reject it, without buffering a huge upload.
+    content = await file.read(MAX_RECEIPT_BYTES + 1)
     use_case = ScanReceiptUseCase(ai_client)
     data = await use_case.execute(
         ScanReceiptCommand(content_type=file.content_type or "", image_bytes=content)

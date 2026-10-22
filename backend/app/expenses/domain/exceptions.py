@@ -13,5 +13,9 @@ class UnsupportedReceiptFileTypeException(ValidationException):
     error_code = "unsupported_receipt_file_type"
 
 
+class UnreadableReceiptPdfException(ValidationException):
+    error_code = "unreadable_receipt_pdf"
+
+
 class ReceiptFileTooLargeException(ValidationException):
     error_code = "receipt_file_too_large"
