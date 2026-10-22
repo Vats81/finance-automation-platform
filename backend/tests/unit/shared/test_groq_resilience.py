@@ -49,24 +49,33 @@ async def test_a_tool_use_failed_400_is_retried_once_and_then_succeeds(
 async def test_other_provider_errors_become_a_clean_ai_provider_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    seen = _client_with(monkeypatch, [httpx.Response(429, text=json.dumps({"error": "rate limited"}))])
+    seen = _client_with(monkeypatch, [httpx.Response(401, text=json.dumps({"error": "bad key"}))])
 
     with pytest.raises(AiProviderError):
         await _send()
 
-    assert len(seen) == 1  # not retried
+    assert len(seen) == 1  # a non-transient error is not retried
 
 
-async def test_a_persistent_tool_failure_gives_up_after_one_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_a_persistent_tool_failure_gives_up_after_three_attempts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def no_sleep(_: float) -> None: ...
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", no_sleep)
     seen = _client_with(monkeypatch, [httpx.Response(400, json=_TOOL_FAIL)])
 
     with pytest.raises(AiProviderError):
         await _send()
 
-    assert len(seen) == 2
+    assert len(seen) == 3
 
 
 async def test_a_network_failure_becomes_an_ai_provider_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def no_sleep(_: float) -> None: ...
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", no_sleep)
+
     def boom(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("down")
 
@@ -77,3 +86,57 @@ async def test_a_network_failure_becomes_an_ai_provider_error(monkeypatch: pytes
 
     with pytest.raises(AiProviderError):
         await _send()
+
+
+@pytest.mark.parametrize("status", [429, 500, 502, 503])
+async def test_transient_provider_errors_are_retried_then_succeed(
+    monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+    async def no_sleep(_: float) -> None: ...
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", no_sleep)
+    seen = _client_with(
+        monkeypatch,
+        [
+            httpx.Response(status, text="busy"),
+            httpx.Response(status, text="busy"),
+            httpx.Response(200, json=_OK),
+        ],
+    )
+
+    response = await _send()
+
+    assert len(seen) == 3
+    assert response.text == "Done"  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    "bad_body",
+    [
+        {"choices": []},
+        {},
+        {"choices": [{"message": {"content": None, "tool_calls": None}}]},
+        {"choices": [None]},
+    ],
+)
+async def test_an_empty_or_malformed_200_is_retried_and_never_a_crash(
+    monkeypatch: pytest.MonkeyPatch, bad_body: dict
+) -> None:
+    async def no_sleep(_: float) -> None: ...
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", no_sleep)
+    seen = _client_with(monkeypatch, [httpx.Response(200, json=bad_body)])
+
+    with pytest.raises(AiProviderError):
+        await _send()
+
+    assert len(seen) == 3
+
+
+async def test_a_flaky_empty_answer_then_a_good_one_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def no_sleep(_: float) -> None: ...
+
+    monkeypatch.setattr(ai_module.asyncio, "sleep", no_sleep)
+    _client_with(monkeypatch, [httpx.Response(200, json={"choices": []}), httpx.Response(200, json=_OK)])
+
+    assert (await _send()).text == "Done"  # type: ignore[attr-defined]

@@ -10,10 +10,11 @@ from pypdf import PdfReader
 
 from app.expenses.domain.exceptions import (
     ReceiptFileTooLargeException,
+    ReceiptScannerUnavailableException,
     UnreadableReceiptPdfException,
     UnsupportedReceiptFileTypeException,
 )
-from app.shared.application.ports import IAiClient
+from app.shared.application.ports import AiProviderError, IAiClient
 
 # Claude vision's realistically-relevant receipt formats.
 _PDF = "application/pdf"
@@ -267,11 +268,17 @@ class ScanReceiptUseCase:
         else:
             content = _image_content(command.content_type, command.image_bytes)
 
-        response = await self._ai_client.send(
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": content}],
-            tools=[],
-        )
+        try:
+            response = await self._ai_client.send(
+                system=_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": content}],
+                tools=[],
+            )
+        except AiProviderError as exc:
+            raise ReceiptScannerUnavailableException(
+                "The scanner is busy or unavailable right now. Nothing was saved - please try again "
+                "in a moment, or enter the details by hand."
+            ) from exc
 
         raw_text = response.text or ""
         try:

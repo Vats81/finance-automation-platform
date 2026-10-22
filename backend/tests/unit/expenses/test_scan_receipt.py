@@ -362,3 +362,20 @@ async def test_a_response_that_is_json_but_not_an_object_degrades_gracefully() -
     result = await _scan("[1, 2, 3]")
 
     assert result.vendor_name is None and result.line_items == []
+
+
+async def test_a_provider_failure_is_a_clear_503_style_error_not_a_crash() -> None:
+    from app.expenses.domain.exceptions import ReceiptScannerUnavailableException
+    from app.shared.application.ports import AiProviderError
+
+    class Broken(FakeAiClient):
+        async def send(self, *, system: str, messages: list[dict], tools: list[dict]) -> AiResponse:
+            raise AiProviderError("down")
+
+    with pytest.raises(ReceiptScannerUnavailableException) as caught:
+        await ScanReceiptUseCase(Broken([])).execute(
+            ScanReceiptCommand(content_type="image/png", image_bytes=b"img")
+        )
+
+    assert caught.value.http_status == 503
+    assert "Nothing was saved" in caught.value.message

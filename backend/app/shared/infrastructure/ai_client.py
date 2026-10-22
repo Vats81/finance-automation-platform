@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from typing import Any
@@ -60,6 +61,10 @@ class AnthropicAiClient(IAiClient):
         )
 
 
+_MAX_ATTEMPTS = 3
+_RETRYABLE_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+
+
 class GroqAiClient(IAiClient):
     """Free-tier alternative to AnthropicAiClient, talking to Groq's
     OpenAI-compatible chat-completions endpoint over plain httpx (no SDK,
@@ -103,7 +108,8 @@ class GroqAiClient(IAiClient):
 
         data: dict[str, Any] = {}
         async with httpx.AsyncClient(timeout=60) as client:
-            for attempt in (1, 2):
+            for attempt in range(1, _MAX_ATTEMPTS + 1):
+                last = attempt == _MAX_ATTEMPTS
                 try:
                     response = await client.post(
                         _GROQ_CHAT_URL,
@@ -111,23 +117,47 @@ class GroqAiClient(IAiClient):
                         json=payload,
                     )
                 except httpx.HTTPError as exc:
-                    logger.error("Groq request could not be sent: %s", exc)
-                    raise AiProviderError("The AI service could not be reached.") from exc
+                    logger.error("Groq request could not be sent (attempt %s): %s", attempt, exc)
+                    if last:
+                        raise AiProviderError("The AI service could not be reached.") from exc
+                    await asyncio.sleep(attempt)
+                    continue
                 if response.is_error:
                     # Groq's JSON error body (code/message) is far more useful
                     # than httpx's generic "400 Bad Request" - log it.
-                    logger.error("Groq request failed (%s): %s", response.status_code, response.text)
-                    # The model occasionally emits a tool call that fails the
-                    # provider's schema validation (code tool_use_failed). It is
-                    # non-deterministic, so one retry usually succeeds.
-                    if attempt == 1 and response.status_code == 400 and "tool_use_failed" in response.text:
+                    logger.error(
+                        "Groq request failed (attempt %s, %s): %s",
+                        attempt,
+                        response.status_code,
+                        response.text,
+                    )
+                    # Rate limits, provider-side errors, and the model sometimes
+                    # emitting a tool call that fails the provider's schema
+                    # validation (tool_use_failed) are all transient: retry.
+                    transient = response.status_code in _RETRYABLE_STATUSES or (
+                        response.status_code == 400 and "tool_use_failed" in response.text
+                    )
+                    if transient and not last:
+                        await asyncio.sleep(attempt)
                         continue
                     raise AiProviderError(f"The AI service returned an error ({response.status_code}).")
-                data = response.json()
+                try:
+                    data = response.json()
+                    choice = data["choices"][0]
+                    oai_message = choice["message"]
+                    if not oai_message.get("content") and not oai_message.get("tool_calls"):
+                        raise ValueError("empty completion")
+                except (ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
+                    # A 200 with no usable answer (empty choices, or all of the token
+                    # budget spent on hidden reasoning). Used to surface as a 500.
+                    logger.error(
+                        "Groq returned an unusable response (attempt %s): %s", attempt, response.text[:500]
+                    )
+                    if last:
+                        raise AiProviderError("The AI service returned an empty answer.") from exc
+                    await asyncio.sleep(attempt)
+                    continue
                 break
-
-        choice = data["choices"][0]
-        oai_message = choice["message"]
 
         tool_calls = [
             AiToolCall(
