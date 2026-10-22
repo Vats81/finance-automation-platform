@@ -34,6 +34,8 @@ class CreatePurchaseRequest(BaseModel):
     line_items: list[CreatePurchaseLineItemRequest] = Field(min_length=1)
     tax: Decimal | None = None
     notes: str | None = None
+    # Also add each linked line's quantity to that product's stock.
+    add_to_stock: bool = False
 
 
 class UpdatePurchaseRequest(BaseModel):
@@ -68,6 +70,7 @@ class PurchaseResponse(BaseModel):
     payment_status: PurchasePaymentStatus
     notes: str | None
     status: PurchaseStatus
+    stock_added: bool = False
     created_at: datetime
 
     @classmethod
@@ -99,6 +102,7 @@ class PurchaseResponse(BaseModel):
             payment_status=purchase.payment_status,
             notes=purchase.notes,
             status=purchase.status,
+            stock_added=purchase.stock_added,
             created_at=purchase.created_at,
         )
 

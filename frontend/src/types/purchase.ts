@@ -16,6 +16,7 @@ export interface PurchaseResponse {
   purchase_number: string;
   vendor_id: string | null;
   vendor_name?: string | null;
+  stock_added?: boolean;
   purchase_date: string;
   due_date: string | null;
   line_items: PurchaseLineItem[];
@@ -50,6 +51,8 @@ export interface CreatePurchaseRequest {
   // Either a saved vendor, or a typed supplier name for a one-off shop.
   vendor_id?: string;
   vendor_name?: string;
+  // Also add each linked line's count to that product's stock.
+  add_to_stock?: boolean;
   purchase_date: string;
   due_date?: string;
   line_items: CreatePurchaseLineItemRequest[];

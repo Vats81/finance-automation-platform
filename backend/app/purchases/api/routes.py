@@ -62,6 +62,7 @@ async def create_purchase(
             purchase_number=body.purchase_number,
             vendor_id=body.vendor_id,
             vendor_name=body.vendor_name,
+            add_to_stock=body.add_to_stock,
             purchase_date=body.purchase_date,
             due_date=body.due_date,
             line_items=[

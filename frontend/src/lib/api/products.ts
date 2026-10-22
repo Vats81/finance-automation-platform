@@ -7,8 +7,13 @@ import {
   UpdateProductRequest,
 } from "@/types/product";
 
-export function listProducts(token: string | null, businessId: string): Promise<PagedProductsResponse> {
-  return apiFetch<PagedProductsResponse>(`/businesses/${businessId}/products`, token);
+export function listProducts(
+  token: string | null,
+  businessId: string,
+  options?: { limit?: number }
+): Promise<PagedProductsResponse> {
+  const query = options?.limit ? `?limit=${options.limit}` : "";
+  return apiFetch<PagedProductsResponse>(`/businesses/${businessId}/products${query}`, token);
 }
 
 export function getProduct(

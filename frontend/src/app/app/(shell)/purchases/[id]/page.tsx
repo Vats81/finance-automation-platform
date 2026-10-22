@@ -71,6 +71,12 @@ export default function PurchaseDetailPage() {
 
   async function handleVoid() {
     if (!currentBusinessId) return;
+    if (
+      purchase?.stock_added &&
+      !window.confirm("This purchase added items to your stock. Voiding it will take those counts back out. Continue?")
+    ) {
+      return;
+    }
     setIsUpdating(true);
     setError(null);
     try {
@@ -103,6 +109,7 @@ export default function PurchaseDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {purchase.status === "void" && <Badge tone="neutral">void</Badge>}
+          {purchase.stock_added && <Badge tone="success">added to stock</Badge>}
           <Badge tone={STATUS_TONE[purchase.payment_status]}>
             {purchase.payment_status.replace("_", " ")}
           </Badge>

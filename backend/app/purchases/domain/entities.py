@@ -12,6 +12,7 @@ from app.purchases.domain.exceptions import (
     EmptyPurchaseException,
     PurchaseAlreadyVoidException,
     PurchasePaymentExceedsOutstandingException,
+    PurchaseStockLockedException,
 )
 from app.purchases.domain.value_objects import PurchaseLineItem, PurchasePaymentStatus, PurchaseStatus
 from app.shared.domain.aggregate_root import AggregateRoot
@@ -57,6 +58,7 @@ class Purchase(AggregateRoot):
         amount_paid: Money | None = None,
         notes: str | None = None,
         status: PurchaseStatus = PurchaseStatus.RECORDED,
+        stock_added: bool = False,
         created_at: datetime | None = None,
     ) -> None:
         super().__init__(entity_id)
@@ -70,6 +72,10 @@ class Purchase(AggregateRoot):
         self.tax = tax or Money(amount=Decimal("0"))
         self.amount_paid = amount_paid or Money(amount=Decimal("0"))
         self.notes = notes
+        # True when recording this purchase also increased product stock. Its
+        # items are then locked (the stock they added must stay in step) and
+        # voiding it takes that stock back out.
+        self.stock_added = stock_added
         self.status = status
         self.created_at = created_at or datetime.now(timezone.utc)
 
@@ -86,6 +92,7 @@ class Purchase(AggregateRoot):
         tax: Money | None = None,
         notes: str | None = None,
         vendor_name: str | None = None,
+        stock_added: bool = False,
     ) -> "Purchase":
         if not line_items:
             raise EmptyPurchaseException("A purchase requires at least one line item")
@@ -103,6 +110,7 @@ class Purchase(AggregateRoot):
             line_items=line_items,
             tax=tax,
             notes=notes,
+            stock_added=stock_added,
         )
         purchase._record_event(
             PurchaseRecorded(
@@ -183,6 +191,11 @@ class Purchase(AggregateRoot):
         if not line_items:
             raise EmptyPurchaseException("A purchase requires at least one line item")
         vendor_name = _clean_vendor(vendor_id, vendor_name)
+        if self.stock_added and line_items != self.line_items:
+            raise PurchaseStockLockedException(
+                "This purchase added items to your stock, so its items can't be changed. "
+                "Void it (which removes that stock) and enter a corrected purchase."
+            )
 
         new_subtotal = Money(amount=Decimal("0"))
         for item in line_items:

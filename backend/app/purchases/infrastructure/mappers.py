@@ -41,6 +41,7 @@ def model_to_domain(model: PurchaseModel) -> Purchase:
         amount_paid=Money.from_cents(model.amount_paid_cents),
         notes=model.notes,
         status=PurchaseStatus(model.status),
+        stock_added=model.stock_added,
         created_at=model.created_at,
     )
 
@@ -59,6 +60,7 @@ def domain_to_model(purchase: Purchase) -> PurchaseModel:
         amount_paid_cents=purchase.amount_paid.cents,
         notes=purchase.notes,
         status=purchase.status.value,
+        stock_added=purchase.stock_added,
         created_at=purchase.created_at,
     )
 

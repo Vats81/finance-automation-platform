@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from app.purchases.application.ports import PurchasesUnitOfWork
+from app.bootstrap.unit_of_work import AppUnitOfWork
+from app.purchases.application.stock import ensure_products_belong_to_business
 from app.purchases.domain.entities import Purchase
 from app.purchases.domain.exceptions import PurchaseNotFoundException
 from app.purchases.domain.value_objects import PurchaseLineItem
@@ -34,7 +35,7 @@ class UpdatePurchaseCommand:
 
 
 class UpdatePurchaseUseCase:
-    def __init__(self, uow: PurchasesUnitOfWork) -> None:
+    def __init__(self, uow: AppUnitOfWork) -> None:
         self._uow = uow
 
     async def execute(self, command: UpdatePurchaseCommand) -> Purchase:
@@ -52,6 +53,7 @@ class UpdatePurchaseUseCase:
             )
             for item in command.line_items
         ]
+        await ensure_products_belong_to_business(self._uow, command.business_id, line_items)
         tax = Money(amount=command.tax) if command.tax is not None else Money(amount=Decimal("0"))
         purchase.update_details(
             purchase_number=command.purchase_number,

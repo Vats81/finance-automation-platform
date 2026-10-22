@@ -1,9 +1,10 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, String, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import expression
 
 from app.shared.infrastructure.db.base import Base
 
@@ -27,4 +28,7 @@ class PurchaseModel(Base):
     amount_paid_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     notes: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="recorded")
+    stock_added: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=expression.false()
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/Input";
 import { ApiError } from "@/lib/api/client";
 import { scanReceipt } from "@/lib/api/expenses";
 import { listBusinessVendors } from "@/lib/api/businessVendors";
+import { createProduct, listProducts } from "@/lib/api/products";
 import { createPurchase } from "@/lib/api/purchases";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { formatCurrency } from "@/lib/format";
+import { ProductResponse } from "@/types/product";
 import { PurchaseResponse } from "@/types/purchase";
 import { VendorResponse } from "@/types/vendor";
 
@@ -17,6 +19,20 @@ interface Row {
   description: string;
   quantity: string;
   unitCost: string;
+  // Where this row's count goes in stock: "" = nowhere, "new" = a new product, else a product id.
+  stock: string;
+  newSku: string;
+  newPrice: string;
+}
+
+const NEW_PRODUCT = "new";
+const blankStock = { stock: "", newSku: "", newPrice: "" };
+
+const decimalPlaces = (value: string): number => (value.split(".")[1] ?? "").length;
+
+function suggestSku(description: string): string {
+  const slug = description.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20);
+  return `${slug || "ITEM"}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 }
 
 type Step = "pick" | "scanning" | "review" | "saving";
@@ -38,7 +54,9 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 /**
  * "Scan a bill" -> review -> confirm. The scan only fills this popup in; nothing is saved
  * until the user checks the items and presses Confirm, which records ONE purchase containing
- * every confirmed line (description, quantity, unit cost). It does not change stock counts.
+ * every confirmed line (description, quantity, unit cost). Optionally the counts are also
+ * added to stock: each line is matched to a product (or a new product is created) and the
+ * server adds the counts in the same transaction as the purchase.
  */
 export function ScanBillDialog({
   token,
@@ -64,6 +82,10 @@ export function ScanBillDialog({
   const [scannedTotal, setScannedTotal] = useState<string | null>(null);
   const [itemsFound, setItemsFound] = useState(true);
   const [notFoundTotals, setNotFoundTotals] = useState(false);
+  const [addToStock, setAddToStock] = useState(false);
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  // Products created for "new" rows, remembered so a retry after a failure doesn't create them twice.
+  const createdProducts = useRef<Record<number, string>>({});
   const submission = useSubmissionKey();
   const nextKey = useRef(1);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -74,6 +96,27 @@ export function ScanBillDialog({
       .then((page) => setVendors(page.items.filter((v) => v.status !== "inactive")))
       .catch(() => setVendors([]));
   }, [token, businessId]);
+
+  useEffect(() => {
+    listProducts(token, businessId, { limit: 200 })
+      .then((page) => setProducts(page.items.filter((p) => p.status !== "inactive")))
+      .catch(() => setProducts([]));
+  }, [token, businessId]);
+
+  // Turning stock on suggests a product for rows whose name or SKU matches one exactly.
+  // Anything unmatched stays on "don't add" until the user chooses.
+  function toggleStock(on: boolean) {
+    setAddToStock(on);
+    if (!on) return;
+    setRows((current) =>
+      current.map((row) => {
+        if (row.stock) return row;
+        const wanted = row.description.trim().toLowerCase();
+        const match = products.find((p) => p.name.trim().toLowerCase() === wanted || p.sku.toLowerCase() === wanted);
+        return match ? { ...row, stock: match.id } : row;
+      })
+    );
+  }
 
   useEffect(() => {
     dialogRef.current?.focus();
@@ -107,6 +150,7 @@ export function ScanBillDialog({
               description: item.description,
               quantity: item.quantity,
               unitCost: item.unit_price,
+              ...blankStock,
             }))
           : scan.amount
             ? [
@@ -115,6 +159,7 @@ export function ScanBillDialog({
                   description: scan.description_guess ?? "Bill total",
                   quantity: "1",
                   unitCost: String(Math.max(0, Number(scan.amount) - Number(taxValue || 0)).toFixed(2)),
+                  ...blankStock,
                 },
               ]
             : [];
@@ -138,7 +183,15 @@ export function ScanBillDialog({
   const mismatch =
     scannedTotal !== null && Math.abs(totalCents - Math.round(Number(scannedTotal) * 100)) > 5;
   const isSaving = step === "saving";
-  const canConfirm = Boolean(typedVendor && billNumber.trim() && validRows.length > 0 && !hasInvalidRow);
+  const stockRows = addToStock ? validRows.filter((r) => r.stock) : [];
+  const stockProblem = stockRows.some(
+    (r) =>
+      decimalPlaces(r.quantity) > 4 ||
+      (r.stock === NEW_PRODUCT && (!r.newSku.trim() || cents(r.newPrice) === null || (cents(r.newPrice) ?? 0) < 0))
+  );
+  const canConfirm = Boolean(
+    typedVendor && billNumber.trim() && validRows.length > 0 && !hasInvalidRow && !stockProblem
+  );
 
   function updateRow(key: number, patch: Partial<Row>) {
     setRows((current) => current.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -148,6 +201,35 @@ export function ScanBillDialog({
     setError(null);
     setStep("saving");
     try {
+      // 1) Create any brand-new products (zero stock; the purchase adds the count). Remembered per
+      //    row so a retry after a failed save reuses them instead of creating duplicates.
+      const productFor: Record<number, string> = {};
+      for (const row of stockRows) {
+        if (row.stock !== NEW_PRODUCT) {
+          productFor[row.key] = row.stock;
+          continue;
+        }
+        let productId = createdProducts.current[row.key];
+        if (!productId) {
+          const created = await createProduct(
+            token,
+            businessId,
+            {
+              name: row.description.trim(),
+              sku: row.newSku.trim(),
+              selling_price: row.newPrice,
+              purchase_cost: row.unitCost,
+              current_quantity: "0",
+            },
+            { idempotencyKey: `${submission.key()}-product-${row.key}` }
+          );
+          productId = created.id;
+          createdProducts.current[row.key] = productId;
+        }
+        productFor[row.key] = productId;
+      }
+
+      // 2) One purchase with every confirmed line; the server adds the counts to stock atomically.
       const purchase = await createPurchase(
         token,
         businessId,
@@ -161,9 +243,11 @@ export function ScanBillDialog({
             description: r.description.trim(),
             quantity: r.quantity,
             unit_cost: r.unitCost,
+            product_id: productFor[r.key],
           })),
           tax: tax.trim() === "" ? undefined : tax,
           notes: notes.trim() || undefined,
+          add_to_stock: stockRows.length > 0 ? true : undefined,
         },
         { idempotencyKey: submission.key() }
       );
@@ -285,6 +369,7 @@ export function ScanBillDialog({
                     <th className="w-24 px-3 py-2">Count</th>
                     <th className="w-32 px-3 py-2">Unit cost</th>
                     <th className="w-28 px-3 py-2 text-right">Line total</th>
+                    {addToStock && <th className="w-56 px-3 py-2">Add count to stock</th>}
                     <th className="w-10 px-3 py-2">
                       <span className="sr-only">Remove</span>
                     </th>
@@ -318,6 +403,49 @@ export function ScanBillDialog({
                             onChange={(e) => updateRow(row.key, { unitCost: e.target.value })}
                           />
                         </td>
+                        {addToStock && (
+                          <td className="space-y-1 px-3 py-2">
+                            <select
+                              aria-label={`Stock for ${row.description || "item"}`}
+                              value={row.stock}
+                              onChange={(e) =>
+                                updateRow(row.key, {
+                                  stock: e.target.value,
+                                  newSku: e.target.value === NEW_PRODUCT ? row.newSku || suggestSku(row.description) : row.newSku,
+                                })
+                              }
+                              className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
+                            >
+                              <option value="">Don&apos;t add to stock</option>
+                              {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({p.sku}) — {Number(p.current_quantity)} in stock
+                                </option>
+                              ))}
+                              <option value={NEW_PRODUCT}>+ New product</option>
+                            </select>
+                            {row.stock === NEW_PRODUCT && (
+                              <div className="grid grid-cols-2 gap-1">
+                                <Input
+                                  aria-label="New product SKU"
+                                  placeholder="SKU"
+                                  value={row.newSku}
+                                  onChange={(e) => updateRow(row.key, { newSku: e.target.value })}
+                                />
+                                <Input
+                                  aria-label="New product selling price"
+                                  placeholder="Selling price"
+                                  inputMode="decimal"
+                                  value={row.newPrice}
+                                  onChange={(e) => updateRow(row.key, { newPrice: e.target.value })}
+                                />
+                              </div>
+                            )}
+                            {row.stock && decimalPlaces(row.quantity) > 4 && (
+                              <span className="block text-xs text-red-600">Stock counts allow up to 4 decimals.</span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-3 py-2 text-right">
                           {total === null ? <span className="text-red-600">check</span> : formatCurrency(total / 100)}
                         </td>
@@ -341,12 +469,28 @@ export function ScanBillDialog({
               onClick={() =>
                 setRows((current) => [
                   ...current,
-                  { key: nextKey.current++, description: "", quantity: "1", unitCost: "" },
+                  { key: nextKey.current++, description: "", quantity: "1", unitCost: "", ...blankStock },
                 ])
               }
             >
               Add an item
             </Button>
+
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={addToStock}
+                onChange={(e) => toggleStock(e.target.checked)}
+              />
+              <span>
+                Also add these counts to my stock
+                <span className="block text-xs text-slate-500">
+                  Choose a product for each item. Voiding this purchase later takes the stock back out, and the
+                  items can&apos;t be edited afterwards.
+                </span>
+              </span>
+            </label>
 
             <div className="space-y-1 rounded-md bg-slate-50 p-3 text-sm">
               <div className="flex justify-between">
@@ -387,7 +531,7 @@ export function ScanBillDialog({
               <Button onClick={handleConfirm} disabled={!canConfirm || isSaving}>
                 {isSaving
                   ? "Saving…"
-                  : `Confirm — add ${validRows.length} item${validRows.length === 1 ? "" : "s"} (${formatCurrency(totalCents / 100)})`}
+                  : `Confirm — add ${validRows.length} item${validRows.length === 1 ? "" : "s"} (${formatCurrency(totalCents / 100)})${stockRows.length > 0 ? ` + stock for ${stockRows.length}` : ""}`}
               </Button>
             </div>
           </div>
