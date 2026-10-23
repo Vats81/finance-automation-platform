@@ -371,3 +371,27 @@ Backups, monitoring and the restore drill are described in
 [`docs/RECOVERY_RUNBOOK.md`](docs/RECOVERY_RUNBOOK.md). To enable the monthly
 drill add the repository secret `DRILL_DATABASE_URL` (a separate empty database
 whose name contains `drill`).
+
+
+## 14. Account types
+
+Tallyra has three kinds of account. The user picks one on the first screen after
+signing up; no setting is needed to turn any of them on.
+
+| Kind | What it is | How it is stored |
+|---|---|---|
+| **Business** | Sales, expenses, purchases, stock, customers, vendors, reports. | A `businesses` row with `kind = business`. |
+| **Accounting firm** | A firm with its own staff (owner, admin, accountant, viewer) that creates and manages client businesses. Staff reach a client through their firm role; there is no per-client invitation. | `firms`, `firm_memberships`, and `businesses.firm_id` on each client. Access is evaluated on every request in `require_business_role`, so removing or suspending a staff member cuts off every client at once. |
+| **Personal** | One person's income, spending and monthly category budgets. Sharing with a partner uses the normal team roles (a viewer can look but not change). | A `businesses` row with `kind = personal`, plus `incomes` and `budgets`. Spending reuses `expenses`. |
+
+Notes:
+
+- Income and budget endpoints return 422 on a business workspace, and the
+  business-only screens are hidden in a personal workspace.
+- The AI assistant's `get_business_summary` tool answers in personal terms
+  (income, spending, saved, budget progress for one month) for a personal workspace.
+- Firm roles map to business roles as: firm owner/admin → business admin (never
+  owner), accountant → accountant, viewer → viewer. A client's owner keeps the
+  owner role and the plan; a firm cannot change a client's plan.
+- Migrations `0027` (firms, `kind`) and `0028` (incomes, budgets) run at container start.
+- Billing per account type is not built yet.
