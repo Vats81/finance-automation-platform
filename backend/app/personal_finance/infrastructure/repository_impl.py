@@ -11,6 +11,13 @@ from app.personal_finance.infrastructure.models import BudgetModel, IncomeModel
 from app.shared.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 
 
+_TWO_PLACES = Decimal("0.01")
+
+
+def _money(cents: int) -> Decimal:
+    return (Decimal(cents) / 100).quantize(_TWO_PLACES)
+
+
 def _cents(amount: Decimal) -> int:
     return int((amount * 100).to_integral_value())
 
@@ -22,7 +29,7 @@ def _income(m: IncomeModel) -> IncomeRecord:
         income_date=m.income_date,
         source=m.source,
         category=m.category,
-        amount=Decimal(m.amount_cents) / 100,
+        amount=_money(m.amount_cents),
         notes=m.notes,
         status=m.status,
         created_at=m.created_at,
@@ -34,7 +41,7 @@ def _budget(m: BudgetModel) -> BudgetRecord:
         id=m.id,
         business_id=m.business_id,
         category=m.category,
-        monthly_limit=Decimal(m.monthly_limit_cents) / 100,
+        monthly_limit=_money(m.monthly_limit_cents),
         created_at=m.created_at,
     )
 
