@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 
 const NAV_ITEMS = [
   { href: "/app/dashboard", label: "Overview" },
@@ -21,28 +22,82 @@ const NAV_ITEMS = [
   { href: "/app/help", label: "Help" },
 ];
 
+const FIRM_NAV_ITEMS = [
+  { href: "/app/firm", label: "Clients", exact: true },
+  { href: "/app/firm/staff", label: "Staff", exact: true },
+];
+
+function NavLink({
+  href,
+  label,
+  isActive,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  isActive: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        onClick={onNavigate}
+        className={`block rounded-md px-3 py-2 text-sm font-medium ${
+          isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100"
+        }`}
+      >
+        {label}
+      </Link>
+    </li>
+  );
+}
+
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { businesses, firms, currentFirm } = useCurrentBusiness();
 
   return (
-    <ul className="space-y-1">
-      {NAV_ITEMS.map((item) => {
-        const isActive = pathname?.startsWith(item.href);
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              onClick={onNavigate}
-              className={`block rounded-md px-3 py-2 text-sm font-medium ${
-                isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-6">
+      {firms.length > 0 && (
+        <div>
+          <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {currentFirm?.name ?? "Firm"}
+          </div>
+          <ul className="space-y-1">
+            {FIRM_NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                isActive={pathname === item.href}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+      {businesses.length > 0 && (
+        <div>
+          {firms.length > 0 && (
+            <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Business
+            </div>
+          )}
+          <ul className="space-y-1">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                isActive={pathname?.startsWith(item.href) ?? false}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

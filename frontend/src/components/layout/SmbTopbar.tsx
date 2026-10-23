@@ -47,9 +47,10 @@ export function SmbTopbar({
             className="max-w-[10rem] sm:max-w-xs"
             aria-label="Select business"
           >
-            {businesses.map(({ business }) => (
+            {businesses.map(({ business, via_firm, firm_name }) => (
               <option key={business.id} value={business.id}>
                 {business.name}
+                {via_firm && firm_name ? ` · ${firm_name}` : ""}
               </option>
             ))}
           </Select>

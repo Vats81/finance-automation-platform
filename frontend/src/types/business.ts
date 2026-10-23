@@ -2,6 +2,7 @@ export type BusinessRole = "owner" | "admin" | "accountant" | "viewer";
 export type BusinessStatus = "active" | "suspended";
 export type BusinessPlan = "free" | "starter" | "pro";
 export type MembershipStatus = "active" | "invited" | "removed";
+export type BusinessKind = "business" | "personal";
 
 // Mirrors backend/app/business/application/plan_limits.py's PLAN_LIMITS —
 // duplicated here per this codebase's established per-layer convention,
@@ -29,16 +30,22 @@ export interface BusinessResponse {
   onboarding_completed: boolean;
   status: BusinessStatus;
   plan: BusinessPlan;
+  kind?: BusinessKind;
+  firm_id?: string | null;
   created_at: string;
 }
 
 export interface MyBusinessResponse {
   business: BusinessResponse;
   role: BusinessRole;
+  // True when this business is reached through an accounting firm, not the business's own team.
+  via_firm?: boolean;
+  firm_name?: string | null;
 }
 
 export interface RegisterBusinessRequest {
   name: string;
+  kind?: BusinessKind;
 }
 
 export interface CompleteOnboardingRequest {

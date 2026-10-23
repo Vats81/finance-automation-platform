@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LocalAuthGuard } from "@/components/layout/LocalAuthGuard";
 import { SmbSidebar } from "@/components/layout/SmbSidebar";
@@ -12,16 +12,23 @@ import { TourProvider } from "@/lib/tour/useTour";
 
 function ShellContent({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { businesses, currentBusinessId, setCurrentBusinessId, isLoading } = useCurrentBusiness();
+  const { businesses, firms, currentBusinessId, setCurrentBusinessId, isLoading } = useCurrentBusiness();
   const router = useRouter();
+  const pathname = usePathname();
+  const onFirmPage = pathname?.startsWith("/app/firm") ?? false;
 
   useEffect(() => {
-    if (!isLoading && businesses.length === 0) {
+    if (isLoading) return;
+    if (businesses.length === 0 && firms.length === 0) {
       router.replace("/app/onboarding");
+    } else if (businesses.length === 0 && !onFirmPage) {
+      // A firm user with no clients yet has nothing to show on the business pages.
+      router.replace("/app/firm");
     }
-  }, [isLoading, businesses, router]);
+  }, [isLoading, businesses, firms, onFirmPage, router]);
 
-  if (isLoading || (businesses.length === 0 && typeof window !== "undefined")) {
+  const nothingToShow = businesses.length === 0 && (firms.length === 0 || !onFirmPage);
+  if (isLoading || (nothingToShow && typeof window !== "undefined")) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Spinner />
