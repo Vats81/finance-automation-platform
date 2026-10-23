@@ -17,7 +17,7 @@ import { CompleteOnboardingRequest } from "@/types/business";
 function OnboardingContent() {
   const { getAccessToken } = useLocalAuth();
   const router = useRouter();
-  const [mode, setMode] = useState<"choose" | "business" | "firm">("choose");
+  const [mode, setMode] = useState<"choose" | "business" | "firm" | "personal">("choose");
   const [firmName, setFirmName] = useState("");
   const firmSubmission = useSubmissionKey();
   const [step, setStep] = useState<1 | 2>(1);
@@ -52,6 +52,21 @@ function OnboardingContent() {
       router.push("/app/firm");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create your firm");
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCreatePersonal(event: FormEvent) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const token = getAccessToken();
+      const workspace = await registerBusiness(token, { name: businessName.trim() || "My money", kind: "personal" });
+      await completeOnboarding(token, workspace.id, {});
+      router.push("/app/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set up your personal finances");
       setIsSubmitting(false);
     }
   }
@@ -97,14 +112,49 @@ function OnboardingContent() {
                 Manage several clients&apos; books from one place, with your own staff and roles.
               </div>
             </button>
-            <div
-              aria-disabled="true"
-              className="w-full cursor-not-allowed rounded-md border border-dashed border-slate-200 p-4 text-left opacity-60"
+            <button
+              type="button"
+              onClick={() => setMode("personal")}
+              className="w-full rounded-md border border-slate-300 p-4 text-left hover:border-brand-500 hover:bg-brand-50"
             >
               <div className="font-medium">My personal finances</div>
-              <div className="text-sm text-slate-500">Income, spending and budgets for one person. Coming soon.</div>
-            </div>
+              <div className="text-sm text-slate-500">
+                Track your income and spending, and set monthly budgets. Just for you.
+              </div>
+            </button>
           </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (mode === "personal") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+        <Card className="w-full max-w-lg">
+          <h1 className="mb-1 text-xl font-semibold">Set up your personal finances</h1>
+          <p className="mb-6 text-sm text-slate-500">
+            Give it a name if you like. You can add income, spending and budgets right after.
+          </p>
+          <form onSubmit={handleCreatePersonal} className="space-y-4">
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <FormField label="Name">
+              <Input
+                maxLength={255}
+                placeholder="My money"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+              />
+            </FormField>
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" onClick={() => setMode("choose")} disabled={isSubmitting}>
+                Back
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="flex-1">
+                {isSubmitting ? "Setting up…" : "Get started"}
+              </Button>
+            </div>
+          </form>
         </Card>
       </div>
     );

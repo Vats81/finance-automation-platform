@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { PersonalOverview } from "@/components/personal/PersonalOverview";
 import { RevenueExpenseChart } from "@/components/dashboard/RevenueExpenseChart";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -86,7 +87,7 @@ function getTrendRange(period: DashboardPeriod): { startDate: string; endDate: s
   return { startDate: range.startDate ?? toISODate(now), endDate: range.endDate ?? toISODate(now) };
 }
 
-export default function DashboardPage() {
+function BusinessDashboard() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusiness, currentBusinessId } = useCurrentBusiness();
   const [period, setPeriod] = useState<DashboardPeriod>("this_month");
@@ -371,4 +372,9 @@ export default function DashboardPage() {
       </Card>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const { currentBusiness } = useCurrentBusiness();
+  return currentBusiness?.business.kind === "personal" ? <PersonalOverview /> : <BusinessDashboard />;
 }

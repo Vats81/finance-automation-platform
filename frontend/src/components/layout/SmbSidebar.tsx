@@ -22,6 +22,17 @@ const NAV_ITEMS = [
   { href: "/app/help", label: "Help" },
 ];
 
+const PERSONAL_NAV_ITEMS = [
+  { href: "/app/dashboard", label: "Overview" },
+  { href: "/app/income", label: "Income" },
+  { href: "/app/expenses", label: "Spending" },
+  { href: "/app/budgets", label: "Budgets" },
+  { href: "/app/data-upload", label: "Data Upload" },
+  { href: "/app/ai-assistant", label: "AI Assistant" },
+  { href: "/app/settings", label: "Settings" },
+  { href: "/app/help", label: "Help" },
+];
+
 const FIRM_NAV_ITEMS = [
   { href: "/app/firm", label: "Clients", exact: true },
   { href: "/app/firm/staff", label: "Staff", exact: true },
@@ -55,7 +66,8 @@ function NavLink({
 
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { businesses, firms, currentFirm } = useCurrentBusiness();
+  const { businesses, firms, currentFirm, currentBusiness } = useCurrentBusiness();
+  const navItems = currentBusiness?.business.kind === "personal" ? PERSONAL_NAV_ITEMS : NAV_ITEMS;
 
   return (
     <div className="space-y-6">
@@ -85,7 +97,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             </div>
           )}
           <ul className="space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.href}
                 href={item.href}
