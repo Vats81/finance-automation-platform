@@ -11,6 +11,7 @@ from app.business.infrastructure.models import BusinessMembershipModel, Business
 from app.customers.infrastructure.models import CustomerModel
 from app.expenses.infrastructure.models import ExpenseModel
 from app.inventory.infrastructure.models import ProductModel
+from app.personal_finance.infrastructure.models import BudgetModel, IncomeModel
 from app.purchases.infrastructure.models import PurchaseModel
 from app.sales.infrastructure.models import SaleModel
 from app.shared.domain.exceptions import ValidationException
@@ -30,6 +31,8 @@ BUSINESS_SCOPED_MODELS: tuple[type, ...] = (
     VendorModel,
     BusinessMembershipModel,
     BusinessAuditEventModel,
+    IncomeModel,
+    BudgetModel,
 )
 
 

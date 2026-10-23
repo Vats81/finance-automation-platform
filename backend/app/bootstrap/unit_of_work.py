@@ -13,6 +13,7 @@ from app.identity.infrastructure.repository_impl import SqlAlchemyUserRepository
 from app.inventory.infrastructure.repository_impl import SqlAlchemyProductRepository
 from app.invoices.infrastructure.repository_impl import SqlAlchemyInvoiceRepository
 from app.payments.infrastructure.repository_impl import SqlAlchemyPaymentRepository
+from app.personal_finance.infrastructure.repository_impl import SqlAlchemyPersonalFinanceRepository
 from app.purchase_orders.infrastructure.repository_impl import SqlAlchemyPurchaseOrderRepository
 from app.purchases.infrastructure.repository_impl import SqlAlchemyPurchaseRepository
 from app.sales.infrastructure.repository_impl import SqlAlchemySaleRepository
@@ -35,6 +36,7 @@ class AppUnitOfWork(SqlAlchemyUnitOfWork):
         self.businesses = SqlAlchemyBusinessRepository(self)
         self.business_memberships = SqlAlchemyBusinessMembershipRepository(self)
         self.firms = SqlAlchemyFirmRepository(self)
+        self.personal = SqlAlchemyPersonalFinanceRepository(self)
         self.customers = SqlAlchemyCustomerRepository(self)
         self.sales = SqlAlchemySaleRepository(self)
         self.products = SqlAlchemyProductRepository(self)

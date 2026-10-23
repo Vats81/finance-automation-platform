@@ -23,6 +23,7 @@ from app.shared.application.unit_of_work import IUnitOfWork
 from app.vendors.domain.entities import Vendor
 from app.vendors.domain.repository import IVendorRepository
 from tests.fakes.fake_firms import FakeFirmRepository
+from tests.fakes.fake_personal import FakePersonalFinanceRepository
 
 
 class FakeUserRepository(IUserRepository):
@@ -325,6 +326,7 @@ class FakeUnitOfWork(IUnitOfWork):
         self.businesses = FakeBusinessRepository()
         self.business_memberships = FakeBusinessMembershipRepository()
         self.firms = FakeFirmRepository()
+        self.personal = FakePersonalFinanceRepository()
         self.customers = FakeCustomerRepository()
         self.sales = FakeSaleRepository()
         self.products = FakeProductRepository()
