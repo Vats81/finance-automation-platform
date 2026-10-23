@@ -6,6 +6,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.business.infrastructure.models import BusinessMembershipModel, BusinessModel
+from app.firms.infrastructure.models import FirmMembershipModel, FirmModel
 from app.identity.domain.exceptions import UserNotFoundException
 from app.identity.infrastructure.models import UserModel
 from app.shared.domain.exceptions import ConflictException, ValidationException
@@ -51,9 +52,20 @@ class DeleteUserUseCase:
                 "Delete those businesses first."
             )
 
+        owned_firms = await self._session.execute(
+            select(FirmModel.name).where(FirmModel.owner_user_id == user.id)
+        )
+        firm_names = [name for (name,) in owned_firms.all()]
+        if firm_names:
+            raise ConflictException(
+                f"This user owns {len(firm_names)} accounting firm(s) ({', '.join(firm_names[:3])}). "
+                "They cannot be deleted while they own a firm."
+            )
+
         await self._session.execute(
             delete(BusinessMembershipModel).where(BusinessMembershipModel.user_id == user.id)
         )
+        await self._session.execute(delete(FirmMembershipModel).where(FirmMembershipModel.user_id == user.id))
         await self._session.delete(user)
         await self._session.commit()
         logger.warning(

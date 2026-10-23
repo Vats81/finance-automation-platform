@@ -10,7 +10,13 @@ from app.business.domain.events import (
     MembershipRemoved,
     MembershipRoleChanged,
 )
-from app.business.domain.value_objects import BusinessPlan, BusinessRole, BusinessStatus, MembershipStatus
+from app.business.domain.value_objects import (
+    BusinessKind,
+    BusinessPlan,
+    BusinessRole,
+    BusinessStatus,
+    MembershipStatus,
+)
 from app.shared.domain.aggregate_root import AggregateRoot
 
 
@@ -47,9 +53,15 @@ class Business(AggregateRoot):
         plan: BusinessPlan = BusinessPlan.FREE,
         stripe_customer_id: str | None = None,
         stripe_subscription_id: str | None = None,
+        kind: BusinessKind = BusinessKind.BUSINESS,
+        firm_id: uuid.UUID | None = None,
         created_at: datetime | None = None,
     ) -> None:
         super().__init__(entity_id)
+        self.kind = kind
+        # Set when an accounting firm manages this business: the firm's active
+        # staff can then reach it according to their firm role.
+        self.firm_id = firm_id
         self.owner_user_id = owner_user_id
         self.name = name
         self.business_type = business_type
@@ -70,12 +82,19 @@ class Business(AggregateRoot):
         self.created_at = created_at or datetime.now(timezone.utc)
 
     @classmethod
-    def register(cls, *, owner_user_id: uuid.UUID, name: str) -> "Business":
+    def register(
+        cls,
+        *,
+        owner_user_id: uuid.UUID,
+        name: str,
+        kind: BusinessKind = BusinessKind.BUSINESS,
+        firm_id: uuid.UUID | None = None,
+    ) -> "Business":
         """Step 1 of the golden path (create account -> register business ->
         complete onboarding): only the business name is required up front,
         every other field is filled in (or skipped) during onboarding.
         """
-        business = cls(owner_user_id=owner_user_id, name=name)
+        business = cls(owner_user_id=owner_user_id, name=name, kind=kind, firm_id=firm_id)
         business._record_event(
             BusinessRegistered(aggregate_id=business.id, name=name, owner_user_id=str(owner_user_id))
         )

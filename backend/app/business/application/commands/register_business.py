@@ -3,12 +3,15 @@ from dataclasses import dataclass
 
 from app.business.application.ports import BusinessUnitOfWork
 from app.business.domain.entities import Business, BusinessMembership
+from app.business.domain.value_objects import BusinessKind
 
 
 @dataclass(frozen=True)
 class RegisterBusinessCommand:
     owner_user_id: uuid.UUID
     name: str
+    kind: BusinessKind = BusinessKind.BUSINESS
+    firm_id: uuid.UUID | None = None
 
 
 class RegisterBusinessUseCase:
@@ -24,7 +27,12 @@ class RegisterBusinessUseCase:
         self._uow = uow
 
     async def execute(self, command: RegisterBusinessCommand) -> Business:
-        business = Business.register(owner_user_id=command.owner_user_id, name=command.name)
+        business = Business.register(
+            owner_user_id=command.owner_user_id,
+            name=command.name,
+            kind=command.kind,
+            firm_id=command.firm_id,
+        )
         self._uow.businesses.add(business)
 
         membership = BusinessMembership.create_owner(business_id=business.id, user_id=command.owner_user_id)

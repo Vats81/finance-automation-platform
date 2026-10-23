@@ -22,6 +22,7 @@ from app.sales.domain.value_objects import SaleStatus
 from app.shared.application.unit_of_work import IUnitOfWork
 from app.vendors.domain.entities import Vendor
 from app.vendors.domain.repository import IVendorRepository
+from tests.fakes.fake_firms import FakeFirmRepository
 
 
 class FakeUserRepository(IUserRepository):
@@ -60,6 +61,9 @@ class FakeBusinessRepository(IBusinessRepository):
     async def list_all(self, *, offset: int = 0, limit: int = 50) -> tuple[list[Business], int]:
         items = sorted(self._store.values(), key=lambda b: b.created_at, reverse=True)
         return items[offset : offset + limit], len(items)
+
+    async def list_by_firm_id(self, firm_id: uuid.UUID) -> list[Business]:
+        return sorted((b for b in self._store.values() if b.firm_id == firm_id), key=lambda b: b.created_at)
 
     async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
         return next(
@@ -320,6 +324,7 @@ class FakeUnitOfWork(IUnitOfWork):
         self.users = FakeUserRepository()
         self.businesses = FakeBusinessRepository()
         self.business_memberships = FakeBusinessMembershipRepository()
+        self.firms = FakeFirmRepository()
         self.customers = FakeCustomerRepository()
         self.sales = FakeSaleRepository()
         self.products = FakeProductRepository()

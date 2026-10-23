@@ -6,11 +6,18 @@ from pydantic import BaseModel, EmailStr, Field
 from app.business.application.queries.list_my_businesses import MyBusinessView
 from app.business.application.queries.list_team_members import TeamMemberView
 from app.business.domain.entities import Business
-from app.business.domain.value_objects import BusinessPlan, BusinessRole, BusinessStatus, MembershipStatus
+from app.business.domain.value_objects import (
+    BusinessKind,
+    BusinessPlan,
+    BusinessRole,
+    BusinessStatus,
+    MembershipStatus,
+)
 
 
 class RegisterBusinessRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    kind: BusinessKind = BusinessKind.BUSINESS
 
 
 class CompleteOnboardingRequest(BaseModel):
@@ -43,6 +50,8 @@ class BusinessResponse(BaseModel):
     onboarding_completed: bool
     status: BusinessStatus
     plan: BusinessPlan
+    kind: BusinessKind = BusinessKind.BUSINESS
+    firm_id: uuid.UUID | None = None
     created_at: datetime
 
     @classmethod
@@ -64,6 +73,8 @@ class BusinessResponse(BaseModel):
             onboarding_completed=business.onboarding_completed,
             status=business.status,
             plan=business.plan,
+            kind=business.kind,
+            firm_id=business.firm_id,
             created_at=business.created_at,
         )
 
@@ -71,10 +82,19 @@ class BusinessResponse(BaseModel):
 class MyBusinessResponse(BaseModel):
     business: BusinessResponse
     role: BusinessRole
+    # True when the caller reaches this business through an accounting firm
+    # rather than being on its own team.
+    via_firm: bool = False
+    firm_name: str | None = None
 
     @classmethod
     def from_domain(cls, view: MyBusinessView) -> "MyBusinessResponse":
-        return cls(business=BusinessResponse.from_domain(view.business), role=view.role)
+        return cls(
+            business=BusinessResponse.from_domain(view.business),
+            role=view.role,
+            via_firm=view.via_firm,
+            firm_name=view.firm_name,
+        )
 
 
 class ChangePlanRequest(BaseModel):

@@ -7,6 +7,7 @@ from app.bootstrap.container import get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.domain.exceptions import BusinessSuspendedException, NotABusinessMemberException
 from app.business.domain.value_objects import BusinessRole, BusinessStatus
+from app.firms.application.access import combine, firm_role_for
 from app.identity.api.dependencies import get_current_local_user
 from app.identity.domain.entities import User
 from app.shared.domain.exceptions import UnauthorizedDomainActionException
@@ -31,24 +32,29 @@ def require_business_role(*roles: BusinessRole) -> Callable:
         membership = await uow.business_memberships.get_for_user_and_business(
             user_id=current_user.id, business_id=business_id
         )
-        if membership is None or not membership.is_active:
+        business = await uow.businesses.get_by_id(business_id)
+        direct_role = membership.role if membership is not None and membership.is_active else None
+        # Staff of the accounting firm that manages this business reach it through their
+        # firm role; the stronger of that and any direct membership applies. Read on
+        # every request, so leaving the firm takes effect on the next call.
+        access = combine(direct_role, await firm_role_for(uow, business, current_user.id))
+        if access is None:
             raise NotABusinessMemberException(
                 f"User {current_user.id} is not a member of business {business_id}"
             )
-        if roles and membership.role not in roles:
+        if roles and access.role not in roles:
             raise UnauthorizedDomainActionException(
                 f"Action requires one of roles: {[r.value for r in roles]}"
             )
         # Checked after membership so a non-member can't probe which business
         # ids exist or are suspended. Read on every request, so a suspension
         # (or reactivation) takes effect on the very next call.
-        business = await uow.businesses.get_by_id(business_id)
         if business is None or business.status == BusinessStatus.SUSPENDED:
             raise BusinessSuspendedException("This business is suspended. Contact support to restore access.")
         # Read by the audit middleware once the response status is known.
         request.state.audit_actor_id = current_user.id
         request.state.audit_business_id = business_id
-        request.state.audit_role = membership.role.value
+        request.state.audit_role = f"firm_{access.role.value}" if access.via_firm else access.role.value
         return current_user
 
     # Introspected by tests/unit/api/test_route_permissions.py, which fails if

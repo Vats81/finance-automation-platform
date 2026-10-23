@@ -1,5 +1,11 @@
 from app.business.domain.entities import Business, BusinessMembership
-from app.business.domain.value_objects import BusinessPlan, BusinessRole, BusinessStatus, MembershipStatus
+from app.business.domain.value_objects import (
+    BusinessKind,
+    BusinessPlan,
+    BusinessRole,
+    BusinessStatus,
+    MembershipStatus,
+)
 from app.business.infrastructure.models import BusinessMembershipModel, BusinessModel
 
 
@@ -23,6 +29,8 @@ def business_model_to_domain(model: BusinessModel) -> Business:
         plan=BusinessPlan(model.plan),
         stripe_customer_id=model.stripe_customer_id,
         stripe_subscription_id=model.stripe_subscription_id,
+        kind=BusinessKind(model.kind),
+        firm_id=model.firm_id,
         created_at=model.created_at,
     )
 
@@ -47,6 +55,8 @@ def business_domain_to_model(business: Business) -> BusinessModel:
         plan=business.plan.value,
         stripe_customer_id=business.stripe_customer_id,
         stripe_subscription_id=business.stripe_subscription_id,
+        kind=business.kind.value,
+        firm_id=business.firm_id,
         created_at=business.created_at,
     )
 
@@ -68,6 +78,7 @@ def apply_business_domain_to_existing_model(business: Business, model: BusinessM
     model.plan = business.plan.value
     model.stripe_customer_id = business.stripe_customer_id
     model.stripe_subscription_id = business.stripe_subscription_id
+    model.firm_id = business.firm_id
 
 
 def membership_model_to_domain(model: BusinessMembershipModel) -> BusinessMembership:

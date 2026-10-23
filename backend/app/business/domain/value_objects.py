@@ -16,6 +16,16 @@ class BusinessRole(str, enum.Enum):
     VIEWER = "viewer"
 
 
+class BusinessKind(str, enum.Enum):
+    """What the workspace is for. A business is the full product (customers,
+    sales, stock...); a personal workspace is the simple income / spending /
+    budget view for one person's own money.
+    """
+
+    BUSINESS = "business"
+    PERSONAL = "personal"
+
+
 class BusinessStatus(str, enum.Enum):
     ACTIVE = "active"
     SUSPENDED = "suspended"

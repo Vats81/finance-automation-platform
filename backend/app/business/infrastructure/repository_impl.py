@@ -38,6 +38,12 @@ class SqlAlchemyBusinessRepository(IBusinessRepository):
         businesses = [business_model_to_domain(m) for m in result.scalars().all()]
         return businesses, total
 
+    async def list_by_firm_id(self, firm_id: uuid.UUID) -> list[Business]:
+        result = await self._session.execute(
+            select(BusinessModel).where(BusinessModel.firm_id == firm_id).order_by(BusinessModel.created_at)
+        )
+        return [business_model_to_domain(m) for m in result.scalars().all()]
+
     async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
         stmt = select(BusinessModel).where(BusinessModel.stripe_subscription_id == subscription_id)
         result = await self._session.execute(stmt)

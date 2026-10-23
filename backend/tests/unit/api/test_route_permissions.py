@@ -84,7 +84,9 @@ def _business_routes() -> list[tuple[str, str, tuple[BusinessRole, ...] | None]]
             continue
         path = route.path.removeprefix("/api/v1")
         # /admin/* is gated by require_platform_admin, a separate mechanism.
-        if "{business_id}" not in path or path.startswith("/admin/"):
+        # /admin/* is platform-admin gated and /firms/* is firm-role gated (see tests/unit/firms);
+        # both are separate mechanisms from the per-business role check audited here.
+        if "{business_id}" not in path or path.startswith(("/admin/", "/firms/")):
             continue
         for method in sorted(route.methods - {"HEAD", "OPTIONS"}):
             rows.append((method, path, _roles_of(route.dependant)))

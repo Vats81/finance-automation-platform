@@ -16,6 +16,11 @@ class IBusinessRepository(ABC):
         ...
 
     @abstractmethod
+    async def list_by_firm_id(self, firm_id: uuid.UUID) -> list[Business]:
+        """The businesses an accounting firm manages, oldest first."""
+        ...
+
+    @abstractmethod
     async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
         """Resolves the business a Stripe webhook is about, for event types
         (customer.subscription.updated/.deleted) that don't carry the

@@ -49,7 +49,9 @@ async def register_business(
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> BusinessResponse:
     use_case = RegisterBusinessUseCase(uow)
-    business = await use_case.execute(RegisterBusinessCommand(owner_user_id=actor.id, name=body.name))
+    business = await use_case.execute(
+        RegisterBusinessCommand(owner_user_id=actor.id, name=body.name, kind=body.kind)
+    )
     return BusinessResponse.from_domain(business)
 
 
