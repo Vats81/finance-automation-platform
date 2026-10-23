@@ -6,7 +6,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-slate-50 px-6 py-12">
       <div className="mx-auto max-w-3xl">
         <Link href="/" className="mb-6 inline-block text-sm text-brand-600 underline">
-          ← Back to Tallyra
+          ← Back to Finverlo
         </Link>
 
         <Card>
@@ -24,7 +24,7 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-2 text-base font-semibold text-slate-900">1. Acceptance of terms</h2>
               <p>
-                By creating an account or using Tallyra (&quot;the Service&quot;), you agree to these
+                By creating an account or using Finverlo (&quot;the Service&quot;), you agree to these
                 Terms of Service. If you don&apos;t agree, don&apos;t use the Service.
               </p>
             </section>
@@ -32,7 +32,7 @@ export default function TermsPage() {
             <section>
               <h2 className="mb-2 text-base font-semibold text-slate-900">2. Description of service</h2>
               <p>
-                Tallyra is a business finance management tool covering sales, expenses, purchases,
+                Finverlo is a business finance management tool covering sales, expenses, purchases,
                 inventory, customers, vendors, payments, reporting, and AI-assisted insights. It is a
                 record-keeping and analysis aid, not a substitute for a qualified accountant, bookkeeper,
                 or tax advisor.

@@ -5,7 +5,7 @@ These are drafts for the owner to edit and send personally, to people the owner
 has chosen, when the owner decides. Do not send until you have identified the
 recipients and explicitly approved the wording.
 
-Positioning: Tallyra is a **bookkeeping and reporting assistant** for small
+Positioning: Finverlo is a **bookkeeping and reporting assistant** for small
 businesses that keep their books in spreadsheets today. It is a free, private,
 supervised beta - not a finished accounting system, and not a replacement for an
 accountant. Be upfront about that in every message.
@@ -46,7 +46,7 @@ Placeholders: `{{first_name}}`, `{{their_business}}`, `{{your_name}}`,
 
 ## 3. Reply to someone who registered interest (they are Interested, not yet invited)
 
-> Subject: Thanks for your interest in the Tallyra beta
+> Subject: Thanks for your interest in the Finverlo beta
 >
 > Hi {{first_name}},
 >
@@ -62,7 +62,7 @@ Placeholders: `{{first_name}}`, `{{their_business}}`, `{{your_name}}`,
 
 ## 4. Invitation (send only when the onboarding gates in docs/BETA_READINESS.md all pass)
 
-> Subject: Your place in the Tallyra beta
+> Subject: Your place in the Finverlo beta
 >
 > Hi {{first_name}},
 >

@@ -158,7 +158,7 @@ export default function LandingPage() {
   return (
     <div className="bg-white text-slate-900">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="text-lg font-semibold text-brand-700">Tallyra</div>
+        <div className="text-lg font-semibold text-brand-700">Finverlo</div>
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 sm:flex">
           <a href="#features" className="hover:text-slate-900">Features</a>
           <a href="#how-it-works" className="hover:text-slate-900">How it works</a>
@@ -300,7 +300,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-slate-200 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-slate-500 sm:flex-row">
-          <span>© {new Date().getFullYear()} Tallyra</span>
+          <span>© {new Date().getFullYear()} Finverlo</span>
           <div className="flex gap-6">
             <Link href="/terms" className="hover:text-slate-800">Terms of Service</Link>
             <Link href="/privacy" className="hover:text-slate-800">Privacy Policy</Link>

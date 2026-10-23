@@ -1,6 +1,6 @@
 {
-  "name": "Tallyra — AI Finance Manager",
-  "short_name": "Tallyra",
+  "name": "Finverlo — AI Finance Manager",
+  "short_name": "Finverlo",
   "description": "AI-powered finance and business management for small and medium businesses",
   "start_url": "/app/dashboard",
   "display": "standalone",

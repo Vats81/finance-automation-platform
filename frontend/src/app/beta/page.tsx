@@ -66,9 +66,9 @@ export default function BetaWaitlistPage() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12">
-      <h1 className="mb-2 text-2xl font-semibold">Tallyra private beta</h1>
+      <h1 className="mb-2 text-2xl font-semibold">Finverlo private beta</h1>
       <p className="mb-6 text-sm text-slate-600">
-        Tallyra is a bookkeeping and reporting assistant for small businesses. We are opening a small, free,
+        Finverlo is a bookkeeping and reporting assistant for small businesses. We are opening a small, free,
         supervised beta for a handful of businesses that keep their books in spreadsheets today. Registering
         interest does <strong>not</strong> create an account or give access: we review each request, set up
         every beta business together, and will email you if there is a place.

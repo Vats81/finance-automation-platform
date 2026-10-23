@@ -11,7 +11,7 @@ export interface TourStep {
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    title: "Welcome to Tallyra",
+    title: "Welcome to Finverlo",
     body: "This is your business dashboard — revenue, expenses, and health score update automatically as you record activity.",
   },
   {

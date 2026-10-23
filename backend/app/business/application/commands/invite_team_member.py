@@ -58,7 +58,7 @@ class InviteTeamMemberUseCase:
         invitee = await self._uow.users.get_by_email(command.email)
         if invitee is None:
             raise InviteeNotRegisteredException(
-                f"No Tallyra account found for {command.email}. Ask them to sign up first, then "
+                f"No Finverlo account found for {command.email}. Ask them to sign up first, then "
                 "invite them by the same email."
             )
 
@@ -92,10 +92,10 @@ class InviteTeamMemberUseCase:
         try:
             await self._email_sender.send(
                 to=command.email,
-                subject=f"You've been added to {business.name} on Tallyra",
+                subject=f"You've been added to {business.name} on Finverlo",
                 body=(
                     f"You've been added to {business.name} as a {command.role.value}. "
-                    "Log in to Tallyra to get started."
+                    "Log in to Finverlo to get started."
                 ),
             )
         except Exception:  # noqa: BLE001 - email is best-effort once the invite is saved

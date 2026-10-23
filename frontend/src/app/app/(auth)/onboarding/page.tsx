@@ -89,7 +89,7 @@ function OnboardingContent() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
         <Card className="w-full max-w-lg">
-          <h1 className="mb-1 text-xl font-semibold">How will you use Tallyra?</h1>
+          <h1 className="mb-1 text-xl font-semibold">How will you use Finverlo?</h1>
           <p className="mb-6 text-sm text-slate-500">Pick the one that fits best. You can add the others later.</p>
           <div className="space-y-3">
             <button

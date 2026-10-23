@@ -375,7 +375,7 @@ whose name contains `drill`).
 
 ## 14. Account types
 
-Tallyra has three kinds of account. The user picks one on the first screen after
+Finverlo has three kinds of account. The user picks one on the first screen after
 signing up; no setting is needed to turn any of them on.
 
 | Kind | What it is | How it is stored |
