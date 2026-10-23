@@ -158,7 +158,7 @@ export default function LandingPage() {
   return (
     <div className="bg-white text-slate-900">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <div className="text-lg font-semibold text-brand-700">Finverlo</div>
+        <div className="text-2xl font-bold tracking-tight text-brand-700">Finverlo</div>
         <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 sm:flex">
           <a href="#features" className="hover:text-slate-900">Features</a>
           <a href="#how-it-works" className="hover:text-slate-900">How it works</a>
