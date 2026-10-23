@@ -10,7 +10,6 @@ from app.personal_finance.application.ports import BudgetRecord, IncomeRecord, I
 from app.personal_finance.infrastructure.models import BudgetModel, IncomeModel
 from app.shared.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 
-
 _TWO_PLACES = Decimal("0.01")
 
 
