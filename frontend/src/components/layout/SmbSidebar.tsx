@@ -55,7 +55,7 @@ export function SmbSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   return (
     <>
       <nav className="hidden h-screen w-56 flex-col border-r border-slate-200 bg-white p-4 md:flex">
-        <div className="mb-8 px-2 text-lg font-semibold text-brand-700">FinanceAI</div>
+        <div className="mb-8 px-2 text-lg font-semibold text-brand-700">Tallyra</div>
         <NavList />
       </nav>
 
@@ -64,7 +64,7 @@ export function SmbSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           <div className="absolute inset-0 bg-black/30" onClick={onClose} aria-hidden="true" />
           <nav className="absolute left-0 top-0 flex h-full w-64 flex-col bg-white p-4 shadow-xl">
             <div className="mb-8 flex items-center justify-between px-2">
-              <span className="text-lg font-semibold text-brand-700">FinanceAI</span>
+              <span className="text-lg font-semibold text-brand-700">Tallyra</span>
               <button
                 onClick={onClose}
                 aria-label="Close menu"

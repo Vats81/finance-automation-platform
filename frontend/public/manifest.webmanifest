@@ -1,6 +1,6 @@
 {
-  "name": "FinanceAI — AI Finance Manager",
-  "short_name": "FinanceAI",
+  "name": "Tallyra — AI Finance Manager",
+  "short_name": "Tallyra",
   "description": "AI-powered finance and business management for small and medium businesses",
   "start_url": "/app/dashboard",
   "display": "standalone",

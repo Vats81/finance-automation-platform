@@ -21,7 +21,7 @@ export function AdminSidebar() {
 
   return (
     <nav className="flex h-screen w-56 flex-col border-r border-slate-200 bg-white p-4">
-      <div className="mb-8 px-2 text-lg font-semibold text-brand-700">FinanceAI Admin</div>
+      <div className="mb-8 px-2 text-lg font-semibold text-brand-700">Tallyra Admin</div>
       <ul className="flex-1 space-y-1">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;

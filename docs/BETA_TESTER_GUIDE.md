@@ -1,12 +1,12 @@
-# FinanceAI private beta - tester guide
+# Tallyra private beta - tester guide
 
-Thank you for helping test FinanceAI. This guide takes you from your first
+Thank you for helping test Tallyra. This guide takes you from your first
 login to a full week of use. The owner of the beta ({{your_name}},
 {{support_email}}) will set up the first session with you.
 
 ## What this is (and isn't)
 
-FinanceAI is a **bookkeeping and reporting assistant** for small businesses that
+Tallyra is a **bookkeeping and reporting assistant** for small businesses that
 keep their books in spreadsheets today. You record sales, expenses and
 purchases; it shows you profit, who owes you money, and what is running low,
 and an AI assistant answers questions about *your* numbers.
@@ -14,7 +14,7 @@ and an AI assistant answers questions about *your* numbers.
 It is **early software**, in a **free, supervised beta**. It is not a
 replacement for an accountant, and you should **keep your original spreadsheets
 and receipts** for the whole beta - part of your job is to check that
-FinanceAI's figures match them.
+Tallyra's figures match them.
 
 ### Ground rules
 
@@ -84,7 +84,7 @@ Good to know:
 ## 4. Your team
 
 **Settings → Team**: the owner or an admin can add people who already have a
-FinanceAI account (they must have been invited to the beta too). Roles:
+Tallyra account (they must have been invited to the beta too). Roles:
 
 | Role | Can do |
 |---|---|

@@ -6,7 +6,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-slate-50 px-6 py-12">
       <div className="mx-auto max-w-3xl">
         <Link href="/" className="mb-6 inline-block text-sm text-brand-600 underline">
-          ← Back to FinanceAI
+          ← Back to Tallyra
         </Link>
 
         <Card>

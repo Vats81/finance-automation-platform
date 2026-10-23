@@ -8,7 +8,7 @@ from app.shared.infrastructure.whatsapp_sender import ConsoleWhatsAppSender, Twi
 async def test_console_whatsapp_sender_works() -> None:
     sender = ConsoleWhatsAppSender()
 
-    await sender.send(to="+15551234567", message="Hello from FinanceAI")
+    await sender.send(to="+15551234567", message="Hello from Tallyra")
 
 
 async def test_twilio_whatsapp_sender_posts_correct_request() -> None:

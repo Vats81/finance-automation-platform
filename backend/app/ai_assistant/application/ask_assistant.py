@@ -8,7 +8,7 @@ from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.shared.application.ports import AiProviderError, IAiClient
 
 _SYSTEM_PROMPT = (
-    "You are FinanceAI's business assistant. Answer questions about the user's business using the "
+    "You are Tallyra's business assistant. Answer questions about the user's business using the "
     "provided tools to fetch real data — never guess or make up numbers. Keep answers concise and "
     "format currency amounts clearly.\n"
     "Rules:\n"
