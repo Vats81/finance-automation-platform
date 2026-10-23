@@ -14,6 +14,7 @@ import { changeBusinessPlan, completeOnboarding } from "@/lib/api/business";
 import { getIntegrationsStatus } from "@/lib/api/integrations";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { CURRENCY_OPTIONS } from "@/lib/format";
 import {
   inviteTeamMember,
   listTeamMembers,
@@ -251,9 +252,9 @@ export default function SettingsPage() {
                 value={form.currency ?? "USD"}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
               >
-                {["USD", "EUR", "GBP", "INR", "AUD", "CAD"].map((code) => (
+                {CURRENCY_OPTIONS.map(({ code, label }) => (
                   <option key={code} value={code}>
-                    {code}
+                    {label}
                   </option>
                 ))}
               </Select>

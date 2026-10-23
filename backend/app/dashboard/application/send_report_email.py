@@ -48,7 +48,11 @@ class SendReportEmailUseCase:
             )
         )
         pdf_bytes = generate_profit_loss_pdf(
-            business.name, trend, start_date=command.start_date, end_date=command.end_date
+            business.name,
+            trend,
+            start_date=command.start_date,
+            end_date=command.end_date,
+            currency=business.currency,
         )
 
         await self._email_sender.send(

@@ -14,6 +14,7 @@ from app.sales.application.queries.list_outstanding_sales import (
 )
 from app.shared.application.pagination import PageRequest
 from app.shared.application.ports import IClock
+from app.shared.domain.money_format import format_money
 
 _OVERDUE_CRITICAL_THRESHOLD_DAYS = 7
 
@@ -58,6 +59,8 @@ class ListNotificationsUseCase:
 
     async def execute(self, query: GetNotificationsQuery) -> Notifications:
         today = self._clock.now().date()
+        business = await self._uow.businesses.get_by_id(query.business_id)
+        currency = business.currency if business else "USD"
 
         sales = await ListOutstandingSalesUseCase(self._uow).execute(
             ListOutstandingSalesQuery(business_id=query.business_id)
@@ -81,7 +84,7 @@ class ListNotificationsUseCase:
                 else "warning",
                 message=(
                     f"Invoice {sale.invoice_number} is overdue by {(today - sale.due_date).days} "
-                    f"day(s) (${sale.outstanding_amount.amount})"
+                    f"day(s) ({format_money(sale.outstanding_amount.amount, currency)})"
                 ),
                 link=f"/app/sales/{sale.id}",
             )
@@ -98,7 +101,8 @@ class ListNotificationsUseCase:
                 else "warning",
                 message=(
                     f"Purchase {purchase.purchase_number} payment is overdue by "
-                    f"{(today - purchase.due_date).days} day(s) (${purchase.outstanding_amount.amount})"
+                    f"{(today - purchase.due_date).days} day(s) "
+                    f"({format_money(purchase.outstanding_amount.amount, currency)})"
                 ),
                 link=f"/app/purchases/{purchase.id}",
             )

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { SalePaymentStatus, SaleResponse } from "@/types/sale";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<SalePaymentStatus, "success" | "warning" | "neutral"> = {
   paid: "success",
@@ -36,8 +37,8 @@ export function SaleTable({ sales }: { sales: SaleResponse[] }) {
               )}
             </td>
             <td className="py-2 pr-4 text-slate-600">{sale.invoice_date}</td>
-            <td className="py-2 pr-4 text-slate-600">${sale.total_amount}</td>
-            <td className="py-2 pr-4 text-slate-600">${sale.outstanding_amount}</td>
+            <td className="py-2 pr-4 text-slate-600">{formatCurrency(sale.total_amount)}</td>
+            <td className="py-2 pr-4 text-slate-600">{formatCurrency(sale.outstanding_amount)}</td>
             <td className="py-2 pr-4">
               <Badge tone={STATUS_TONE[sale.payment_status]}>{sale.payment_status.replace("_", " ")}</Badge>
             </td>

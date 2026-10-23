@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { listMyBusinesses } from "@/lib/api/business";
 import { listMyFirms } from "@/lib/api/firms";
+import { setDisplayCurrency } from "@/lib/format";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { MyBusinessResponse } from "@/types/business";
 import { FirmResponse } from "@/types/firm";
@@ -88,6 +89,8 @@ export function CurrentBusinessProvider({ children }: { children: React.ReactNod
   }, []);
 
   const currentBusiness = businesses.find((m) => m.business.id === currentBusinessId) ?? null;
+  // Set during render, before the children draw, so every amount on screen uses this business's currency.
+  setDisplayCurrency(currentBusiness?.business.currency);
   const currentFirm = firms.find((f) => f.id === currentFirmId) ?? null;
 
   return (

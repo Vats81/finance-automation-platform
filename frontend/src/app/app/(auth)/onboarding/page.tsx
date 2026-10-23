@@ -12,6 +12,7 @@ import { completeOnboarding, registerBusiness } from "@/lib/api/business";
 import { createFirm } from "@/lib/api/firms";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
+import { CURRENCY_OPTIONS, detectCurrency } from "@/lib/format";
 import { CompleteOnboardingRequest } from "@/types/business";
 
 function OnboardingContent() {
@@ -63,7 +64,7 @@ function OnboardingContent() {
     try {
       const token = getAccessToken();
       const workspace = await registerBusiness(token, { name: businessName.trim() || "My money", kind: "personal" });
-      await completeOnboarding(token, workspace.id, {});
+      await completeOnboarding(token, workspace.id, { currency: detectCurrency() });
       router.push("/app/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set up your personal finances");
@@ -217,7 +218,7 @@ function OnboardingContent() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                void finishOnboarding(details);
+                void finishOnboarding({ currency: detectCurrency(), ...details });
               }}
               className="space-y-4"
             >
@@ -244,12 +245,12 @@ function OnboardingContent() {
                 </FormField>
                 <FormField label="Currency">
                   <Select
-                    value={details.currency ?? "USD"}
+                    value={details.currency ?? detectCurrency()}
                     onChange={(e) => setDetails({ ...details, currency: e.target.value })}
                   >
-                    {["USD", "EUR", "GBP", "INR", "AUD", "CAD"].map((code) => (
+                    {CURRENCY_OPTIONS.map(({ code, label }) => (
                       <option key={code} value={code}>
-                        {code}
+                        {label}
                       </option>
                     ))}
                   </Select>
@@ -294,7 +295,7 @@ function OnboardingContent() {
                   variant="secondary"
                   className="flex-1"
                   disabled={isSubmitting}
-                  onClick={() => void finishOnboarding({})}
+                  onClick={() => void finishOnboarding({ currency: detectCurrency() })}
                 >
                   Skip for now
                 </Button>

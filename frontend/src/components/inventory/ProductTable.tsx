@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { ProductResponse } from "@/types/product";
+import { formatCurrency } from "@/lib/format";
 
 function stockBadge(product: ProductResponse): { tone: "danger" | "warning" | "success"; label: string } {
   if (product.is_out_of_stock) return { tone: "danger", label: "out of stock" };
@@ -41,7 +42,7 @@ export function ProductTable({ products }: { products: ProductResponse[] }) {
               <td className="py-2 pr-4 text-slate-600">
                 {product.current_quantity} {product.unit_of_measurement}
               </td>
-              <td className="py-2 pr-4 text-slate-600">${product.selling_price}</td>
+              <td className="py-2 pr-4 text-slate-600">{formatCurrency(product.selling_price)}</td>
               <td className="py-2 pr-4">
                 <Badge tone={badge.tone}>{badge.label}</Badge>
               </td>

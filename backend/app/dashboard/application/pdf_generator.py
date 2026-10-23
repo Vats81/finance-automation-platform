@@ -10,6 +10,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from app.dashboard.application.queries.get_dashboard_trend import DashboardTrend, Granularity
+from app.shared.domain.money_format import format_money
 
 _MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -18,10 +19,8 @@ _MONTH_NAMES = [
 _MONTH_ABBR = [name[:3] for name in _MONTH_NAMES]
 
 
-def _format_currency(amount: Decimal) -> str:
-    """-$5.00, not $-5.00, for a loss."""
-    sign = "-" if amount < 0 else ""
-    return f"{sign}${abs(amount):,.2f}"
+def _format_currency(amount: Decimal, currency: str = "USD") -> str:
+    return format_money(amount, currency, plain=True)
 
 
 def _format_short_date(value: date, *, with_year: bool) -> str:
@@ -48,6 +47,7 @@ def generate_profit_loss_pdf(
     trend: DashboardTrend,
     *,
     start_date: date | None = None,
+    currency: str = "USD",
     end_date: date | None = None,
 ) -> bytes:
     """Renders the same Profit & Loss breakdown as the Reports page's
@@ -70,17 +70,17 @@ def generate_profit_loss_pdf(
     rows = [
         [
             _format_period_label(p.period_start, trend.granularity),
-            _format_currency(p.revenue),
-            _format_currency(p.expenses),
-            _format_currency(p.revenue - p.expenses),
+            _format_currency(p.revenue, currency),
+            _format_currency(p.expenses, currency),
+            _format_currency(p.revenue - p.expenses, currency),
         ]
         for p in trend.points
     ]
     totals_row = [
         "Total",
-        _format_currency(total_revenue),
-        _format_currency(total_expenses),
-        _format_currency(net_profit),
+        _format_currency(total_revenue, currency),
+        _format_currency(total_expenses, currency),
+        _format_currency(net_profit, currency),
     ]
     table_data = [header, *rows, totals_row]
 
@@ -104,7 +104,7 @@ def generate_profit_loss_pdf(
 
     # Say exactly what was exported, so a printed copy can be checked against
     # the dashboard for the same business and dates. Money is USD-only today.
-    scope = "Currency: USD"
+    scope = f"Currency: {currency}"
     if start_date and end_date:
         period = f"Period: {start_date.isoformat()} to {end_date.isoformat()}"
         scope = f"{period}  |  Granularity: {trend.granularity}  |  {scope}"

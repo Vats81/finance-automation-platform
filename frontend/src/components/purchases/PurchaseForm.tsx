@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { CreatePurchaseLineItemRequest, CreatePurchaseRequest } from "@/types/purchase";
 import { ProductResponse } from "@/types/product";
 import { VendorResponse } from "@/types/vendor";
+import { formatCurrency } from "@/lib/format";
 
 function emptyLine(lineNumber: number): CreatePurchaseLineItemRequest {
   return { line_number: lineNumber, description: "", quantity: "1", unit_cost: "0" };
@@ -170,7 +171,7 @@ export function PurchaseForm({
 
       <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
         <span className="font-medium">Total</span>
-        <span className="font-semibold">${total.toFixed(2)}</span>
+        <span className="font-semibold">{formatCurrency(total)}</span>
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">

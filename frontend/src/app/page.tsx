@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { submitContactRequest } from "@/lib/api/contact";
 import { ApiError } from "@/lib/api/client";
+import { detectCurrency, DisplayCurrency } from "@/lib/format";
+
+
+// Sample figures for the preview card: the same business, written in the visitor's currency.
+const PREVIEW_FIGURES: Record<DisplayCurrency, string[]> = {
+  USD: ["$48.2k", "$21.7k", "34%", "$12.9k"],
+  INR: ["₹40.1L", "₹26.5L", "34%", "₹10.7L"],
+};
 
 const FEATURES = [
   { title: "Unified dashboard", body: "Revenue, expenses, profit, and cash flow in one view — updated the moment you record or import data." },
@@ -155,6 +163,10 @@ function ContactForm() {
 }
 
 export default function LandingPage() {
+  // Dollars on the server render, then rupees for a visitor in India once the browser is known.
+  const [previewCurrency, setPreviewCurrency] = useState<DisplayCurrency>("USD");
+  useEffect(() => setPreviewCurrency(detectCurrency()), []);
+
   return (
     <div className="bg-white text-slate-900">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
@@ -203,7 +215,7 @@ export default function LandingPage() {
               <div key={label} className="rounded-lg bg-white p-4 text-left shadow-sm">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
                 <div className="mt-2 text-xl font-semibold text-brand-700">
-                  {["$48.2k", "$21.7k", "34%", "$12.9k"][i]}
+                  {PREVIEW_FIGURES[previewCurrency][i]}
                 </div>
               </div>
             ))}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CreateSaleLineItemRequest, CreateSaleRequest } from "@/types/sale";
 import { CustomerResponse } from "@/types/customer";
+import { formatCurrency } from "@/lib/format";
 
 function emptyLine(lineNumber: number): CreateSaleLineItemRequest {
   return { line_number: lineNumber, description: "", quantity: "1", unit_price: "0" };
@@ -149,7 +150,7 @@ export function SaleForm({
 
       <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
         <span className="font-medium">Total</span>
-        <span className="font-semibold">${total.toFixed(2)}</span>
+        <span className="font-semibold">{formatCurrency(total)}</span>
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">

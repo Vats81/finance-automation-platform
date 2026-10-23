@@ -14,6 +14,7 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { PurchasePaymentStatus, PurchaseResponse } from "@/types/purchase";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<PurchasePaymentStatus, "success" | "warning" | "neutral"> = {
   paid: "success",
@@ -138,8 +139,8 @@ export default function PurchaseDetailPage() {
               <tr key={item.line_number} className="border-b border-slate-100 last:border-0">
                 <td className="py-2 pr-4">{item.description}</td>
                 <td className="py-2 pr-4">{item.quantity}</td>
-                <td className="py-2 pr-4">${item.unit_cost}</td>
-                <td className="py-2 pr-4">${item.line_total}</td>
+                <td className="py-2 pr-4">{formatCurrency(item.unit_cost)}</td>
+                <td className="py-2 pr-4">{formatCurrency(item.line_total)}</td>
               </tr>
             ))}
           </tbody>
@@ -148,23 +149,23 @@ export default function PurchaseDetailPage() {
         <div className="mt-4 space-y-1 border-t border-slate-200 pt-4 text-sm">
           <div className="flex justify-between">
             <span className="text-slate-500">Subtotal</span>
-            <span>${purchase.subtotal}</span>
+            <span>{formatCurrency(purchase.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Tax</span>
-            <span>${purchase.tax}</span>
+            <span>{formatCurrency(purchase.tax)}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>${purchase.total_amount}</span>
+            <span>{formatCurrency(purchase.total_amount)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Paid</span>
-            <span>${purchase.amount_paid}</span>
+            <span>{formatCurrency(purchase.amount_paid)}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Outstanding</span>
-            <span>${purchase.outstanding_amount}</span>
+            <span>{formatCurrency(purchase.outstanding_amount)}</span>
           </div>
         </div>
       </Card>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { PurchasePaymentStatus, PurchaseResponse } from "@/types/purchase";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<PurchasePaymentStatus, "success" | "warning" | "neutral"> = {
   paid: "success",
@@ -47,8 +48,8 @@ export function PurchaseTable({
               {purchase.vendor_name ?? (purchase.vendor_id ? vendorNames[purchase.vendor_id] : undefined) ?? "—"}
             </td>
             <td className="py-2 pr-4 text-slate-600">{purchase.purchase_date}</td>
-            <td className="py-2 pr-4 text-slate-600">${purchase.total_amount}</td>
-            <td className="py-2 pr-4 text-slate-600">${purchase.outstanding_amount}</td>
+            <td className="py-2 pr-4 text-slate-600">{formatCurrency(purchase.total_amount)}</td>
+            <td className="py-2 pr-4 text-slate-600">{formatCurrency(purchase.outstanding_amount)}</td>
             <td className="py-2 pr-4">
               <Badge tone={STATUS_TONE[purchase.payment_status]}>
                 {purchase.payment_status.replace("_", " ")}

@@ -1,6 +1,7 @@
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.dashboard.application.queries.get_business_health_score import (
@@ -18,6 +19,7 @@ from app.sales.application.queries.list_outstanding_sales import (
 )
 from app.shared.application.pagination import PageRequest
 from app.shared.application.ports import IAiClient, IClock
+from app.shared.domain.money_format import format_money
 
 _SYSTEM_PROMPT = (
     "You are the AI Insights writer for a small business finance app. Given a snapshot of the "
@@ -71,11 +73,17 @@ class GenerateInsightsUseCase:
         )
         low_stock = [p for p in products_page.items if p.is_low_stock or p.is_out_of_stock]
 
+        business = await self._uow.businesses.get_by_id(command.business_id)
+        currency = business.currency if business else "USD"
+
+        def money(amount: Decimal) -> str:
+            return format_money(amount, currency)
+
         prompt_lines = [
-            f"This month's revenue: ${summary.total_revenue}",
-            f"This month's expenses: ${summary.total_expenses}",
-            f"This month's net profit: ${summary.net_profit}",
-            f"Outstanding receivables (all time): ${summary.outstanding_receivables}",
+            f"This month's revenue: {money(summary.total_revenue)}",
+            f"This month's expenses: {money(summary.total_expenses)}",
+            f"This month's net profit: {money(summary.net_profit)}",
+            f"Outstanding receivables (all time): {money(summary.outstanding_receivables)}",
         ]
         if health.overall_score is None:
             # overall_score is None when there isn't enough history to score
@@ -98,7 +106,7 @@ class GenerateInsightsUseCase:
             top = outstanding_sales[:3]
             prompt_lines.append(
                 "Top outstanding sales: "
-                + "; ".join(f"{s.invoice_number} owes ${s.outstanding_amount.amount}" for s in top)
+                + "; ".join(f"{s.invoice_number} owes {money(s.outstanding_amount.amount)}" for s in top)
             )
         total_products = len(products_page.items)
         if total_products == 0:

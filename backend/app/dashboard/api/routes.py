@@ -95,7 +95,9 @@ async def get_profit_loss_pdf(
             business_id=business_id, start_date=start_date, end_date=end_date, granularity=granularity
         )
     )
-    pdf_bytes = generate_profit_loss_pdf(business.name, trend, start_date=start_date, end_date=end_date)
+    pdf_bytes = generate_profit_loss_pdf(
+        business.name, trend, start_date=start_date, end_date=end_date, currency=business.currency
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

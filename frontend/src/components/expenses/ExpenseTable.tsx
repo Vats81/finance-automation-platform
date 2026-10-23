@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { ExpenseResponse } from "@/types/expense";
+import { formatCurrency } from "@/lib/format";
 
 export function ExpenseTable({ expenses }: { expenses: ExpenseResponse[] }) {
   if (expenses.length === 0) {
@@ -32,7 +33,7 @@ export function ExpenseTable({ expenses }: { expenses: ExpenseResponse[] }) {
               {expense.status === "void" && <span className="ml-2 text-xs text-slate-400">(void)</span>}
             </td>
             <td className="py-2 pr-4 text-slate-600">{expense.description}</td>
-            <td className="py-2 pr-4 text-slate-600">${expense.total_amount}</td>
+            <td className="py-2 pr-4 text-slate-600">{formatCurrency(expense.total_amount)}</td>
             <td className="py-2 pr-4">
               <Badge tone="neutral">{expense.payment_method.replace("_", " ")}</Badge>
             </td>

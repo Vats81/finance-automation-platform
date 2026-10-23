@@ -16,6 +16,7 @@ import {
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ProductResponse } from "@/types/product";
+import { formatCurrency } from "@/lib/format";
 
 function stockBadge(product: ProductResponse): { tone: "danger" | "warning" | "success"; label: string } {
   if (product.is_out_of_stock) return { tone: "danger", label: "out of stock" };
@@ -124,15 +125,15 @@ export default function ProductDetailPage() {
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Selling price</span>
-          <span>${product.selling_price}</span>
+          <span>{formatCurrency(product.selling_price)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Purchase cost</span>
-          <span>${product.purchase_cost}</span>
+          <span>{formatCurrency(product.purchase_cost)}</span>
         </div>
         <div className="flex justify-between font-semibold">
           <span>Stock value</span>
-          <span>${product.stock_value}</span>
+          <span>{formatCurrency(product.stock_value)}</span>
         </div>
       </Card>
 

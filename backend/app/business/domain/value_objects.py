@@ -47,3 +47,8 @@ class BusinessPlan(str, enum.Enum):
     FREE = "free"
     STARTER = "starter"
     PRO = "pro"
+
+
+# Amounts are stored as plain numbers and never converted, so a business's currency is
+# a display choice. Dollars and rupees are the two the product presents today.
+SUPPORTED_CURRENCIES = ("USD", "INR")

@@ -11,6 +11,7 @@ from app.business.domain.events import (
     MembershipRoleChanged,
 )
 from app.business.domain.value_objects import (
+    SUPPORTED_CURRENCIES,
     BusinessKind,
     BusinessPlan,
     BusinessRole,
@@ -18,6 +19,7 @@ from app.business.domain.value_objects import (
     MembershipStatus,
 )
 from app.shared.domain.aggregate_root import AggregateRoot
+from app.shared.domain.exceptions import ValidationException
 
 
 class Business(AggregateRoot):
@@ -126,6 +128,8 @@ class Business(AggregateRoot):
         if country is not None:
             self.country = country
         if currency is not None:
+            if currency not in SUPPORTED_CURRENCIES:
+                raise ValidationException(f"Currency must be one of: {', '.join(SUPPORTED_CURRENCIES)}.")
             self.currency = currency
         if financial_year_start_month is not None:
             self.financial_year_start_month = financial_year_start_month

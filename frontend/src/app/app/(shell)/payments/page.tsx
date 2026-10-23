@@ -13,6 +13,7 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { PurchaseResponse } from "@/types/purchase";
 import { SaleResponse } from "@/types/sale";
+import { formatCurrency } from "@/lib/format";
 
 type DueBucket = "overdue" | "due_today" | "due_this_week" | "later" | "no_due_date";
 
@@ -119,7 +120,7 @@ function PaymentsTable({ rows }: { rows: PaymentRow[] }) {
               <td className="py-2 pr-4">
                 <Badge tone={BUCKET_TONE[bucket]}>{BUCKET_LABEL[bucket]}</Badge>
               </td>
-              <td className="py-2 pr-4 text-slate-600">${row.outstandingAmount}</td>
+              <td className="py-2 pr-4 text-slate-600">{formatCurrency(row.outstandingAmount)}</td>
               <td className="py-2 pr-4">
                 <Badge tone={PAYMENT_STATUS_TONE[row.paymentStatus] ?? "neutral"}>
                   {row.paymentStatus.replace("_", " ")}

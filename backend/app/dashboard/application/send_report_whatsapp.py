@@ -12,6 +12,7 @@ from app.dashboard.application.queries.get_dashboard_trend import (
     GetDashboardTrendUseCase,
 )
 from app.shared.application.ports import IWhatsAppSender
+from app.shared.domain.money_format import format_money
 
 
 @dataclass(frozen=True)
@@ -58,9 +59,9 @@ class SendReportWhatsAppUseCase:
         message = (
             f"*{business.name}* — Profit & Loss\n"
             f"{command.start_date.isoformat()} to {command.end_date.isoformat()}\n\n"
-            f"Revenue: ${total_revenue:,.2f}\n"
-            f"Expenses: ${total_expenses:,.2f}\n"
-            f"Net Profit: ${net_profit:,.2f}\n\n"
+            f"Revenue: {format_money(total_revenue, business.currency)}\n"
+            f"Expenses: {format_money(total_expenses, business.currency)}\n"
+            f"Net Profit: {format_money(net_profit, business.currency)}\n\n"
             f"View the full report: {report_link}"
         )
 

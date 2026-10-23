@@ -13,6 +13,7 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { SalePaymentStatus, SaleResponse } from "@/types/sale";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<SalePaymentStatus, "success" | "warning" | "neutral"> = {
   paid: "success",
@@ -118,8 +119,8 @@ export default function SaleDetailPage() {
               <tr key={item.line_number} className="border-b border-slate-100 last:border-0">
                 <td className="py-2 pr-4">{item.description}</td>
                 <td className="py-2 pr-4">{item.quantity}</td>
-                <td className="py-2 pr-4">${item.unit_price}</td>
-                <td className="py-2 pr-4">${item.line_total}</td>
+                <td className="py-2 pr-4">{formatCurrency(item.unit_price)}</td>
+                <td className="py-2 pr-4">{formatCurrency(item.line_total)}</td>
               </tr>
             ))}
           </tbody>
@@ -128,27 +129,27 @@ export default function SaleDetailPage() {
         <div className="mt-4 space-y-1 border-t border-slate-200 pt-4 text-sm">
           <div className="flex justify-between">
             <span className="text-slate-500">Subtotal</span>
-            <span>${sale.subtotal}</span>
+            <span>{formatCurrency(sale.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Discount</span>
-            <span>-${sale.discount}</span>
+            <span>-{formatCurrency(sale.discount)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Tax</span>
-            <span>${sale.tax}</span>
+            <span>{formatCurrency(sale.tax)}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>${sale.total_amount}</span>
+            <span>{formatCurrency(sale.total_amount)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Received</span>
-            <span>${sale.amount_received}</span>
+            <span>{formatCurrency(sale.amount_received)}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Outstanding</span>
-            <span>${sale.outstanding_amount}</span>
+            <span>{formatCurrency(sale.outstanding_amount)}</span>
           </div>
         </div>
       </Card>

@@ -10,6 +10,7 @@ import { getExpense, voidExpense } from "@/lib/api/expenses";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ExpenseResponse } from "@/types/expense";
+import { formatCurrency } from "@/lib/format";
 
 export default function ExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,15 +75,15 @@ export default function ExpenseDetailPage() {
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Amount</span>
-          <span>${expense.amount}</span>
+          <span>{formatCurrency(expense.amount)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Tax</span>
-          <span>${expense.tax}</span>
+          <span>{formatCurrency(expense.tax)}</span>
         </div>
         <div className="flex justify-between font-semibold">
           <span>Total</span>
-          <span>${expense.total_amount}</span>
+          <span>{formatCurrency(expense.total_amount)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Payment method</span>
