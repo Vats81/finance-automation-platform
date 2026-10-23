@@ -68,6 +68,13 @@ class SqlAlchemyWaitlistStore(IWaitlistStore):
         row = await self._session.get(Model, entry_id)
         return _to_entry(row) if row else None
 
+    async def get_by_email(self, work_email: str) -> WaitlistEntry | None:
+        result = await self._session.execute(
+            select(Model).where(Model.work_email == work_email.strip().lower())
+        )
+        row = result.scalar_one_or_none()
+        return _to_entry(row) if row else None
+
     async def list_all(self, *, limit: int) -> list[WaitlistEntry]:
         result = await self._session.execute(select(Model).order_by(Model.created_at.desc()).limit(limit))
         return [_to_entry(r) for r in result.scalars()]

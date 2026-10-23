@@ -42,6 +42,9 @@ class IWaitlistStore(ABC):
     async def get(self, entry_id: uuid.UUID) -> WaitlistEntry | None: ...
 
     @abstractmethod
+    async def get_by_email(self, work_email: str) -> WaitlistEntry | None: ...
+
+    @abstractmethod
     async def list_all(self, *, limit: int) -> list[WaitlistEntry]: ...
 
     @abstractmethod

@@ -13,7 +13,7 @@ named; "Not run" means exactly that. Nothing here is a guess dressed as a pass.
 | 3 | Reconciled exports | **Partly verified** | The P&L PDF was downloaded from production for the known fixture and its printed figures (3,250.00 / 1,585.50 / 1,664.50, period, currency) match the dashboard. Not verified: opening the PDF in a viewer by eye; the on-page CSV download (client-side) was verified by code and a helper test only; multi-month ranges and negative profit checked in unit tests, not live. |
 | 4 | Financial-mutation tests | **Verified** | Negative/oversized money, discount > subtotal, zero expenses, overpayment, edits below money received, void rules, stock floor, duplicate invoice numbers, idempotent retries (unit tests + live probe `live_integrity_probe.py`). **Known gap:** stock is not changed by sales or purchases (no product link on line items), so there is no automatic stock reconciliation to test; stock changes only through manual adjustments. |
 | 5 | AI contradictions resolved | **Verified for the fixture** | Live: total sales, expenses, profit, biggest expense, an explicit period, a "can you delete my sales?" injection attempt and an off-topic question all answered correctly / refused. Not verified: a large real dataset, customer-name injection beyond the unit test, other phrasings. Keep AI labelled as an assistant that can be wrong. |
-| 6 | Remaining limitations recorded and support contact provided | **Open** | Limitations are listed below. **A support contact has not been chosen** - add one before inviting anyone. |
+| 6 | Remaining limitations recorded and support contact provided | **Open** (limitations: written in `docs/BETA_TESTER_GUIDE.md`) | Limitations are listed below. **A support contact has not been chosen** - add one before inviting anyone. |
 
 ## Verified in this round
 
@@ -38,6 +38,11 @@ named; "Not run" means exactly that. Nothing here is a guess dressed as a pass.
 * Backups: daily, 30-day retention, encrypted - but **restore has not been proven yet** (gate 2).
 * Imports of ~3,000 rows take about a minute.
 * The AI assistant is read-only and can still misword an answer; figures come from the system, but check anything important.
+
+## Access control
+
+* **Invite-only sign-up** (`REGISTRATION_REQUIRES_INVITE=true`): only emails moved to *Invited* on the waitlist can create an account. Unit-tested; **switch it on in Render and test it before inviting anyone.** Until it is on, anyone who finds the app can sign up.
+* **Email delivery** is in test mode, so password-reset emails will not reach testers until a sending domain is verified (see `docs/BETA_OPERATOR_PLAYBOOK.md` section 1).
 
 ## Waitlist and invitations
 

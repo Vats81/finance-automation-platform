@@ -2,6 +2,7 @@ from app.shared.domain.exceptions import (
     ConflictException,
     DomainException,
     NotFoundException,
+    UnauthorizedDomainActionException,
     ValidationException,
 )
 
@@ -27,6 +28,10 @@ class InvalidTokenException(DomainException):
 class UserDeactivatedException(DomainException):
     error_code = "user_deactivated"
     http_status = 403
+
+
+class RegistrationInviteRequiredException(UnauthorizedDomainActionException):
+    error_code = "registration_invite_required"
 
 
 class EmailAlreadyRegisteredException(ConflictException):

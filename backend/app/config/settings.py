@@ -118,6 +118,11 @@ class Settings(BaseSettings):
     # reach a real customer or payment account. See docs/RECOVERY_RUNBOOK.md.
     disable_external_side_effects: bool = Field(default=False, alias="DISABLE_EXTERNAL_SIDE_EFFECTS")
 
+    # Private beta: when true, only an email that the owner has moved to
+    # "Invited" (or "Onboarded") on the beta waitlist can create an account.
+    # Off by default so ordinary deployments keep open sign-up.
+    registration_requires_invite: bool = Field(default=False, alias="REGISTRATION_REQUIRES_INVITE")
+
     # --- Landing-page "request a demo" form ---
     # Where to email a notification for each submission. Blank = no email,
     # requests are still saved and listed in the admin panel. With Resend's

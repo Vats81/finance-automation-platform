@@ -361,6 +361,7 @@ here) is down, which is expected.
 | Variable | Default | Meaning |
 |---|---|---|
 | `ENABLE_LEGACY_AP_API` | `false` | Mounts the original AP-automation endpoints (`/vendors`, `/invoices`, `/payments`, `/purchase-orders`, `/approvals`, `/audit-log`, `/me`, `/users`). They are not scoped to a business and use Entra sign-in, so they stay off for the SMB product. |
+| `REGISTRATION_REQUIRES_INVITE` | `false` | Private beta switch. When `true`, only an email moved to **Invited** (or Onboarded) on the beta waitlist can create an account; everyone else gets a 403 explaining sign-up is by invitation. Invited people move to Onboarded automatically when they sign up. See `docs/BETA_OPERATOR_PLAYBOOK.md`. |
 | `DISABLE_EXTERNAL_SIDE_EFFECTS` | `false` | Set to `true` only in an isolated restore/drill environment. Email and WhatsApp become log-only and Stripe keys are blanked, so a restored copy can never contact customers or charge anyone. |
 
 Migration `0022` (the per-business audit trail) runs automatically at

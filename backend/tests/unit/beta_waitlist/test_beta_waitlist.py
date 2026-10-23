@@ -47,6 +47,9 @@ class MemoryStore(IWaitlistStore):
     async def get(self, entry_id: uuid.UUID) -> WaitlistEntry | None:
         return self.rows.get(entry_id)
 
+    async def get_by_email(self, work_email: str) -> WaitlistEntry | None:
+        return next((e for e in self.rows.values() if e.work_email == work_email.strip().lower()), None)
+
     async def list_all(self, *, limit: int) -> list[WaitlistEntry]:
         return list(self.rows.values())[:limit]
 
