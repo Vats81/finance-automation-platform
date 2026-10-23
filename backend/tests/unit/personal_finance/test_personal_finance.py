@@ -365,3 +365,56 @@ def test_a_new_workspace_can_be_personal_and_defaults_to_business(api: tuple[Wor
     mine = call(client, "me", "POST", "/businesses", {"name": "Me", "kind": "personal"}).json()
 
     assert (plain["kind"], mine["kind"]) == ("business", "personal")
+
+
+async def test_the_ai_summary_tool_reports_a_personal_workspace_in_personal_terms() -> None:
+    import uuid
+    from datetime import date
+    from decimal import Decimal
+
+    from app.ai_assistant.application.tools import TOOL_HANDLERS
+    from app.business.application.commands.register_business import (
+        RegisterBusinessCommand,
+        RegisterBusinessUseCase,
+    )
+    from app.business.domain.value_objects import BusinessKind
+    from app.expenses.application.commands.create_expense import CreateExpenseCommand, CreateExpenseUseCase
+    from app.expenses.domain.value_objects import PaymentMethod
+    from app.personal_finance.application import use_cases
+
+    uow = FakeUnitOfWork()
+    me = await RegisterBusinessUseCase(uow).execute(
+        RegisterBusinessCommand(owner_user_id=uuid.uuid4(), name="Me", kind=BusinessKind.PERSONAL)
+    )
+    await use_cases.record_income(
+        uow,
+        business_id=me.id,
+        income_date=date(2026, 10, 1),
+        source="Pay",
+        category="Salary",
+        amount=Decimal("2000"),
+        notes=None,
+    )
+    await CreateExpenseUseCase(uow).execute(
+        CreateExpenseCommand(
+            business_id=me.id,
+            expense_date=date(2026, 10, 2),
+            category="Food",
+            description="Shop",
+            amount=Decimal("500"),
+            payment_method=PaymentMethod.CARD,
+        )
+    )
+    await use_cases.set_budget(uow, business_id=me.id, category="Food", monthly_limit=Decimal("400"))
+
+    result = await TOOL_HANDLERS["get_business_summary"](
+        uow, me.id, start_date="2026-10-01", end_date="2026-10-31"
+    )
+
+    assert result["workspace"] == "personal"
+    assert (result["total_income"], result["total_spending"], result["saved"]) == (
+        "2000.00",
+        "500.00",
+        "1500.00",
+    )
+    assert result["budgets"][0]["status"] == "over"

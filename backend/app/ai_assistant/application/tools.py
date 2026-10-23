@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
+from app.business.domain.value_objects import BusinessKind
 from app.customers.application.queries.list_customers import ListCustomersQuery, ListCustomersUseCase
 from app.dashboard.application.queries.get_dashboard_summary import (
     GetDashboardSummaryQuery,
@@ -13,6 +14,7 @@ from app.dashboard.application.queries.get_dashboard_summary import (
 from app.expenses.application.queries.list_expenses import ListExpensesQuery, ListExpensesUseCase
 from app.expenses.domain.value_objects import ExpenseStatus
 from app.inventory.application.queries.list_products import ListProductsQuery, ListProductsUseCase
+from app.personal_finance.application import use_cases as personal_use_cases
 from app.purchases.application.queries.list_outstanding_purchases import (
     ListOutstandingPurchasesQuery,
     ListOutstandingPurchasesUseCase,
@@ -36,7 +38,9 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "description": (
             "Get total revenue (sales), total expenses, net profit, and outstanding receivables. "
             "These are computed exactly by the system; report them verbatim. If the user does not name a "
-            "period, OMIT both dates to get all-time totals (and say the figures are all-time)."
+            "period, OMIT both dates to get all-time totals (and say the figures are all-time). For a "
+            "personal workspace this returns one month of income, spending, savings and budget progress "
+            "instead (the month of end_date, else start_date, else the current month)."
         ),
         "input_schema": {
             "type": "object",
@@ -112,9 +116,42 @@ def _parse_date(value: str | None) -> date | None:
     return date.fromisoformat(value) if value else None
 
 
+async def _personal_month_summary(
+    uow: AppUnitOfWork, business_id: uuid.UUID, start_date: str | None, end_date: str | None
+) -> dict[str, Any]:
+    anchor = _parse_date(end_date) or _parse_date(start_date) or date.today()
+    summary = await personal_use_cases.personal_summary(
+        uow, business_id=business_id, year=anchor.year, month=anchor.month
+    )
+    return {
+        "workspace": "personal",
+        "period": f"{summary.period_start.isoformat()} to {summary.period_end.isoformat()}",
+        "total_income": str(summary.income),
+        "total_spending": str(summary.spending),
+        "saved": str(summary.saved),
+        "savings_rate": str(summary.savings_rate) if summary.savings_rate is not None else None,
+        "spending_by_category": [
+            {"category": c.category, "amount": str(c.amount)} for c in summary.spending_by_category
+        ],
+        "budgets": [
+            {
+                "category": b.budget.category,
+                "monthly_limit": str(b.budget.monthly_limit),
+                "spent": str(b.spent),
+                "remaining": str(b.remaining),
+                "status": b.status,
+            }
+            for b in summary.budgets
+        ],
+    }
+
+
 async def _handle_get_business_summary(
     uow: AppUnitOfWork, business_id: uuid.UUID, *, start_date: str | None = None, end_date: str | None = None
 ) -> dict[str, Any]:
+    business = await uow.businesses.get_by_id(business_id)
+    if business is not None and business.kind == BusinessKind.PERSONAL:
+        return await _personal_month_summary(uow, business_id, start_date, end_date)
     summary = await GetDashboardSummaryUseCase(uow).execute(
         GetDashboardSummaryQuery(
             business_id=business_id, start_date=_parse_date(start_date), end_date=_parse_date(end_date)
