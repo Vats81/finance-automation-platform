@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { listPayments } from "@/lib/api/payments";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentResponse, PaymentStatus } from "@/types/payment";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<PaymentStatus, "success" | "warning" | "danger" | "neutral"> = {
   scheduled: "warning",
@@ -59,7 +60,7 @@ function PaymentsContent() {
                 <tbody className="divide-y divide-slate-100">
                   {payments?.map((payment) => (
                     <tr key={payment.id}>
-                      <td className="py-3 pr-4">${payment.amount}</td>
+                      <td className="py-3 pr-4">{formatCurrency(payment.amount)}</td>
                       <td className="py-3 pr-4">
                         {new Date(payment.scheduled_date).toLocaleDateString()}
                       </td>

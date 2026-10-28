@@ -18,6 +18,7 @@ from app.business.domain.value_objects import (
 class RegisterBusinessRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     kind: BusinessKind = BusinessKind.BUSINESS
+    currency: str = "USD"
 
 
 class CompleteOnboardingRequest(BaseModel):

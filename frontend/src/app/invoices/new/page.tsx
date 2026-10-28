@@ -11,6 +11,7 @@ import { submitInvoice } from "@/lib/api/invoices";
 import { listPurchaseOrders } from "@/lib/api/purchaseOrders";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PurchaseOrderResponse } from "@/types/purchaseOrder";
+import { formatCurrency } from "@/lib/format";
 
 interface LineItemDraft {
   line_number: number;
@@ -109,7 +110,7 @@ function NewInvoiceContent() {
                   </option>
                   {pos.map((po) => (
                     <option key={po.id} value={po.id}>
-                      {po.po_number} — ${po.total_amount}
+                      {po.po_number} — {formatCurrency(po.total_amount)}
                     </option>
                   ))}
                 </select>

@@ -19,6 +19,7 @@ from typing import Any
 
 from app.audit.infrastructure.models import BusinessAuditEventModel
 from app.bootstrap.container import get_container
+from app.firms.infrastructure.models import FirmAuditEventModel
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +34,18 @@ _PARAM = re.compile(r"\{(\w+)\}")
 
 @dataclass(frozen=True)
 class AuditEvent:
-    business_id: uuid.UUID
+    """One row of a trail. Exactly one of business_id (a business's trail) or firm_id (an
+    accounting firm's own trail) is set.
+    """
+
     actor_user_id: uuid.UUID
     actor_role: str
     action: str
     entity_type: str
     entity_id: uuid.UUID | None
     status_code: int
+    business_id: uuid.UUID | None = None
+    firm_id: uuid.UUID | None = None
 
 
 AuditRecorder = Callable[[AuditEvent], Awaitable[None]]
@@ -47,18 +53,32 @@ AuditRecorder = Callable[[AuditEvent], Awaitable[None]]
 
 async def record_to_database(event: AuditEvent) -> None:
     async with get_container().session_factory() as session:
-        session.add(
-            BusinessAuditEventModel(
-                id=uuid.uuid4(),
-                business_id=event.business_id,
-                actor_user_id=event.actor_user_id,
-                actor_role=event.actor_role,
-                action=event.action,
-                entity_type=event.entity_type,
-                entity_id=event.entity_id,
-                status_code=event.status_code,
+        if event.firm_id is not None:
+            session.add(
+                FirmAuditEventModel(
+                    id=uuid.uuid4(),
+                    firm_id=event.firm_id,
+                    actor_user_id=event.actor_user_id,
+                    actor_role=event.actor_role,
+                    action=event.action,
+                    entity_type=event.entity_type,
+                    entity_id=event.entity_id,
+                    status_code=event.status_code,
+                )
             )
-        )
+        elif event.business_id is not None:
+            session.add(
+                BusinessAuditEventModel(
+                    id=uuid.uuid4(),
+                    business_id=event.business_id,
+                    actor_user_id=event.actor_user_id,
+                    actor_role=event.actor_role,
+                    action=event.action,
+                    entity_type=event.entity_type,
+                    entity_id=event.entity_id,
+                    status_code=event.status_code,
+                )
+            )
         await session.commit()
 
 
@@ -74,7 +94,7 @@ def describe(route_path: str, path_params: dict[str, Any], body: bytes) -> tuple
     /businesses/{business_id}/sales/{sale_id}/void.
     """
     template = route_path.removeprefix("/api/v1")
-    params = [p for p in _PARAM.findall(template) if p != "business_id"]
+    params = [p for p in _PARAM.findall(template) if p not in ("business_id", "firm_id")]
     if params:
         name = params[-1]
         return name.removesuffix("_id"), _as_uuid(path_params.get(name))
@@ -86,7 +106,7 @@ def describe(route_path: str, path_params: dict[str, Any], body: bytes) -> tuple
         parsed = json.loads(body) if body else None
     except ValueError:
         parsed = None
-    new_id = _as_uuid(parsed.get("id")) if isinstance(parsed, dict) else None
+    new_id = _as_uuid(parsed.get("id") or parsed.get("membership_id")) if isinstance(parsed, dict) else None
     return entity_type, new_id
 
 
@@ -121,13 +141,17 @@ class AuditMiddleware:
         state = scope.get("state") or {}
         actor_id = state.get("audit_actor_id")
         business_id = state.get("audit_business_id")
+        firm_id = state.get("audit_firm_id")
         route = scope.get("route")
-        if not (200 <= status < 300) or actor_id is None or business_id is None or route is None:
+        if not (200 <= status < 300) or actor_id is None or route is None:
+            return
+        if business_id is None and firm_id is None:
             return
 
         entity_type, entity_id = describe(route.path, scope.get("path_params") or {}, body)
         event = AuditEvent(
             business_id=business_id,
+            firm_id=None if business_id is not None else firm_id,
             actor_user_id=actor_id,
             actor_role=state.get("audit_role", "unknown"),
             action=f"{scope['method']} {route.path.removeprefix('/api/v1')}"[:255],

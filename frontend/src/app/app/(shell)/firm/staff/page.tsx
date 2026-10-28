@@ -7,10 +7,16 @@ import { Card } from "@/components/ui/Card";
 import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { changeFirmStaffRole, inviteFirmStaff, listFirmStaff, removeFirmStaff } from "@/lib/api/firms";
+import {
+  changeFirmStaffRole,
+  inviteFirmStaff,
+  listFirmAuditEvents,
+  listFirmStaff,
+  removeFirmStaff,
+} from "@/lib/api/firms";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
-import { ASSIGNABLE_FIRM_ROLES, FirmRole, FirmStaffResponse } from "@/types/firm";
+import { ASSIGNABLE_FIRM_ROLES, FirmAuditEvent, FirmRole, FirmStaffResponse } from "@/types/firm";
 
 const ROLE_HELP: Record<FirmRole, string> = {
   owner: "Everything. Created the firm; cannot be changed or removed.",
@@ -18,6 +24,16 @@ const ROLE_HELP: Record<FirmRole, string> = {
   accountant: "Records and edits data in client businesses, imports and exports.",
   viewer: "Looks only: no editing, importing or exporting.",
 };
+
+function describeAction(action: string): string {
+  if (action === "POST /firms") return "created the firm";
+  if (action.endsWith("/staff/{membership_id}/remove")) return "removed a staff member";
+  if (action.endsWith("/staff/{membership_id}")) return "changed a staff member's role";
+  if (action.endsWith("/staff")) return "invited a staff member";
+  if (action.endsWith("/release")) return "released a client";
+  if (action.endsWith("/clients")) return "added a client";
+  return action;
+}
 
 export default function FirmStaffPage() {
   const { getAccessToken, user } = useLocalAuth();
@@ -30,6 +46,14 @@ export default function FirmStaffPage() {
   const [isInviting, setIsInviting] = useState(false);
 
   const canManage = currentFirm?.my_role === "owner" || currentFirm?.my_role === "admin";
+  const [activity, setActivity] = useState<FirmAuditEvent[] | null>(null);
+
+  useEffect(() => {
+    if (!currentFirm || !canManage) return;
+    listFirmAuditEvents(getAccessToken(), currentFirm.id)
+      .then(setActivity)
+      .catch(() => setActivity([]));
+  }, [currentFirm, canManage, getAccessToken, staff]);
 
   const load = useCallback(() => {
     if (!currentFirm) return;
@@ -189,6 +213,36 @@ export default function FirmStaffPage() {
           </table>
         )}
       </Card>
+
+      {canManage && (
+        <Card className="mt-6">
+          <h2 className="mb-1 text-lg font-semibold">Recent activity</h2>
+          <p className="mb-4 text-sm text-slate-500">
+            Who changed the firm&apos;s staff and clients. Work inside a client&apos;s books is in that
+            client&apos;s own activity log.
+          </p>
+          {!activity ? (
+            <p className="text-sm text-slate-500">Loading…</p>
+          ) : activity.length === 0 ? (
+            <p className="text-sm text-slate-500">Nothing yet.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 text-sm">
+              {activity.map((event) => {
+                const who = staff?.find((s) => s.user_id === event.actor_user_id);
+                return (
+                  <li key={event.id} className="flex flex-wrap justify-between gap-2 py-2">
+                    <span>
+                      <span className="font-medium">{who?.display_name ?? "Someone"}</span>{" "}
+                      <span className="text-slate-500">({event.actor_role})</span> · {describeAction(event.action)}
+                    </span>
+                    <span className="text-slate-400">{new Date(event.occurred_at).toLocaleString()}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

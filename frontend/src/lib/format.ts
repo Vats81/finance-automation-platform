@@ -14,9 +14,14 @@ export function setDisplayCurrency(code: string | null | undefined): void {
   displayCurrency = code === "INR" ? "INR" : "USD";
 }
 
+/** An amount in a specific currency, for screens that mix businesses (a firm's client list). */
+export function formatMoney(value: string | number, code: string | null | undefined): string {
+  const currency: DisplayCurrency = code === "INR" ? "INR" : "USD";
+  return Number(value).toLocaleString(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency });
+}
+
 export function formatCurrency(value: string | number): string {
-  const locale = displayCurrency === "INR" ? "en-IN" : "en-US";
-  return Number(value).toLocaleString(locale, { style: "currency", currency: displayCurrency });
+  return formatMoney(value, displayCurrency);
 }
 
 /**

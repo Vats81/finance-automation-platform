@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
+import { shrinkImageForScan } from "@/lib/imageResize";
 import {
   CreateExpenseRequest,
   ExpenseResponse,
@@ -48,7 +49,7 @@ export async function scanReceipt(
   file: File
 ): Promise<ScannedReceiptResponse> {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", await shrinkImageForScan(file));
   // apiFetch always sets Content-Type: application/json, which is wrong for
   // multipart uploads — the browser needs to set its own boundary — so this
   // call bypasses it and constructs the request directly.

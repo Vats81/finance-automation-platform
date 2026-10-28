@@ -12,6 +12,7 @@ class RegisterBusinessCommand:
     name: str
     kind: BusinessKind = BusinessKind.BUSINESS
     firm_id: uuid.UUID | None = None
+    currency: str = "USD"
 
 
 class RegisterBusinessUseCase:
@@ -32,6 +33,7 @@ class RegisterBusinessUseCase:
             name=command.name,
             kind=command.kind,
             firm_id=command.firm_id,
+            currency=command.currency,
         )
         self._uow.businesses.add(business)
 

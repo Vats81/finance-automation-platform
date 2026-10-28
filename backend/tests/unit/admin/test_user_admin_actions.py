@@ -51,9 +51,7 @@ async def test_reactivate_user_sets_active() -> None:
     uow = FakeUnitOfWork()
     admin_id = uuid.uuid4()
     user = seed_user(uow, "teammate@example.com")
-    await DeactivateUserUseCase(uow).execute(
-        DeactivateUserCommand(user_id=user.id, actor_user_id=admin_id)
-    )
+    await DeactivateUserUseCase(uow).execute(DeactivateUserCommand(user_id=user.id, actor_user_id=admin_id))
 
     reactivated = await ReactivateUserUseCase(uow).execute(ReactivateUserCommand(user_id=user.id))
 

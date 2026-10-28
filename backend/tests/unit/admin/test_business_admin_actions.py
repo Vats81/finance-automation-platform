@@ -22,9 +22,7 @@ async def test_suspend_business_sets_status_suspended() -> None:
         RegisterBusinessCommand(owner_user_id=uuid.uuid4(), name="Acme")
     )
 
-    suspended = await SuspendBusinessUseCase(uow).execute(
-        SuspendBusinessCommand(business_id=business.id)
-    )
+    suspended = await SuspendBusinessUseCase(uow).execute(SuspendBusinessCommand(business_id=business.id))
 
     assert suspended.status == BusinessStatus.SUSPENDED
 

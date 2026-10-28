@@ -93,7 +93,7 @@ export function ExpenseForm({
         <div className="rounded-md border border-dashed border-slate-300 p-3">
           <label className="flex cursor-pointer items-center justify-between gap-3">
             <span className="text-sm text-slate-600">
-              {isScanning ? "Scanning receipt…" : "Scan a receipt or invoice (photo or PDF) to pre-fill this form"}
+              {isScanning ? "Scanning receipt… this can take up to a minute" : "Scan a receipt or invoice (photo or PDF) to pre-fill this form"}
             </span>
             <span className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200">
               Choose file

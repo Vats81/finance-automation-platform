@@ -33,3 +33,14 @@ export interface FirmClientResponse {
   outstanding_receivables: string;
   last_activity: string | null;
 }
+
+export interface FirmAuditEvent {
+  id: string;
+  actor_user_id: string;
+  actor_role: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  status_code: number;
+  occurred_at: string;
+}

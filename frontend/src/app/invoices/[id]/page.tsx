@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { ApprovalWorkflowResponse } from "@/types/approval";
 import { InvoiceResponse, InvoiceStatus } from "@/types/invoice";
 import { UserResponse } from "@/types/user";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<InvoiceStatus, "success" | "warning" | "danger" | "neutral"> = {
   submitted: "neutral",
@@ -166,13 +167,13 @@ function InvoiceDetailContent() {
                         <td className="py-2 pr-4">{item.line_number}</td>
                         <td className="py-2 pr-4">{item.description}</td>
                         <td className="py-2 pr-4">{item.quantity}</td>
-                        <td className="py-2 pr-4">${item.unit_price}</td>
-                        <td className="py-2 pr-4">${item.line_total}</td>
+                        <td className="py-2 pr-4">{formatCurrency(item.unit_price)}</td>
+                        <td className="py-2 pr-4">{formatCurrency(item.line_total)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <p className="mt-4 text-right text-sm font-semibold">Total: ${invoice.total_amount}</p>
+                <p className="mt-4 text-right text-sm font-semibold">Total: {formatCurrency(invoice.total_amount)}</p>
               </Card>
             </>
           )}

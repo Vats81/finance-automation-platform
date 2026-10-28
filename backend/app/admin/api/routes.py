@@ -20,6 +20,10 @@ from app.admin.application.commands.reactivate_business import (
     ReactivateBusinessUseCase,
 )
 from app.admin.application.commands.reactivate_user import ReactivateUserCommand, ReactivateUserUseCase
+from app.admin.application.commands.set_temporary_password import (
+    SetTemporaryPasswordCommand,
+    SetTemporaryPasswordUseCase,
+)
 from app.admin.application.commands.suspend_business import SuspendBusinessCommand, SuspendBusinessUseCase
 from app.admin.application.queries.export_backup import ExportBackupUseCase
 from app.admin.application.queries.get_platform_stats import GetPlatformStatsUseCase
@@ -32,13 +36,14 @@ from app.admin.application.queries.list_users_overview import (
     ListUsersOverviewQuery,
     ListUsersOverviewUseCase,
 )
-from app.bootstrap.container import get_uow
+from app.bootstrap.container import get_password_hasher, get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.contact.api.dependencies import get_contact_request_store
 from app.contact.api.schemas import ContactRequestResponse, ContactRequestsResponse
 from app.contact.application.ports import IContactRequestStore
 from app.identity.api.dependencies import require_platform_admin
 from app.identity.domain.entities import User
+from app.shared.application.ports import IPasswordHasher
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_platform_admin)])
 
@@ -88,6 +93,26 @@ async def deactivate_user(
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> None:
     await DeactivateUserUseCase(uow).execute(DeactivateUserCommand(user_id=user_id, actor_user_id=actor.id))
+
+
+@router.post("/users/{user_id}/temporary-password")
+async def set_temporary_password(
+    user_id: uuid.UUID,
+    actor: User = Depends(require_platform_admin),
+    uow: AppUnitOfWork = Depends(get_uow),
+    hasher: IPasswordHasher = Depends(get_password_hasher),
+) -> Response:
+    """Sets a new random password for a locked-out user and returns it once, for the admin to pass
+    on. Never cached.
+    """
+    password = await SetTemporaryPasswordUseCase(uow, hasher).execute(
+        SetTemporaryPasswordCommand(user_id=user_id, actor_user_id=actor.id)
+    )
+    return Response(
+        content=json.dumps({"temporary_password": password}),
+        media_type="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post("/users/{user_id}/reactivate", status_code=204)

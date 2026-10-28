@@ -13,6 +13,7 @@ import { listVendors } from "@/lib/api/vendors";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PurchaseOrderResponse } from "@/types/purchaseOrder";
 import { VendorResponse } from "@/types/vendor";
+import { formatCurrency } from "@/lib/format";
 
 interface LineItemDraft {
   description: string;
@@ -184,7 +185,7 @@ function PurchaseOrdersContent() {
                     <tr key={po.id}>
                       <td className="py-3 pr-4 font-mono">{po.po_number}</td>
                       <td className="py-3 pr-4">{po.line_items.length}</td>
-                      <td className="py-3 pr-4">${po.total_amount}</td>
+                      <td className="py-3 pr-4">{formatCurrency(po.total_amount)}</td>
                       <td className="py-3 pr-4">
                         <Badge tone={po.status === "open" ? "success" : "neutral"}>{po.status}</Badge>
                       </td>

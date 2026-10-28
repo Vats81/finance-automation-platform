@@ -293,8 +293,8 @@ export function ScanBillDialog({
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-md border border-dashed border-slate-300 p-8 text-center">
             <span className="text-sm text-slate-600">
               {step === "scanning"
-                ? "Reading your bill…"
-                : "Choose a photo (JPG, PNG, WebP) or a PDF of the bill, up to 3 MB"}
+                ? "Reading your bill… this can take up to a minute"
+                : "Choose a photo (JPG, PNG, WebP) or a PDF of the bill. Large photos are shrunk automatically"}
             </span>
             <span className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700">
               {step === "scanning" ? "Please wait" : "Choose file"}

@@ -44,6 +44,15 @@ export function deactivateUser(token: string | null, userId: string): Promise<vo
   return apiFetch<void>(`/admin/users/${userId}/deactivate`, token, { method: "POST" });
 }
 
+export function setTemporaryPassword(
+  token: string | null,
+  userId: string
+): Promise<{ temporary_password: string }> {
+  return apiFetch<{ temporary_password: string }>(`/admin/users/${userId}/temporary-password`, token, {
+    method: "POST",
+  });
+}
+
 export function reactivateUser(token: string | null, userId: string): Promise<void> {
   return apiFetch<void>(`/admin/users/${userId}/reactivate`, token, { method: "POST" });
 }

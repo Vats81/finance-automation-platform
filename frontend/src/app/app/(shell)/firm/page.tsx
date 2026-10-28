@@ -12,7 +12,7 @@ import { ApiError } from "@/lib/api/client";
 import { addFirmClient, listFirmClients, releaseFirmClient } from "@/lib/api/firms";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
-import { formatCurrency } from "@/lib/format";
+import { detectCurrency, formatMoney } from "@/lib/format";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { FirmClientResponse } from "@/types/firm";
 
@@ -59,7 +59,9 @@ export default function FirmClientsPage() {
     setIsAdding(true);
     setActionError(null);
     try {
-      await addFirmClient(getAccessToken(), currentFirm.id, newClient.trim(), { idempotencyKey: submission.key() });
+      await addFirmClient(getAccessToken(), currentFirm.id, newClient.trim(), detectCurrency(), {
+        idempotencyKey: submission.key(),
+      });
       setNewClient("");
       submission.renew();
       await refresh(); // the new client joins the business switcher
@@ -196,14 +198,14 @@ export default function FirmClientsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="py-2 pr-4 text-right">{formatCurrency(client.total_revenue)}</td>
-                    <td className="py-2 pr-4 text-right">{formatCurrency(client.total_expenses)}</td>
+                    <td className="py-2 pr-4 text-right">{formatMoney(client.total_revenue, client.business.currency)}</td>
+                    <td className="py-2 pr-4 text-right">{formatMoney(client.total_expenses, client.business.currency)}</td>
                     <td
                       className={`py-2 pr-4 text-right ${Number(client.net_profit) < 0 ? "text-red-600" : ""}`}
                     >
-                      {formatCurrency(client.net_profit)}
+                      {formatMoney(client.net_profit, client.business.currency)}
                     </td>
-                    <td className="py-2 pr-4 text-right">{formatCurrency(client.outstanding_receivables)}</td>
+                    <td className="py-2 pr-4 text-right">{formatMoney(client.outstanding_receivables, client.business.currency)}</td>
                     <td className="py-2 pr-4 text-slate-500">
                       {client.last_activity ? new Date(client.last_activity).toLocaleDateString("en-US") : "—"}
                     </td>

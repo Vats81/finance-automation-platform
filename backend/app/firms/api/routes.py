@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from sqlalchemy import select
 
 from app.api.rate_limit import limiter
 from app.bootstrap.container import get_uow
@@ -17,6 +18,7 @@ from app.firms.application import use_cases
 from app.firms.application.ports import FirmMemberRecord, FirmRecord
 from app.firms.domain.exceptions import FirmSuspendedException, NotAFirmMemberException
 from app.firms.domain.value_objects import FirmMembershipStatus, FirmRole, FirmStatus
+from app.firms.infrastructure.models import FirmAuditEventModel
 from app.identity.api.dependencies import get_current_local_user
 from app.identity.domain.entities import User
 
@@ -32,6 +34,7 @@ def require_firm_role(*roles: FirmRole) -> Callable:
     """
 
     async def checker(
+        request: Request,
         firm_id: uuid.UUID,
         current_user: User = Depends(get_current_local_user),
         uow: AppUnitOfWork = Depends(get_uow),
@@ -44,6 +47,10 @@ def require_firm_role(*roles: FirmRole) -> Callable:
         firm = await uow.firms.get_firm(firm_id)
         if firm is None or firm.status != FirmStatus.ACTIVE:
             raise FirmSuspendedException("This firm is suspended.")
+        # Read by the audit middleware once the response status is known.
+        request.state.audit_actor_id = current_user.id
+        request.state.audit_firm_id = firm_id
+        request.state.audit_role = membership.role.value
         return membership
 
     checker.allowed_roles = roles  # type: ignore[attr-defined]
@@ -103,6 +110,18 @@ class UpdateStaffRoleRequest(BaseModel):
 class AddClientRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=255)
+    currency: str | None = None
+
+
+class FirmAuditEventResponse(BaseModel):
+    id: uuid.UUID
+    actor_user_id: uuid.UUID
+    actor_role: str
+    action: str
+    entity_type: str
+    entity_id: uuid.UUID | None
+    status_code: int
+    occurred_at: datetime
 
 
 class ClientResponse(BaseModel):
@@ -139,6 +158,9 @@ async def create_firm(
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> FirmResponse:
     firm = await use_cases.create_firm(uow, owner_user_id=actor.id, name=body.name)
+    request.state.audit_actor_id = actor.id
+    request.state.audit_firm_id = firm.id
+    request.state.audit_role = FirmRole.OWNER.value
     return FirmResponse.build(firm, FirmRole.OWNER)
 
 
@@ -243,7 +265,7 @@ async def add_client(
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> BusinessResponse:
     business = await use_cases.add_client(
-        uow, firm_id=firm_id, actor_user_id=actor_membership.user_id, name=body.name
+        uow, firm_id=firm_id, actor_user_id=actor_membership.user_id, name=body.name, currency=body.currency
     )
     return BusinessResponse.from_domain(business)
 
@@ -259,3 +281,32 @@ async def release_client(
 ) -> BusinessResponse:
     business = await use_cases.release_client(uow, firm_id=firm_id, business_id=business_id)
     return BusinessResponse.from_domain(business)
+
+
+@router.get("/{firm_id}/audit-events", response_model=list[FirmAuditEventResponse])
+async def list_firm_audit_events(
+    firm_id: uuid.UUID,
+    limit: int = Query(default=100, ge=1, le=500),
+    _actor: FirmMemberRecord = Depends(require_firm_role(*MANAGE_FIRM)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> list[FirmAuditEventResponse]:
+    """Newest first: who changed the firm's staff and clients. Owner and Admin only."""
+    result = await uow.session.execute(
+        select(FirmAuditEventModel)
+        .where(FirmAuditEventModel.firm_id == firm_id)
+        .order_by(FirmAuditEventModel.occurred_at.desc())
+        .limit(limit)
+    )
+    return [
+        FirmAuditEventResponse(
+            id=m.id,
+            actor_user_id=m.actor_user_id,
+            actor_role=m.actor_role,
+            action=m.action,
+            entity_type=m.entity_type,
+            entity_id=m.entity_id,
+            status_code=m.status_code,
+            occurred_at=m.occurred_at,
+        )
+        for m in result.scalars().all()
+    ]

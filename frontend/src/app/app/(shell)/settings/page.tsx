@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -40,7 +41,7 @@ const MEMBERSHIP_STATUS_TONE: Record<string, "success" | "warning" | "neutral"> 
 
 export default function SettingsPage() {
   const { getAccessToken } = useLocalAuth();
-  const { currentBusiness, refresh } = useCurrentBusiness();
+  const { currentBusiness, firms, refresh } = useCurrentBusiness();
   const [form, setForm] = useState<CompleteOnboardingRequest>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -94,6 +95,7 @@ export default function SettingsPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const isOwner = currentBusiness?.role === "owner";
+  const isPersonal = currentBusiness?.business.kind === "personal";
   const canManageMembers = isOwner || currentBusiness?.role === "admin";
 
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -221,25 +223,29 @@ export default function SettingsPage() {
       <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
 
       <Card className="max-w-2xl">
-        <h2 className="mb-1 text-lg font-semibold">Business profile</h2>
+        <h2 className="mb-1 text-lg font-semibold">{isPersonal ? "Your profile" : "Business profile"}</h2>
         <p className="mb-6 text-sm text-slate-500">{currentBusiness.business.name}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-red-600">{error}</p>}
           {saved && <p className="text-sm text-emerald-600">Saved.</p>}
 
-          <FormField label="Business type">
-            <Input
-              value={form.business_type ?? ""}
-              onChange={(e) => setForm({ ...form, business_type: e.target.value })}
-            />
-          </FormField>
-          <FormField label="Industry">
-            <Input
-              value={form.industry ?? ""}
-              onChange={(e) => setForm({ ...form, industry: e.target.value })}
-            />
-          </FormField>
+          {!isPersonal && (
+            <>
+              <FormField label="Business type">
+                <Input
+                  value={form.business_type ?? ""}
+                  onChange={(e) => setForm({ ...form, business_type: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Industry">
+                <Input
+                  value={form.industry ?? ""}
+                  onChange={(e) => setForm({ ...form, industry: e.target.value })}
+                />
+              </FormField>
+            </>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Country">
               <Input
@@ -260,22 +266,24 @@ export default function SettingsPage() {
               </Select>
             </FormField>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Number of branches">
-              <Input
-                type="number"
-                min={1}
-                value={form.number_of_branches ?? 1}
-                onChange={(e) => setForm({ ...form, number_of_branches: Number(e.target.value) })}
-              />
-            </FormField>
-            <FormField label="WhatsApp number">
-              <Input
-                value={form.whatsapp_number ?? ""}
-                onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
-              />
-            </FormField>
-          </div>
+          {!isPersonal && (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Number of branches">
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.number_of_branches ?? 1}
+                  onChange={(e) => setForm({ ...form, number_of_branches: Number(e.target.value) })}
+                />
+              </FormField>
+              <FormField label="WhatsApp number">
+                <Input
+                  value={form.whatsapp_number ?? ""}
+                  onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+                />
+              </FormField>
+            </div>
+          )}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Saving…" : "Save changes"}
           </Button>
@@ -435,6 +443,33 @@ export default function SettingsPage() {
           Only people who already have a Finverlo account can be invited.
         </p>
       </Card>
+
+      {!isPersonal && (
+        <Card className="mt-6 max-w-2xl">
+          <h2 className="mb-1 text-lg font-semibold">Accounting firm</h2>
+          {firms.length > 0 ? (
+            <>
+              <p className="mb-4 text-sm text-slate-500">
+                You work for {firms.map((f) => f.name).join(", ")}. Clients, staff and activity are in the Firm
+                section of the menu.
+              </p>
+              <Link href="/app/firm">
+                <Button variant="secondary">Open firm</Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-slate-500">
+                Do the books for other businesses? Set up a firm to manage your clients from one place, with
+                your own staff and roles. Your own business stays as it is.
+              </p>
+              <Link href="/app/firm/new">
+                <Button variant="secondary">Set up an accounting firm</Button>
+              </Link>
+            </>
+          )}
+        </Card>
+      )}
 
       <Card className="mt-6 max-w-2xl">
         <h2 className="mb-1 text-lg font-semibold">Install app</h2>

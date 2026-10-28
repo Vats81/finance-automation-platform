@@ -161,6 +161,14 @@ class User(AggregateRoot):
             )
         )
 
+    def set_password(self, new_password_hash: str) -> None:
+        """A new password chosen by someone with authority over the account (a platform admin);
+        cancels any pending reset link.
+        """
+        self.password_hash = new_password_hash
+        self.password_reset_token_hash = None
+        self.password_reset_expires_at = None
+
     def reset_password(self, *, token: str, new_password_hash: str, now: datetime) -> None:
         if self.password_reset_token_hash is None or self.password_reset_expires_at is None:
             raise InvalidOrExpiredTokenException("No password reset is pending for this user")

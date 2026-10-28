@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.business.infrastructure.models import BusinessModel
 from app.firms.domain.exceptions import FirmNotFoundException
-from app.firms.infrastructure.models import FirmMembershipModel, FirmModel
+from app.firms.infrastructure.models import FirmAuditEventModel, FirmMembershipModel, FirmModel
 from app.shared.domain.exceptions import ConflictException, ValidationException
 
 logger = logging.getLogger(__name__)
@@ -47,6 +47,7 @@ class PurgeFirmUseCase:
             )
 
         await self._session.execute(delete(FirmMembershipModel).where(FirmMembershipModel.firm_id == firm.id))
+        await self._session.execute(delete(FirmAuditEventModel).where(FirmAuditEventModel.firm_id == firm.id))
         await self._session.delete(firm)
         await self._session.commit()
         logger.warning(

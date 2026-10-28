@@ -50,7 +50,9 @@ async def register_business(
 ) -> BusinessResponse:
     use_case = RegisterBusinessUseCase(uow)
     business = await use_case.execute(
-        RegisterBusinessCommand(owner_user_id=actor.id, name=body.name, kind=body.kind)
+        RegisterBusinessCommand(
+            owner_user_id=actor.id, name=body.name, kind=body.kind, currency=body.currency
+        )
     )
     return BusinessResponse.from_domain(business)
 

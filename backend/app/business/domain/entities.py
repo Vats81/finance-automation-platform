@@ -91,12 +91,15 @@ class Business(AggregateRoot):
         name: str,
         kind: BusinessKind = BusinessKind.BUSINESS,
         firm_id: uuid.UUID | None = None,
+        currency: str = "USD",
     ) -> "Business":
         """Step 1 of the golden path (create account -> register business ->
         complete onboarding): only the business name is required up front,
         every other field is filled in (or skipped) during onboarding.
         """
-        business = cls(owner_user_id=owner_user_id, name=name, kind=kind, firm_id=firm_id)
+        if currency not in SUPPORTED_CURRENCIES:
+            raise ValidationException(f"Currency must be one of: {', '.join(SUPPORTED_CURRENCIES)}.")
+        business = cls(owner_user_id=owner_user_id, name=name, kind=kind, firm_id=firm_id, currency=currency)
         business._record_event(
             BusinessRegistered(aggregate_id=business.id, name=name, owner_user_id=str(owner_user_id))
         )

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { InvoiceResponse, InvoiceStatus } from "@/types/invoice";
+import { formatCurrency } from "@/lib/format";
 
 const STATUS_TONE: Record<InvoiceStatus, "success" | "warning" | "danger" | "neutral"> = {
   submitted: "neutral",
@@ -35,7 +36,7 @@ export function InvoiceTable({ invoices }: { invoices: InvoiceResponse[] }) {
                 {invoice.invoice_number}
               </Link>
             </td>
-            <td className="py-3 pr-4">${invoice.total_amount}</td>
+            <td className="py-3 pr-4">{formatCurrency(invoice.total_amount)}</td>
             <td className="py-3 pr-4">
               <Badge tone={STATUS_TONE[invoice.status]}>{invoice.status.replace("_", " ")}</Badge>
             </td>

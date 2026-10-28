@@ -163,7 +163,12 @@ async def remove_staff(
 
 
 async def add_client(
-    uow: AppUnitOfWork, *, firm_id: uuid.UUID, actor_user_id: uuid.UUID, name: str
+    uow: AppUnitOfWork,
+    *,
+    firm_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    name: str,
+    currency: str | None = None,
 ) -> Business:
     """Creates a client business under the firm. The person who creates it is its
     direct owner (so the business always has an accountable owner); the rest of the
@@ -171,7 +176,9 @@ async def add_client(
     """
     await get_firm_or_404(uow, firm_id)
     return await RegisterBusinessUseCase(uow).execute(
-        RegisterBusinessCommand(owner_user_id=actor_user_id, name=name.strip(), firm_id=firm_id)
+        RegisterBusinessCommand(
+            owner_user_id=actor_user_id, name=name.strip(), firm_id=firm_id, currency=currency or "USD"
+        )
     )
 
 

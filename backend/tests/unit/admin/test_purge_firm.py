@@ -58,6 +58,6 @@ async def test_an_empty_firm_is_deleted_with_its_staff_memberships() -> None:
 
     await PurgeFirmUseCase(session).execute(_command(" Ledger & Co "))
 
-    assert session.execute.await_count == 2  # the client count, then the memberships
+    assert session.execute.await_count == 3  # the client count, the memberships, the audit trail
     session.delete.assert_awaited_once_with(firm)
     session.commit.assert_awaited_once()

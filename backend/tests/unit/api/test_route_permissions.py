@@ -459,6 +459,7 @@ def test_denied_failed_and_read_requests_are_not_audited(world: tuple[World, Tes
 def test_audit_events_carry_no_request_payload_fields() -> None:
     assert set(AuditEvent.__dataclass_fields__) == {
         "business_id",
+        "firm_id",
         "actor_user_id",
         "actor_role",
         "action",

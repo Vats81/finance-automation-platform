@@ -1,7 +1,7 @@
 import { apiFetch } from "@/lib/api/client";
 import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
 import { BusinessResponse } from "@/types/business";
-import { FirmClientResponse, FirmResponse, FirmRole, FirmStaffResponse } from "@/types/firm";
+import { FirmAuditEvent, FirmClientResponse, FirmResponse, FirmRole, FirmStaffResponse } from "@/types/firm";
 
 export function listMyFirms(token: string | null): Promise<FirmResponse[]> {
   return apiFetch<FirmResponse[]>("/firms", token);
@@ -35,13 +35,18 @@ export function addFirmClient(
   token: string | null,
   firmId: string,
   name: string,
+  currency: string,
   options?: IdempotencyOptions
 ): Promise<BusinessResponse> {
   return apiFetch<BusinessResponse>(`/firms/${firmId}/clients`, token, {
     method: "POST",
     headers: idempotencyHeaders(options),
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, currency }),
   });
+}
+
+export function listFirmAuditEvents(token: string | null, firmId: string): Promise<FirmAuditEvent[]> {
+  return apiFetch<FirmAuditEvent[]>(`/firms/${firmId}/audit-events?limit=50`, token);
 }
 
 export function releaseFirmClient(
