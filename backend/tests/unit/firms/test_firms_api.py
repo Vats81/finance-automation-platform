@@ -105,7 +105,11 @@ def test_every_firm_route_has_a_firm_role_check() -> None:
     app = create_app()
     unguarded = []
     for route in app.routes:
-        if not isinstance(route, APIRoute) or "/firms/{firm_id}" not in route.path:
+        if (
+            not isinstance(route, APIRoute)
+            or "/firms/{firm_id}" not in route.path
+            or route.path.startswith("/api/v1/admin/")  # platform-admin gated, see tests/unit/admin
+        ):
             continue
 
         def has_check(dep: Any) -> bool:

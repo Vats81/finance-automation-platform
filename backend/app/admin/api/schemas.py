@@ -102,3 +102,13 @@ class PlatformStatsResponse(BaseModel):
             verified_users=stats.verified_users,
             unverified_users=stats.unverified_users,
         )
+
+
+class FirmOverviewResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    status: str
+    owner_email: str
+    staff_count: int
+    client_count: int
+    created_at: datetime

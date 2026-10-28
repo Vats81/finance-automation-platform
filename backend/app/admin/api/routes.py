@@ -5,10 +5,16 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.admin.api.schemas import BusinessesOverviewResponse, PlatformStatsResponse, UsersOverviewResponse
+from app.admin.api.schemas import (
+    BusinessesOverviewResponse,
+    FirmOverviewResponse,
+    PlatformStatsResponse,
+    UsersOverviewResponse,
+)
 from app.admin.application.commands.deactivate_user import DeactivateUserCommand, DeactivateUserUseCase
 from app.admin.application.commands.delete_user import DeleteUserCommand, DeleteUserUseCase
 from app.admin.application.commands.purge_business import PurgeBusinessCommand, PurgeBusinessUseCase
+from app.admin.application.commands.purge_firm import PurgeFirmCommand, PurgeFirmUseCase
 from app.admin.application.commands.reactivate_business import (
     ReactivateBusinessCommand,
     ReactivateBusinessUseCase,
@@ -21,6 +27,7 @@ from app.admin.application.queries.list_businesses_overview import (
     ListBusinessesOverviewQuery,
     ListBusinessesOverviewUseCase,
 )
+from app.admin.application.queries.list_firms_overview import ListFirmsOverviewUseCase
 from app.admin.application.queries.list_users_overview import (
     ListUsersOverviewQuery,
     ListUsersOverviewUseCase,
@@ -80,9 +87,7 @@ async def deactivate_user(
     actor: User = Depends(require_platform_admin),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> None:
-    await DeactivateUserUseCase(uow).execute(
-        DeactivateUserCommand(user_id=user_id, actor_user_id=actor.id)
-    )
+    await DeactivateUserUseCase(uow).execute(DeactivateUserCommand(user_id=user_id, actor_user_id=actor.id))
 
 
 @router.post("/users/{user_id}/reactivate", status_code=204)
@@ -124,6 +129,31 @@ async def purge_business(
     session: AsyncSession = uow.session
     await PurgeBusinessUseCase(session).execute(
         PurgeBusinessCommand(business_id=business_id, confirm_name=confirm_name, actor_user_id=actor.id)
+    )
+
+
+@router.get("/firms", response_model=list[FirmOverviewResponse])
+async def list_firms_overview(uow: AppUnitOfWork = Depends(get_uow)) -> list[FirmOverviewResponse]:
+    session: AsyncSession = uow.session
+    return [
+        FirmOverviewResponse.model_validate(f, from_attributes=True)
+        for f in await ListFirmsOverviewUseCase(session).execute()
+    ]
+
+
+@router.delete("/firms/{firm_id}", status_code=204)
+async def purge_firm(
+    firm_id: uuid.UUID,
+    confirm_name: str = Query(min_length=1),
+    actor: User = Depends(require_platform_admin),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> None:
+    """Irreversibly deletes a firm and its staff memberships. Refused while it still has client
+    businesses. `confirm_name` must equal the firm's name exactly.
+    """
+    session: AsyncSession = uow.session
+    await PurgeFirmUseCase(session).execute(
+        PurgeFirmCommand(firm_id=firm_id, confirm_name=confirm_name, actor_user_id=actor.id)
     )
 
 
