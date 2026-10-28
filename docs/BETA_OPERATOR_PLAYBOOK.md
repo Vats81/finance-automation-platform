@@ -29,8 +29,10 @@ Do not send an invitation until every box is ticked.
       "Backup monitor" is green.
 - [ ] **Uptime monitor** on `/ping` is running (5-minute checks, alert to your
       phone/email).
-- [ ] **QA data removed**: no `[QA]` businesses, users or waitlist rows (Admin
-      pages). The demo account and `qa_demo_account.txt` are deleted.
+- [ ] **QA data removed**: no `[QA]` businesses, firms, users or waitlist rows.
+      Run `python backend/scripts/purge_qa_data.py` (a preview), then again with
+      `--apply`; it needs `FINVERLO_API`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your
+      environment. The demo account and `qa_demo_account.txt` are deleted.
 - [ ] **Secrets cleaned**: `SEED_SECRET` and `SEED_ADMIN_PASSWORD` are not set in
       Render.
 - [ ] **You have done the demo walkthrough yourself in a browser** on a laptop
@@ -136,7 +138,7 @@ imported, reconciliation result, problems found, mood.
 | App won't load / "stuck" | Wait a minute (free hosting wakes slowly), then open `/health` on the backend. `"degraded"` for Redis is normal. If Postgres is not "ok", see `DEPLOY.md` section 12 |
 | A tester says a number is wrong | **Treat as top priority.** Ask for the exact figure, the period and the source. Reproduce in their business (Admin can't read data - ask them to share a screen). Fix, then re-verify |
 | A tester can't sign up | Is their exact email on the waitlist as **Invited**? Typos and aliases are the usual cause |
-| A tester forgot their password | They use "Forgot password". **If email is still in test mode it will not arrive** and there is no admin password reset yet: delete their business and user (Admin pages) and have them sign up again - which loses their data, so fix email first (section 1) |
+| A tester forgot their password | They use "Forgot password". **If email is still in test mode it will not arrive**: use Admin → Users → **Reset password**. It shows a new temporary password once; pass it to them privately and ask them to change it. Their old password stops working immediately, but a session they already hold lasts until it expires, so deactivate the account first if you suspect it was taken over. Fix email too (section 1) |
 | Scans fail with "busy" | The free AI service rate limit; wait a minute. If it's constant, tell me |
 | Someone entered the wrong data | They can edit or void records themselves; a purchase that added stock must be voided to change its items |
 | A business must be removed | Admin → Businesses → Delete (type the name), then Users → Delete. Permanent |

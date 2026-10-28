@@ -394,4 +394,11 @@ Notes:
   owner), accountant → accountant, viewer → viewer. A client's owner keeps the
   owner role and the plan; a firm cannot change a client's plan.
 - Migrations `0027` (firms, `kind`) and `0028` (incomes, budgets) run at container start.
-- Billing per account type is not built yet.
+- Firm-level actions (create the firm, invite, re-role or remove staff, add or release a
+  client) are recorded in `firm_audit_events` and shown to the firm's owner and admins on the
+  Staff page. Work inside a client's books is in that client's own audit trail, with the
+  actor role `firm_<role>`. Migration `0029` adds the table.
+- An existing business owner can set up a firm from Settings → Accounting firm.
+- A platform admin can delete a firm (`DELETE /admin/firms/{id}`, refused while it still has
+  client businesses) and set a temporary password for a locked-out user.
+- Billing per account type is not built yet: plans and Stripe prices still apply per business.
