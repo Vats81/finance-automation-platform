@@ -35,6 +35,12 @@ class MembershipNotFoundException(NotFoundException):
     error_code = "membership_not_found"
 
 
+class PersonalWorkspaceExistsException(ConflictException):
+    """One personal workspace per person: it is meant to be your own money, in one place."""
+
+    error_code = "personal_workspace_exists"
+
+
 class TeamMemberLimitExceededException(ConflictException):
     error_code = "team_member_limit_exceeded"
 

@@ -39,6 +39,9 @@ const MEMBERSHIP_STATUS_TONE: Record<string, "success" | "warning" | "neutral"> 
   removed: "neutral",
 };
 
+const PERSONAL_PLANS: BusinessPlan[] = ["free", "starter"];
+const FREE_PERSONAL_BUDGETS = 5; // mirrors backend personal_finance/domain/rules.py
+
 export default function SettingsPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusiness, firms, refresh } = useCurrentBusiness();
@@ -96,6 +99,9 @@ export default function SettingsPage() {
 
   const isOwner = currentBusiness?.role === "owner";
   const isPersonal = currentBusiness?.business.kind === "personal";
+  // A personal account has two plans: Free and Plus (the second tier of a workspace).
+  const planLabel = (plan: BusinessPlan) =>
+    isPersonal ? (plan === "free" ? "Free" : "Plus") : PLAN_LIMITS[plan].label;
   const canManageMembers = isOwner || currentBusiness?.role === "admin";
 
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -293,20 +299,27 @@ export default function SettingsPage() {
       <Card className="mt-6 max-w-2xl">
         <h2 className="mb-1 text-lg font-semibold">Plan</h2>
         <p className="mb-4 text-sm text-slate-500">
-          {PLAN_LIMITS[currentBusiness.business.plan].label} plan —{" "}
+          {planLabel(currentBusiness.business.plan)} plan —{" "}
           {members ? members.filter((m) => m.status === "active").length : "…"} of{" "}
-          {PLAN_LIMITS[currentBusiness.business.plan].maxTeamMembers} team members used.
+          {PLAN_LIMITS[currentBusiness.business.plan].maxTeamMembers} {isPersonal ? "people" : "team members"} used
+          {isPersonal && currentBusiness.business.plan === "free"
+            ? `, up to ${FREE_PERSONAL_BUDGETS} budgets.`
+            : isPersonal
+              ? ", unlimited budgets."
+              : "."}
         </p>
         {planError && <p className="mb-3 text-sm text-red-600">{planError}</p>}
         {isOwner ? (
           billingConnected ? (
             currentBusiness.business.plan === "free" ? (
               <div className="flex gap-3">
-                {(["starter", "pro"] as BusinessPlan[]).map((plan) => (
-                  <Button key={plan} onClick={() => handleUpgrade(plan)} disabled={isRedirectingToBilling}>
-                    {isRedirectingToBilling ? "Redirecting…" : `Upgrade to ${PLAN_LIMITS[plan].label}`}
-                  </Button>
-                ))}
+                {(isPersonal ? (["starter"] as BusinessPlan[]) : (["starter", "pro"] as BusinessPlan[])).map(
+                  (plan) => (
+                    <Button key={plan} onClick={() => handleUpgrade(plan)} disabled={isRedirectingToBilling}>
+                      {isRedirectingToBilling ? "Redirecting…" : `Upgrade to ${planLabel(plan)}`}
+                    </Button>
+                  )
+                )}
               </div>
             ) : (
               <Button onClick={handleManageBilling} disabled={isRedirectingToBilling}>
@@ -320,9 +333,9 @@ export default function SettingsPage() {
                   value={selectedPlan}
                   onChange={(e) => setSelectedPlan(e.target.value as BusinessPlan)}
                 >
-                  {BUSINESS_PLANS.map((plan) => (
+                  {(isPersonal ? PERSONAL_PLANS : BUSINESS_PLANS).map((plan) => (
                     <option key={plan} value={plan}>
-                      {PLAN_LIMITS[plan].label} ({PLAN_LIMITS[plan].maxTeamMembers} members)
+                      {planLabel(plan)} ({PLAN_LIMITS[plan].maxTeamMembers} {isPersonal ? "people" : "members"})
                     </option>
                   ))}
                 </Select>

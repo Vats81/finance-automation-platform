@@ -21,11 +21,13 @@ from app.dashboard.application.queries.get_dashboard_summary import (
     GetDashboardSummaryQuery,
     GetDashboardSummaryUseCase,
 )
+from app.firms.application.plan_limits import FIRM_PLAN_LIMITS
 from app.firms.application.ports import FirmMemberRecord, FirmRecord
 from app.firms.domain.exceptions import (
     CannotChangeOwnFirmRoleException,
     CannotModifyFirmOwnerException,
     ClientHasNoOtherOwnerException,
+    FirmClientLimitExceededException,
     FirmClientNotFoundException,
     FirmNotFoundException,
     FirmOwnerRoleNotAssignableException,
@@ -36,7 +38,6 @@ from app.firms.domain.exceptions import (
 )
 from app.firms.domain.value_objects import FirmMembershipStatus, FirmRole
 
-MAX_FIRM_STAFF = 25
 MAX_FIRM_NAME = 255
 
 
@@ -92,10 +93,14 @@ async def invite_staff(
 ) -> FirmMemberRecord:
     if role == FirmRole.OWNER:
         raise FirmOwnerRoleNotAssignableException("The Owner role cannot be granted to a staff member.")
-    await get_firm_or_404(uow, firm_id)
+    firm = await get_firm_or_404(uow, firm_id)
     members = await uow.firms.list_members(firm_id)
-    if sum(1 for m in members if m.is_active) >= MAX_FIRM_STAFF:
-        raise FirmStaffLimitExceededException(f"A firm can have up to {MAX_FIRM_STAFF} staff members.")
+    max_staff = FIRM_PLAN_LIMITS[firm.plan].max_staff
+    if sum(1 for m in members if m.is_active) >= max_staff:
+        raise FirmStaffLimitExceededException(
+            f"The {firm.plan.value.title()} plan includes up to {max_staff} staff members. "
+            "Upgrade the firm's plan to add more."
+        )
 
     invitee = await uow.users.get_by_email(email)
     if invitee is None:
@@ -174,7 +179,13 @@ async def add_client(
     direct owner (so the business always has an accountable owner); the rest of the
     firm's staff reach it through their firm roles.
     """
-    await get_firm_or_404(uow, firm_id)
+    firm = await get_firm_or_404(uow, firm_id)
+    max_clients = FIRM_PLAN_LIMITS[firm.plan].max_clients
+    if len(await uow.businesses.list_by_firm_id(firm_id)) >= max_clients:
+        raise FirmClientLimitExceededException(
+            f"The {firm.plan.value.title()} plan includes up to {max_clients} client businesses. "
+            "Upgrade the firm's plan to add more."
+        )
     return await RegisterBusinessUseCase(uow).execute(
         RegisterBusinessCommand(
             owner_user_id=actor_user_id, name=name.strip(), firm_id=firm_id, currency=currency or "USD"

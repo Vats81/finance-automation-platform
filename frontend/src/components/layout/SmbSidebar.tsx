@@ -36,6 +36,7 @@ const PERSONAL_NAV_ITEMS = [
 const FIRM_NAV_ITEMS = [
   { href: "/app/firm", label: "Clients", exact: true },
   { href: "/app/firm/staff", label: "Staff", exact: true },
+  { href: "/app/firm/billing", label: "Plan & billing", exact: true },
 ];
 
 function NavLink({

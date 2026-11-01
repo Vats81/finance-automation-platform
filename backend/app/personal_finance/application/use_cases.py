@@ -13,7 +13,7 @@ from decimal import Decimal
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.domain.entities import Business
 from app.business.domain.exceptions import BusinessNotFoundException
-from app.business.domain.value_objects import BusinessKind
+from app.business.domain.value_objects import BusinessKind, BusinessPlan
 from app.expenses.domain.value_objects import ExpenseStatus
 from app.personal_finance.application.ports import BudgetRecord, IncomeRecord
 from app.personal_finance.domain import rules
@@ -21,6 +21,7 @@ from app.personal_finance.domain.exceptions import (
     BudgetNotFoundException,
     IncomeAlreadyVoidException,
     IncomeNotFoundException,
+    PersonalPlanLimitReachedException,
     PersonalWorkspaceRequiredException,
 )
 
@@ -91,8 +92,16 @@ async def void_income(uow: AppUnitOfWork, *, business_id: uuid.UUID, income_id: 
 async def set_budget(
     uow: AppUnitOfWork, *, business_id: uuid.UUID, category: str, monthly_limit: Decimal
 ) -> BudgetRecord:
-    await require_personal(uow, business_id)
+    business = await require_personal(uow, business_id)
     cleaned = rules.clean_text(category, field="Category", max_length=100) or ""
+    if business.plan == BusinessPlan.FREE:
+        existing = await uow.personal.list_budgets(business_id)
+        is_new = rules.category_key(cleaned) not in {rules.category_key(b.category) for b in existing}
+        if is_new and len(existing) >= rules.FREE_MAX_BUDGETS:
+            raise PersonalPlanLimitReachedException(
+                f"The free plan includes up to {rules.FREE_MAX_BUDGETS} budgets. "
+                "Upgrade to Plus for unlimited budgets."
+            )
     budget = await uow.personal.upsert_budget(
         business_id=business_id,
         category=cleaned,

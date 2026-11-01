@@ -8,19 +8,20 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
 
 from app.api.rate_limit import limiter
-from app.bootstrap.container import get_uow
+from app.bootstrap.container import get_payment_gateway, get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.schemas import BusinessResponse
 from app.business.domain.value_objects import BusinessStatus
 from app.config.settings import get_settings
-from app.firms.api.permissions import ANY_STAFF, MANAGE_FIRM
-from app.firms.application import use_cases
+from app.firms.api.permissions import ANY_STAFF, MANAGE_FIRM, OWNER_ONLY
+from app.firms.application import billing, use_cases
 from app.firms.application.ports import FirmMemberRecord, FirmRecord
 from app.firms.domain.exceptions import FirmSuspendedException, NotAFirmMemberException
-from app.firms.domain.value_objects import FirmMembershipStatus, FirmRole, FirmStatus
+from app.firms.domain.value_objects import FirmMembershipStatus, FirmPlan, FirmRole, FirmStatus
 from app.firms.infrastructure.models import FirmAuditEventModel
 from app.identity.api.dependencies import get_current_local_user
 from app.identity.domain.entities import User
+from app.shared.application.ports import IPaymentGateway
 
 router = APIRouter(prefix="/firms", tags=["firms"])
 settings = get_settings()
@@ -70,11 +71,19 @@ class FirmResponse(BaseModel):
     name: str
     status: FirmStatus
     my_role: FirmRole
+    plan: FirmPlan
     created_at: datetime
 
     @classmethod
     def build(cls, firm: FirmRecord, role: FirmRole) -> "FirmResponse":
-        return cls(id=firm.id, name=firm.name, status=firm.status, my_role=role, created_at=firm.created_at)
+        return cls(
+            id=firm.id,
+            name=firm.name,
+            status=firm.status,
+            my_role=role,
+            plan=firm.plan,
+            created_at=firm.created_at,
+        )
 
 
 class StaffResponse(BaseModel):
@@ -310,3 +319,79 @@ async def list_firm_audit_events(
         )
         for m in result.scalars().all()
     ]
+
+
+class FirmBillingResponse(BaseModel):
+    plan: FirmPlan
+    max_clients: int
+    max_staff: int
+    clients: int
+    staff: int
+    has_subscription: bool
+    billing_connected: bool
+
+
+class ChangeFirmPlanRequest(BaseModel):
+    plan: FirmPlan
+
+
+@router.get("/{firm_id}/billing", response_model=FirmBillingResponse)
+async def get_firm_billing(
+    firm_id: uuid.UUID,
+    _member: FirmMemberRecord = Depends(require_firm_role(*ANY_STAFF)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> FirmBillingResponse:
+    summary = await billing.billing_summary(uow, settings, firm_id=firm_id)
+    return FirmBillingResponse(
+        plan=summary.plan,
+        max_clients=summary.limits.max_clients,
+        max_staff=summary.limits.max_staff,
+        clients=summary.clients,
+        staff=summary.staff,
+        has_subscription=summary.has_subscription,
+        billing_connected=summary.stripe_configured,
+    )
+
+
+@router.post("/{firm_id}/billing/checkout-session")
+@limiter.limit(settings.rate_limit_write)
+async def start_firm_checkout(
+    request: Request,
+    firm_id: uuid.UUID,
+    body: ChangeFirmPlanRequest,
+    _owner: FirmMemberRecord = Depends(require_firm_role(*OWNER_ONLY)),
+    actor: User = Depends(get_current_local_user),
+    uow: AppUnitOfWork = Depends(get_uow),
+    gateway: IPaymentGateway = Depends(get_payment_gateway),
+) -> dict[str, str]:
+    url = await billing.start_checkout(
+        uow, gateway, settings, firm_id=firm_id, plan=body.plan, actor_email=str(actor.email)
+    )
+    return {"checkout_url": url}
+
+
+@router.post("/{firm_id}/billing/portal-session")
+@limiter.limit(settings.rate_limit_write)
+async def start_firm_portal(
+    request: Request,
+    firm_id: uuid.UUID,
+    _owner: FirmMemberRecord = Depends(require_firm_role(*OWNER_ONLY)),
+    uow: AppUnitOfWork = Depends(get_uow),
+    gateway: IPaymentGateway = Depends(get_payment_gateway),
+) -> dict[str, str]:
+    return {"portal_url": await billing.start_portal(uow, gateway, settings, firm_id=firm_id)}
+
+
+@router.patch("/{firm_id}/plan", response_model=FirmResponse)
+@limiter.limit(settings.rate_limit_write)
+async def change_firm_plan(
+    request: Request,
+    firm_id: uuid.UUID,
+    body: ChangeFirmPlanRequest,
+    membership: FirmMemberRecord = Depends(require_firm_role(*OWNER_ONLY)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> FirmResponse:
+    """Unpaid plan change, available only while billing is not configured (the beta)."""
+    firm = await billing.set_plan_directly(uow, settings, firm_id=firm_id, plan=body.plan)
+    return FirmResponse.build(firm, membership.role)
+

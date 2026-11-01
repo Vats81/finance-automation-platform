@@ -1,9 +1,10 @@
 import uuid
 from dataclasses import dataclass
 
-from app.business.application.ports import BusinessUnitOfWork
+from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.domain.value_objects import BusinessPlan
 from app.config.settings import Settings
+from app.firms.application import billing as firm_billing
 from app.shared.application.ports import IPaymentGateway
 
 
@@ -26,7 +27,7 @@ class HandleStripeWebhookUseCase:
     problem.
     """
 
-    def __init__(self, uow: BusinessUnitOfWork, payment_gateway: IPaymentGateway, settings: Settings) -> None:
+    def __init__(self, uow: AppUnitOfWork, payment_gateway: IPaymentGateway, settings: Settings) -> None:
         self._uow = uow
         self._payment_gateway = payment_gateway
         self._settings = settings
@@ -38,6 +39,14 @@ class HandleStripeWebhookUseCase:
 
         if event.type == "checkout.session.completed":
             reference = event.data["client_reference_id"]
+            if reference.startswith(firm_billing.FIRM_REFERENCE_PREFIX):
+                await firm_billing.on_checkout_completed(
+                    self._uow,
+                    reference=reference,
+                    customer_id=event.data["customer"],
+                    subscription_id=event.data["subscription"],
+                )
+                return
             business_id_str, plan_str = reference.split(":", 1)
             business = await self._uow.businesses.get_by_id(uuid.UUID(business_id_str))
             if business is None:
@@ -52,6 +61,12 @@ class HandleStripeWebhookUseCase:
         elif event.type == "customer.subscription.updated":
             business = await self._uow.businesses.get_by_stripe_subscription_id(event.data["id"])
             if business is None:
+                await firm_billing.on_subscription_updated(
+                    self._uow,
+                    self._settings,
+                    subscription_id=event.data["id"],
+                    price_id=event.data["items"]["data"][0]["price"]["id"],
+                )
                 return
             price_id = event.data["items"]["data"][0]["price"]["id"]
             plan = self._resolve_plan_from_price_id(price_id)
@@ -64,6 +79,7 @@ class HandleStripeWebhookUseCase:
         elif event.type == "customer.subscription.deleted":
             business = await self._uow.businesses.get_by_stripe_subscription_id(event.data["id"])
             if business is None:
+                await firm_billing.on_subscription_deleted(self._uow, subscription_id=event.data["id"])
                 return
             business.cancel_subscription()
             await self._uow.businesses.update(business)
@@ -75,5 +91,8 @@ class HandleStripeWebhookUseCase:
         mapping = {
             self._settings.stripe_price_id_starter: BusinessPlan.STARTER,
             self._settings.stripe_price_id_pro: BusinessPlan.PRO,
+            # The personal paid plan ("Plus") is the Starter tier of a personal workspace.
+            self._settings.stripe_price_id_personal: BusinessPlan.STARTER,
         }
+        mapping.pop("", None)  # a price that is not configured must never match
         return mapping.get(price_id)

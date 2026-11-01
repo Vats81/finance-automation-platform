@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.firms.domain.value_objects import FirmMembershipStatus, FirmRole, FirmStatus
+from app.firms.domain.value_objects import FirmMembershipStatus, FirmPlan, FirmRole, FirmStatus
 
 
 @dataclass(frozen=True)
@@ -13,6 +13,9 @@ class FirmRecord:
     owner_user_id: uuid.UUID
     status: FirmStatus
     created_at: datetime
+    plan: FirmPlan = FirmPlan.FREE
+    stripe_customer_id: str | None = None
+    stripe_subscription_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,21 @@ class IFirmRepository(ABC):
 
     @abstractmethod
     async def get_firm(self, firm_id: uuid.UUID) -> FirmRecord | None: ...
+
+    @abstractmethod
+    async def get_firm_by_subscription_id(self, subscription_id: str) -> FirmRecord | None: ...
+
+    @abstractmethod
+    async def update_billing(
+        self,
+        firm_id: uuid.UUID,
+        *,
+        plan: FirmPlan | None = None,
+        stripe_customer_id: str | None = None,
+        stripe_subscription_id: str | None = None,
+        clear_subscription: bool = False,
+    ) -> FirmRecord | None:
+        """Sets only what is given; clear_subscription removes the Stripe subscription reference."""
 
     @abstractmethod
     async def get_membership(self, firm_id: uuid.UUID, user_id: uuid.UUID) -> FirmMemberRecord | None:

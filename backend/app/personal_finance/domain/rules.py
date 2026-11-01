@@ -47,3 +47,8 @@ def budget_status(spent: Decimal, limit: Decimal) -> str:
     if limit > 0 and spent >= limit * BUDGET_WARNING_RATIO:
         return "near"
     return "ok"
+
+
+# The free personal plan: this many budgets. Plus has no limit. A personal workspace can also be
+# shared with one other person on Free (the team limit), or four on Plus.
+FREE_MAX_BUDGETS = 5

@@ -8,6 +8,7 @@ anyone else's businesses.
 import asyncio
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -20,7 +21,7 @@ from app.api.audit_middleware import AuditEvent
 from app.api.rate_limit import limiter
 from app.bootstrap.app_factory import create_app
 from app.bootstrap.container import get_uow
-from app.firms.domain.value_objects import FirmStatus
+from app.firms.domain.value_objects import FirmPlan, FirmStatus
 from app.identity.api.dependencies import get_current_local_user
 from app.identity.domain.entities import User
 from app.identity.domain.value_objects import EmailAddress
@@ -78,6 +79,9 @@ def call(client: TestClient, user: str, method: str, path: str, json: Any = None
 def build_firm(w: World, client: TestClient) -> tuple[str, dict[str, str]]:
     """A firm with an owner, admin, accountant and viewer. Returns (firm_id, membership ids)."""
     firm_id = call(client, "fowner", "POST", "/firms", {"name": "Ledger & Co"}).json()["id"]
+    # A firm big enough for the whole cast; the plan limits themselves are tested in test_firm_billing.
+    firm = w.uow.firms.firms[uuid.UUID(firm_id)]
+    w.uow.firms.firms[firm.id] = replace(firm, plan=FirmPlan.PRACTICE)
     members: dict[str, str] = {}
     for label, role in (("fadmin", "admin"), ("faccountant", "accountant"), ("fviewer", "viewer")):
         r = call(

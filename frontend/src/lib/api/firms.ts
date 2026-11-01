@@ -1,7 +1,15 @@
 import { apiFetch } from "@/lib/api/client";
 import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
 import { BusinessResponse } from "@/types/business";
-import { FirmAuditEvent, FirmClientResponse, FirmResponse, FirmRole, FirmStaffResponse } from "@/types/firm";
+import {
+  FirmAuditEvent,
+  FirmBillingResponse,
+  FirmClientResponse,
+  FirmPlan,
+  FirmResponse,
+  FirmRole,
+  FirmStaffResponse,
+} from "@/types/firm";
 
 export function listMyFirms(token: string | null): Promise<FirmResponse[]> {
   return apiFetch<FirmResponse[]>("/firms", token);
@@ -93,5 +101,32 @@ export function removeFirmStaff(
 ): Promise<FirmStaffResponse> {
   return apiFetch<FirmStaffResponse>(`/firms/${firmId}/staff/${membershipId}/remove`, token, {
     method: "POST",
+  });
+}
+
+
+export function getFirmBilling(token: string | null, firmId: string): Promise<FirmBillingResponse> {
+  return apiFetch<FirmBillingResponse>(`/firms/${firmId}/billing`, token);
+}
+
+export function startFirmCheckout(
+  token: string | null,
+  firmId: string,
+  plan: FirmPlan
+): Promise<{ checkout_url: string }> {
+  return apiFetch<{ checkout_url: string }>(`/firms/${firmId}/billing/checkout-session`, token, {
+    method: "POST",
+    body: JSON.stringify({ plan }),
+  });
+}
+
+export function openFirmBillingPortal(token: string | null, firmId: string): Promise<{ portal_url: string }> {
+  return apiFetch<{ portal_url: string }>(`/firms/${firmId}/billing/portal-session`, token, { method: "POST" });
+}
+
+export function changeFirmPlan(token: string | null, firmId: string, plan: FirmPlan): Promise<FirmResponse> {
+  return apiFetch<FirmResponse>(`/firms/${firmId}/plan`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ plan }),
   });
 }

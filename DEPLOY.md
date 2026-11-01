@@ -229,6 +229,9 @@ stay in **Test mode** first, no real money involved):
 | `STRIPE_WEBHOOK_SECRET` | your `whsec_...` signing secret |
 | `STRIPE_PRICE_ID_STARTER` | the Starter price id |
 | `STRIPE_PRICE_ID_PRO` | the Pro price id |
+| `STRIPE_PRICE_ID_PERSONAL` | the price id for a personal account's paid plan (Plus) |
+| `STRIPE_PRICE_ID_FIRM_GROWTH` | the price id for an accounting firm's Growth plan |
+| `STRIPE_PRICE_ID_FIRM_PRACTICE` | the price id for an accounting firm's Practice plan |
 
 Once set, a business owner sees real "Upgrade to Starter/Pro" buttons on
 `/app/settings` instead of the free unpaid plan selector, and plan changes
@@ -401,4 +404,23 @@ Notes:
 - An existing business owner can set up a firm from Settings → Accounting firm.
 - A platform admin can delete a firm (`DELETE /admin/firms/{id}`, refused while it still has
   client businesses) and set a temporary password for a locked-out user.
-- Billing per account type is not built yet: plans and Stripe prices still apply per business.
+
+### What each account type includes
+
+| | Free | Paid |
+|---|---|---|
+| **Business** | 2 team members | Starter 5, Pro 20 team members |
+| **Accounting firm** | 2 client businesses, 2 staff | Growth: 15 clients, 5 staff. Practice: 50 clients, 15 staff |
+| **Personal** | 1 personal workspace per person, 5 budgets, shared with 1 other person | Plus: unlimited budgets, shared with up to 4 others |
+
+The firm is the subscriber, not each client: a client business a firm manages needs no plan of its
+own. Limits only stop *adding* more. A firm that downgrades or whose subscription lapses keeps
+every client and staff member it already has. The numbers live in
+`backend/app/firms/application/plan_limits.py`, `backend/app/business/application/plan_limits.py`
+and `backend/app/personal_finance/domain/rules.py` (the frontend mirrors them for display only).
+
+**Prices are set in Stripe, not in code.** Create one recurring price per paid plan, put its id in
+the matching variable above, and the Stripe webhook keeps plans in sync (a checkout, a plan change
+and a cancellation all flow through the same `/billing/webhook`; a firm's checkout is recognised by
+its `firm:` reference). Until `STRIPE_SECRET_KEY` is set, the whole product runs in beta mode: an
+owner can switch plan directly on the Settings or firm Plan & billing page and no payment is taken.

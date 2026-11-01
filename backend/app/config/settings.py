@@ -191,6 +191,10 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
     stripe_price_id_starter: str = Field(default="", alias="STRIPE_PRICE_ID_STARTER")
     stripe_price_id_pro: str = Field(default="", alias="STRIPE_PRICE_ID_PRO")
+    # Personal accounts have one paid plan (Plus); accounting firms have two (Growth, Practice).
+    stripe_price_id_personal: str = Field(default="", alias="STRIPE_PRICE_ID_PERSONAL")
+    stripe_price_id_firm_growth: str = Field(default="", alias="STRIPE_PRICE_ID_FIRM_GROWTH")
+    stripe_price_id_firm_practice: str = Field(default="", alias="STRIPE_PRICE_ID_FIRM_PRACTICE")
 
     @property
     def stripe_configured(self) -> bool:

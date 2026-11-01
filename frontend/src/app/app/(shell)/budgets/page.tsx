@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -12,6 +13,8 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
 import { BudgetResponse } from "@/types/personal";
+
+const FREE_BUDGETS = 5; // mirrors backend personal_finance/domain/rules.py
 
 export default function BudgetsPage() {
   const { getAccessToken } = useLocalAuth();
@@ -64,6 +67,15 @@ export default function BudgetsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Budgets</h1>
+      {currentBusiness?.business.plan === "free" && (
+        <p className="text-sm text-slate-500">
+          Free plan: {budgets ? budgets.length : "…"} of {FREE_BUDGETS} budgets used.{" "}
+          <Link href="/app/settings" className="text-brand-700 hover:underline">
+            Upgrade to Plus
+          </Link>{" "}
+          for unlimited.
+        </p>
+      )}
       <p className="max-w-2xl text-sm text-slate-600">
         A budget is a monthly limit for one spending category. It matches the category you use when you record
         spending (ignoring capital letters), and your Overview shows how each one is doing.

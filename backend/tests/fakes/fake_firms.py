@@ -3,7 +3,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 from app.firms.application.ports import FirmMemberRecord, FirmRecord, IFirmRepository
-from app.firms.domain.value_objects import FirmMembershipStatus, FirmRole, FirmStatus
+from app.firms.domain.value_objects import FirmMembershipStatus, FirmPlan, FirmRole, FirmStatus
 
 
 class FakeFirmRepository(IFirmRepository):
@@ -35,6 +35,32 @@ class FakeFirmRepository(IFirmRepository):
 
     async def get_firm(self, firm_id: uuid.UUID) -> FirmRecord | None:
         return self.firms.get(firm_id)
+
+    async def get_firm_by_subscription_id(self, subscription_id: str) -> FirmRecord | None:
+        return next((f for f in self.firms.values() if f.stripe_subscription_id == subscription_id), None)
+
+    async def update_billing(
+        self,
+        firm_id: uuid.UUID,
+        *,
+        plan: FirmPlan | None = None,
+        stripe_customer_id: str | None = None,
+        stripe_subscription_id: str | None = None,
+        clear_subscription: bool = False,
+    ) -> FirmRecord | None:
+        current = self.firms.get(firm_id)
+        if current is None:
+            return None
+        updated = replace(
+            current,
+            plan=plan or current.plan,
+            stripe_customer_id=stripe_customer_id or current.stripe_customer_id,
+            stripe_subscription_id=None
+            if clear_subscription
+            else (stripe_subscription_id or current.stripe_subscription_id),
+        )
+        self.firms[firm_id] = updated
+        return updated
 
     async def get_membership(self, firm_id: uuid.UUID, user_id: uuid.UUID) -> FirmMemberRecord | None:
         return next((m for m in self.members.values() if m.firm_id == firm_id and m.user_id == user_id), None)

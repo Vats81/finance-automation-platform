@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.infrastructure.models import BusinessAuditEventModel
 from app.firms.application.ports import FirmMemberRecord, FirmRecord, IFirmRepository
-from app.firms.domain.value_objects import FirmMembershipStatus, FirmRole, FirmStatus
+from app.firms.domain.value_objects import FirmMembershipStatus, FirmPlan, FirmRole, FirmStatus
 from app.firms.infrastructure.models import FirmMembershipModel, FirmModel
 from app.shared.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 
@@ -18,6 +18,9 @@ def _firm(m: FirmModel) -> FirmRecord:
         owner_user_id=m.owner_user_id,
         status=FirmStatus(m.status),
         created_at=m.created_at,
+        plan=FirmPlan(m.plan),
+        stripe_customer_id=m.stripe_customer_id,
+        stripe_subscription_id=m.stripe_subscription_id,
     )
 
 
@@ -63,6 +66,36 @@ class SqlAlchemyFirmRepository(IFirmRepository):
     async def get_firm(self, firm_id: uuid.UUID) -> FirmRecord | None:
         model = await self._session.get(FirmModel, firm_id)
         return _firm(model) if model else None
+
+    async def get_firm_by_subscription_id(self, subscription_id: str) -> FirmRecord | None:
+        result = await self._session.execute(
+            select(FirmModel).where(FirmModel.stripe_subscription_id == subscription_id)
+        )
+        model = result.scalar_one_or_none()
+        return _firm(model) if model else None
+
+    async def update_billing(
+        self,
+        firm_id: uuid.UUID,
+        *,
+        plan: FirmPlan | None = None,
+        stripe_customer_id: str | None = None,
+        stripe_subscription_id: str | None = None,
+        clear_subscription: bool = False,
+    ) -> FirmRecord | None:
+        model = await self._session.get(FirmModel, firm_id)
+        if model is None:
+            return None
+        if plan is not None:
+            model.plan = plan.value
+        if stripe_customer_id is not None:
+            model.stripe_customer_id = stripe_customer_id
+        if stripe_subscription_id is not None:
+            model.stripe_subscription_id = stripe_subscription_id
+        if clear_subscription:
+            model.stripe_subscription_id = None
+        await self._session.flush()
+        return _firm(model)
 
     async def get_membership(self, firm_id: uuid.UUID, user_id: uuid.UUID) -> FirmMemberRecord | None:
         result = await self._session.execute(

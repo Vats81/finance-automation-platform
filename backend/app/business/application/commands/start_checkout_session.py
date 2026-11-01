@@ -7,9 +7,10 @@ from app.business.domain.exceptions import (
     BusinessNotFoundException,
     DirectPlanChangeNotAllowedException,
 )
-from app.business.domain.value_objects import BusinessPlan
+from app.business.domain.value_objects import BusinessKind, BusinessPlan
 from app.config.settings import Settings
 from app.shared.application.ports import IPaymentGateway
+from app.shared.domain.exceptions import ValidationException
 
 
 @dataclass(frozen=True)
@@ -42,10 +43,15 @@ class StartCheckoutSessionUseCase:
         if business.stripe_subscription_id is not None:
             raise ActiveSubscriptionExistsException("Use the billing portal to change your existing plan")
 
-        price_id = {
-            BusinessPlan.STARTER: self._settings.stripe_price_id_starter,
-            BusinessPlan.PRO: self._settings.stripe_price_id_pro,
-        }[command.plan]
+        if business.kind == BusinessKind.PERSONAL:
+            if command.plan != BusinessPlan.STARTER:
+                raise ValidationException("A personal account has one paid plan, Plus.")
+            price_id = self._settings.stripe_price_id_personal
+        else:
+            price_id = {
+                BusinessPlan.STARTER: self._settings.stripe_price_id_starter,
+                BusinessPlan.PRO: self._settings.stripe_price_id_pro,
+            }[command.plan]
 
         base_url = self._settings.frontend_base_url
         return await self._payment_gateway.create_checkout_session(

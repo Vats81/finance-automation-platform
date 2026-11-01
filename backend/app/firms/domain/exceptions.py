@@ -60,3 +60,7 @@ class ClientHasNoOtherOwnerException(ConflictException):
     """
 
     error_code = "client_has_no_other_owner"
+
+
+class FirmClientLimitExceededException(ConflictException):
+    error_code = "firm_client_limit_exceeded"

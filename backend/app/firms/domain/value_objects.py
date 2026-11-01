@@ -21,3 +21,11 @@ class FirmStatus(str, enum.Enum):
 class FirmMembershipStatus(str, enum.Enum):
     ACTIVE = "active"
     REMOVED = "removed"
+
+
+class FirmPlan(str, enum.Enum):
+    """What a firm pays for. The limits for each live in firms/application/plan_limits.py."""
+
+    FREE = "free"
+    GROWTH = "growth"
+    PRACTICE = "practice"

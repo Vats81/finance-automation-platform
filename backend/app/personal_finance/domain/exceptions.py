@@ -1,4 +1,4 @@
-from app.shared.domain.exceptions import NotFoundException, ValidationException
+from app.shared.domain.exceptions import ConflictException, NotFoundException, ValidationException
 
 
 class PersonalWorkspaceRequiredException(ValidationException):
@@ -19,3 +19,7 @@ class BudgetNotFoundException(NotFoundException):
 
 class IncomeAlreadyVoidException(ValidationException):
     error_code = "income_already_void"
+
+
+class PersonalPlanLimitReachedException(ConflictException):
+    error_code = "personal_plan_limit_reached"

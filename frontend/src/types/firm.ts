@@ -7,12 +7,32 @@ export const FIRM_ROLES: FirmRole[] = ["owner", "admin", "accountant", "viewer"]
 // The roles a person can be invited as or changed to: the Owner role is never granted.
 export const ASSIGNABLE_FIRM_ROLES: FirmRole[] = ["admin", "accountant", "viewer"];
 
+export type FirmPlan = "free" | "growth" | "practice";
+
+// Mirrors backend/app/firms/application/plan_limits.py, used for display only; the server enforces them.
+export const FIRM_PLANS: Record<FirmPlan, { label: string; maxClients: number; maxStaff: number }> = {
+  free: { label: "Free", maxClients: 2, maxStaff: 2 },
+  growth: { label: "Growth", maxClients: 15, maxStaff: 5 },
+  practice: { label: "Practice", maxClients: 50, maxStaff: 15 },
+};
+
 export interface FirmResponse {
   id: string;
   name: string;
   status: FirmStatus;
   my_role: FirmRole;
+  plan: FirmPlan;
   created_at: string;
+}
+
+export interface FirmBillingResponse {
+  plan: FirmPlan;
+  max_clients: number;
+  max_staff: number;
+  clients: number;
+  staff: number;
+  has_subscription: boolean;
+  billing_connected: boolean;
 }
 
 export interface FirmStaffResponse {

@@ -3,7 +3,8 @@ from dataclasses import dataclass
 
 from app.business.application.ports import BusinessUnitOfWork
 from app.business.domain.entities import Business, BusinessMembership
-from app.business.domain.value_objects import BusinessKind
+from app.business.domain.exceptions import PersonalWorkspaceExistsException
+from app.business.domain.value_objects import BusinessKind, BusinessRole
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,15 @@ class RegisterBusinessUseCase:
         self._uow = uow
 
     async def execute(self, command: RegisterBusinessCommand) -> Business:
+        if command.kind == BusinessKind.PERSONAL:
+            for membership in await self._uow.business_memberships.list_for_user(command.owner_user_id):
+                if membership.role != BusinessRole.OWNER or not membership.is_active:
+                    continue
+                existing = await self._uow.businesses.get_by_id(membership.business_id)
+                if existing is not None and existing.kind == BusinessKind.PERSONAL:
+                    raise PersonalWorkspaceExistsException(
+                        "You already have a personal workspace. Each person has one."
+                    )
         business = Business.register(
             owner_user_id=command.owner_user_id,
             name=command.name,
