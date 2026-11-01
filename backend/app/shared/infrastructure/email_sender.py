@@ -19,14 +19,21 @@ class ConsoleEmailSender(IEmailSender):
     """
 
     async def send(
-        self, *, to: str, subject: str, body: str, attachments: list[EmailAttachment] | None = None
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        attachments: list[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> None:
         attachment_note = (
             f"\nAttachments: {', '.join(a.filename for a in attachments)}" if attachments else ""
         )
+        reply_note = f"\nReply-To: {reply_to}" if reply_to else ""
         logger.info(
-            "=== EMAIL (console sender) ===\nTo: %s\nSubject: %s%s\n\n%s",
-            to, subject, attachment_note, body,
+            "=== EMAIL (console sender) ===\nTo: %s%s\nSubject: %s%s\n\n%s",
+            to, reply_note, subject, attachment_note, body,
         )  # fmt: skip
 
 
@@ -39,12 +46,20 @@ class SmtpEmailSender(IEmailSender):
         self._from_address = from_address
 
     async def send(
-        self, *, to: str, subject: str, body: str, attachments: list[EmailAttachment] | None = None
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        attachments: list[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> None:
         message = EmailMessage()
         message["From"] = self._from_address
         message["To"] = to
         message["Subject"] = subject
+        if reply_to:
+            message["Reply-To"] = reply_to
         message.set_content(body)
 
         for attachment in attachments or []:
@@ -75,7 +90,13 @@ class ResendApiEmailSender(IEmailSender):
         self._from_address = from_address
 
     async def send(
-        self, *, to: str, subject: str, body: str, attachments: list[EmailAttachment] | None = None
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        attachments: list[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> None:
         payload: dict = {
             "from": self._from_address,
@@ -83,10 +104,11 @@ class ResendApiEmailSender(IEmailSender):
             "subject": subject,
             "text": body,
         }
+        if reply_to:
+            payload["reply_to"] = reply_to
         if attachments:
             payload["attachments"] = [
-                {"filename": a.filename, "content": base64.b64encode(a.content).decode()}
-                for a in attachments
+                {"filename": a.filename, "content": base64.b64encode(a.content).decode()} for a in attachments
             ]
 
         async with httpx.AsyncClient() as client:

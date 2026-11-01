@@ -107,8 +107,11 @@ Good first conversations are with people you already know, or who found you.
 
 ## 4. Invitation to a firm you have chosen
 
-Send this only after you have moved them to **Invited** in Admin -> Beta waitlist and have
-confirmed the email works.
+Move them to **Invited** in Admin -> Beta waitlist, then click **Send invitation email** on
+their row. The message below is the suggested text (a firm gets this version, anyone else gets a
+shorter business one). You can edit the subject and the message, and nothing is sent until you
+confirm. It goes from `noreply@finverlo.com` with replies to `support@finverlo.com`, the row then
+shows "Invitation sent <date>", and a second send needs a deliberate "send again".
 
 > Subject: Your place in the Finverlo beta
 >

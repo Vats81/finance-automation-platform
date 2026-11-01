@@ -20,6 +20,7 @@ class WaitlistEntry:
     notes: str | None
     created_at: datetime
     updated_at: datetime
+    invitation_sent_at: datetime | None = None  # when the owner last emailed them their invitation
 
 
 class IWaitlistStore(ABC):
@@ -51,6 +52,9 @@ class IWaitlistStore(ABC):
     async def set_status(
         self, entry_id: uuid.UUID, *, status: WaitlistStatus | None, notes: str | None
     ) -> WaitlistEntry | None: ...
+
+    @abstractmethod
+    async def mark_invitation_sent(self, entry_id: uuid.UUID) -> WaitlistEntry | None: ...
 
     @abstractmethod
     async def delete(self, entry_id: uuid.UUID) -> bool: ...

@@ -88,9 +88,23 @@ class FakeEmailSender(IEmailSender):
         self.sent: list[dict] = []
 
     async def send(
-        self, *, to: str, subject: str, body: str, attachments: list[EmailAttachment] | None = None
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        attachments: list[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> None:
-        self.sent.append({"to": to, "subject": subject, "body": body, "attachments": attachments or []})
+        self.sent.append(
+            {
+                "to": to,
+                "subject": subject,
+                "body": body,
+                "attachments": attachments or [],
+                "reply_to": reply_to,
+            }
+        )
 
 
 class FakeWhatsAppSender(IWhatsAppSender):

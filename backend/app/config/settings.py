@@ -87,6 +87,8 @@ class Settings(BaseSettings):
     # it off only if you run the worker and its outbox relay, or each email would go out twice.
     send_auth_emails_inline: bool = Field(default=True, alias="SEND_AUTH_EMAILS_INLINE")
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
+    # Where replies to emails we send (beta invitations) should go.
+    support_email: str = Field(default="support@finverlo.com", alias="SUPPORT_EMAIL")
 
     # --- Database TLS ---
     # Blank (default) leaves the drivers' own behaviour: opportunistic TLS

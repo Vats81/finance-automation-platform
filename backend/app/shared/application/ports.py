@@ -84,7 +84,13 @@ class IEmailSender(ABC):
 
     @abstractmethod
     async def send(
-        self, *, to: str, subject: str, body: str, attachments: list[EmailAttachment] | None = None
+        self,
+        *,
+        to: str,
+        subject: str,
+        body: str,
+        attachments: list[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> None: ...
 
 

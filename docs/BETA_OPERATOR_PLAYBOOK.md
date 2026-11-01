@@ -75,11 +75,13 @@ The admin page is **Admin → Beta waitlist**. Statuses and what they mean:
 | Interested | They filled in the form (or you added them) | Read their answers |
 | Qualified | They fit: spreadsheets today, a real reporting problem, willing to give weekly feedback | Book a 20-minute call |
 | Waiting for checks | You want to hold them until a gate passes | - |
-| Invited | You have decided to let them in; they can now sign up | Send the invitation (draft 4) |
+| Invited | You have decided to let them in; they can now sign up | Click **Send invitation email** on the row (edit, then confirm) |
 | Onboarded | They created an account | Run the first session |
 | Paused | Not now / left | Keep or delete their details |
 
-Moving someone to "Invited" **sends nothing** - you send the email yourself.
+Moving someone to "Invited" **sends nothing**. To invite them, click **Send invitation email**
+on their row: it shows a suggested message you can edit, and sends only when you confirm. It
+goes only to an address that is on the waitlist at Invited, and records the date it was sent.
 
 **Collecting interest:** the form is at `/beta` and is not linked from the site.
 Share the link yourself with people you choose. It never creates an account.

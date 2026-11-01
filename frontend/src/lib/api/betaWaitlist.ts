@@ -34,6 +34,15 @@ export interface WaitlistEntry {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  invitation_sent_at: string | null;
+}
+
+export interface InvitationDraft {
+  to: string;
+  subject: string;
+  body: string;
+  is_firm: boolean;
+  already_sent_at: string | null;
 }
 
 // Public endpoint: no token. Registers interest only; it creates no account.
@@ -61,4 +70,20 @@ export function updateWaitlistEntry(
 
 export function deleteWaitlistEntry(token: string | null, entryId: string): Promise<void> {
   return apiFetch<void>(`/admin/beta-waitlist/${entryId}`, token, { method: "DELETE" });
+}
+
+
+export function getInvitationDraft(token: string | null, entryId: string): Promise<InvitationDraft> {
+  return apiFetch<InvitationDraft>(`/admin/beta-waitlist/${entryId}/invitation-draft`, token);
+}
+
+export function sendInvitationEmail(
+  token: string | null,
+  entryId: string,
+  body: { subject: string; body: string; resend: boolean }
+): Promise<WaitlistEntry> {
+  return apiFetch<WaitlistEntry>(`/admin/beta-waitlist/${entryId}/send-invitation`, token, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }

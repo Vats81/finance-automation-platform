@@ -69,6 +69,14 @@ class MemoryStore(IWaitlistStore):
         self.rows[entry_id] = updated
         return updated
 
+    async def mark_invitation_sent(self, entry_id: uuid.UUID) -> WaitlistEntry | None:
+        current = self.rows.get(entry_id)
+        if current is None:
+            return None
+        updated = WaitlistEntry(**{**current.__dict__, "invitation_sent_at": datetime.now(timezone.utc)})
+        self.rows[entry_id] = updated
+        return updated
+
     async def delete(self, entry_id: uuid.UUID) -> bool:
         return self.rows.pop(entry_id, None) is not None
 

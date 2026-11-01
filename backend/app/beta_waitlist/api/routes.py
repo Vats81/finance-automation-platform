@@ -6,12 +6,14 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.api.rate_limit import limiter
 from app.beta_waitlist.application.ports import IWaitlistStore, WaitlistEntry
-from app.beta_waitlist.application.use_cases import update_entry
+from app.beta_waitlist.application.use_cases import build_invitation_draft, send_invitation, update_entry
 from app.beta_waitlist.domain.status import WaitlistStatus
 from app.beta_waitlist.infrastructure.store_impl import SqlAlchemyWaitlistStore
-from app.bootstrap.container import get_uow
+from app.bootstrap.container import get_email_sender, get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
+from app.config.settings import get_settings
 from app.identity.api.dependencies import require_platform_admin
+from app.shared.application.ports import IEmailSender
 
 # Public: tighter than the general write limit, like the demo-request form.
 _WAITLIST_RATE_LIMIT = "10/hour"
@@ -59,6 +61,7 @@ class WaitlistEntryResponse(BaseModel):
     notes: str | None
     created_at: datetime
     updated_at: datetime
+    invitation_sent_at: datetime | None = None
 
     @classmethod
     def from_entry(cls, entry: WaitlistEntry) -> "WaitlistEntryResponse":
@@ -126,3 +129,64 @@ async def delete_waitlist_entry(
 ) -> None:
     if not await store.delete(entry_id):
         raise HTTPException(status_code=404, detail="Waitlist entry not found")
+
+
+class InvitationDraftResponse(BaseModel):
+    to: str
+    subject: str
+    body: str
+    is_firm: bool
+    already_sent_at: datetime | None
+
+
+class SendInvitationBody(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=5000)
+    # Set only when the owner knowingly wants to send it a second time.
+    resend: bool = False
+
+
+@admin_router.get("/{entry_id}/invitation-draft", response_model=InvitationDraftResponse)
+async def get_invitation_draft(
+    entry_id: uuid.UUID, store: IWaitlistStore = Depends(get_waitlist_store)
+) -> InvitationDraftResponse:
+    """The suggested invitation for this entry, to read and edit. Sends nothing."""
+    entry = await store.get(entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Waitlist entry not found")
+    settings = get_settings()
+    draft = build_invitation_draft(
+        entry, frontend_base_url=settings.frontend_base_url, support_email=settings.support_email
+    )
+    return InvitationDraftResponse(
+        to=entry.work_email,
+        subject=draft.subject,
+        body=draft.body,
+        is_firm=draft.is_firm,
+        already_sent_at=entry.invitation_sent_at,
+    )
+
+
+@admin_router.post("/{entry_id}/send-invitation", response_model=WaitlistEntryResponse)
+@limiter.limit("30/hour")
+async def send_invitation_email(
+    request: Request,
+    entry_id: uuid.UUID,
+    body: SendInvitationBody,
+    store: IWaitlistStore = Depends(get_waitlist_store),
+    email_sender: IEmailSender = Depends(get_email_sender),
+) -> WaitlistEntryResponse:
+    """Emails exactly the subject and body given (the owner has edited and confirmed them) to an entry
+    at Invited, with replies going to the support address. Never sends to an address that is not on
+    the waitlist.
+    """
+    entry = await send_invitation(
+        store,
+        email_sender,
+        entry_id=entry_id,
+        subject=body.subject.strip(),
+        body=body.body.strip(),
+        support_email=get_settings().support_email,
+        resend=body.resend,
+    )
+    return WaitlistEntryResponse.from_entry(entry)

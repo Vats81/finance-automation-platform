@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -23,6 +24,7 @@ def _to_entry(m: Model) -> WaitlistEntry:
         notes=m.notes,
         created_at=m.created_at,
         updated_at=m.updated_at,
+        invitation_sent_at=m.invitation_sent_at,
     )
 
 
@@ -89,6 +91,15 @@ class SqlAlchemyWaitlistStore(IWaitlistStore):
             row.status = status.value
         if notes is not None:
             row.notes = notes or None
+        await self._session.commit()
+        await self._session.refresh(row)
+        return _to_entry(row)
+
+    async def mark_invitation_sent(self, entry_id: uuid.UUID) -> WaitlistEntry | None:
+        row = await self._session.get(Model, entry_id)
+        if row is None:
+            return None
+        row.invitation_sent_at = datetime.now(timezone.utc)
         await self._session.commit()
         await self._session.refresh(row)
         return _to_entry(row)
