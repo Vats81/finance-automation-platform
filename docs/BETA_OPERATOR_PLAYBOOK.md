@@ -19,12 +19,11 @@ Do not send an invitation until every box is ticked.
       `admin@finverlo.com` for you), both forwarded by Namecheap and tested.
 - [ ] **Invite-only sign-up is ON** (section 2) and you tested that an
       uninvited email is refused.
-- [ ] **Email can actually reach testers.** Email is in Resend test mode, which
-      only delivers to the account owner, so a tester's **password-reset email
-      will not arrive**. Before inviting, verify a sending domain in Resend and
-      set `SMTP_FROM_ADDRESS` to an address on it (Integrations page should
-      then drop the "Limited" label). Without this, a forgotten password means
-      you must delete and recreate the tester's account (Admin → Users).
+- [x] **Email can actually reach testers.** The sending domain `finverlo.com` is verified in
+      Resend, `SMTP_FROM_ADDRESS` is `noreply@finverlo.com`, and a real password-reset email was
+      received on two different addresses. The API sends it itself, so no background worker is needed.
+      If one ever fails to arrive, check Resend -> Logs first; Admin -> Users -> Reset password is
+      the fallback.
 - [ ] **Backups are green**: the last "Scheduled backup" run succeeded and the
       "Backup monitor" is green.
 - [ ] **Uptime monitor** on `/ping` is running (5-minute checks, alert to your
