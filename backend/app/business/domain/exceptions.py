@@ -81,6 +81,14 @@ class ActiveSubscriptionExistsException(ConflictException):
     error_code = "active_subscription_exists"
 
 
+class BillingNotConfiguredException(ValidationException):
+    """Checkout and the billing portal need a Stripe account; until one is connected the product
+    runs in beta mode and plans are switched directly instead.
+    """
+
+    error_code = "billing_not_configured"
+
+
 class NoStripeCustomerException(NotFoundException):
     """Raised when a business tries to open the billing portal before ever
     completing a checkout — there's no Stripe customer to manage yet.

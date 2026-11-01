@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from app.business.application.ports import BusinessUnitOfWork
 from app.business.domain.exceptions import (
     ActiveSubscriptionExistsException,
+    BillingNotConfiguredException,
     BusinessNotFoundException,
     DirectPlanChangeNotAllowedException,
 )
@@ -34,6 +35,8 @@ class StartCheckoutSessionUseCase:
         self._settings = settings
 
     async def execute(self, command: StartCheckoutSessionCommand) -> str:
+        if not self._settings.stripe_configured:
+            raise BillingNotConfiguredException("Billing is not enabled yet.")
         business = await self._uow.businesses.get_by_id(command.business_id)
         if business is None:
             raise BusinessNotFoundException(f"Business {command.business_id} not found")

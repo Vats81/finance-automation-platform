@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.domain.exceptions import (
     ActiveSubscriptionExistsException,
+    BillingNotConfiguredException,
     DirectPlanChangeNotAllowedException,
     NoStripeCustomerException,
 )
@@ -63,6 +64,8 @@ async def start_checkout(
     plan: FirmPlan,
     actor_email: str,
 ) -> str:
+    if not settings.stripe_configured:
+        raise BillingNotConfiguredException("Billing is not enabled yet.")
     firm = await get_firm_or_404(uow, firm_id)
     if plan == FirmPlan.FREE:
         raise DirectPlanChangeNotAllowedException("Nothing to check out for the Free plan")
@@ -82,6 +85,8 @@ async def start_checkout(
 async def start_portal(
     uow: AppUnitOfWork, gateway: IPaymentGateway, settings: Settings, *, firm_id: uuid.UUID
 ) -> str:
+    if not settings.stripe_configured:
+        raise BillingNotConfiguredException("Billing is not enabled yet.")
     firm = await get_firm_or_404(uow, firm_id)
     if firm.stripe_customer_id is None:
         raise NoStripeCustomerException("No billing history yet — nothing to manage")

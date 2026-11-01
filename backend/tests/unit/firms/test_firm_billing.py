@@ -18,6 +18,7 @@ from app.business.application.commands.handle_stripe_webhook import (
 )
 from app.business.domain.exceptions import (
     ActiveSubscriptionExistsException,
+    BillingNotConfiguredException,
     DirectPlanChangeNotAllowedException,
     NoStripeCustomerException,
 )
@@ -238,6 +239,19 @@ async def test_once_billing_is_on_a_paid_plan_cannot_be_set_for_free() -> None:
     await uow.firms.update_billing(firm.id, plan=FirmPlan.GROWTH, stripe_subscription_id="sub_1")
     with pytest.raises(ActiveSubscriptionExistsException):  # cancel in the portal, not here
         await billing.set_plan_directly(uow, BILLING_ON, firm_id=firm.id, plan=FirmPlan.FREE)
+
+
+async def test_checkout_and_the_portal_say_so_plainly_while_billing_is_off() -> None:
+    uow, gateway = FakeUnitOfWork(), FakePaymentGateway()
+    firm = await uow.firms.create_firm(name="Ledger", owner_user_id=uuid.uuid4())
+
+    with pytest.raises(BillingNotConfiguredException):
+        await billing.start_checkout(
+            uow, gateway, BILLING_OFF, firm_id=firm.id, plan=FirmPlan.GROWTH, actor_email="a@b.co"
+        )
+    with pytest.raises(BillingNotConfiguredException):
+        await billing.start_portal(uow, gateway, BILLING_OFF, firm_id=firm.id)
+    assert gateway.checkout_calls == [] and gateway.portal_calls == []
 
 
 async def test_while_billing_is_off_the_owner_can_pick_any_plan() -> None:
