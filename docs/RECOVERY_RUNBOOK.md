@@ -9,9 +9,9 @@ file - only the names of the places they are stored.
 | Requirement | Target | Status |
 |---|---|---|
 | Recovery point objective (max data loss) | 24 hours | Designed for (daily backup). **Measured value: none yet.** |
-| Recovery time objective | 4 hours | **Measured value: none yet** - fill in section 7 after the first drill. |
+| Recovery time objective | 4 hours | Restore step measured at 8 seconds on a small data set (section 7); the real figure is dominated by provisioning a database and cutting over, which has not been timed. |
 | Backup schedule / retention | Daily, 30-day rolling | Implemented in `.github/workflows/backup.yml` (artifact `retention-days: 30`). |
-| Restore drill | Before beta, monthly, after major schema changes | Workflow `restore-drill.yml` written; **first run pending** (needs the isolated database, see 5). |
+| Restore drill | Before beta, monthly, after major schema changes | First run **PASSED** on 2026-11-01 (section 7). Runs monthly on its own after that. |
 
 Do not promise these to users until section 7 shows measured results that meet
 them.
@@ -121,7 +121,7 @@ if the reconciliation **PASSED**.
 
 | Date | Backup taken | Backup age at drill | Rows | Restore time | Total drill time | Result | Notes |
 |---|---|---|---|---|---|---|---|
-| _none yet_ | | | | | | | |
+| 2026-11-01 | 2026-11-01 11:01 UTC (app commit 8b447ea) | under 1 hour | 72 rows, 23 tables | 3.19 s | 8 s | PASSED | 4 businesses reconciled, 23 of 23 table checksums matched, 0 orphaned rows, schema version 0030. Data set is tiny, so the timings say little about a large restore. |
 
 Measured RPO = the age of the newest backup at the worst moment (just before the
 next one runs) = up to 24h + the time to detect a failure. Measured RTO = total

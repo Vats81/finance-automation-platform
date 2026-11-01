@@ -13,8 +13,8 @@ Companion files: `BETA_READINESS.md` (gate status), `BETA_OUTREACH_DRAFTS.md`
 
 Do not send an invitation until every box is ticked.
 
-- [ ] **Restore drill has run and PASSED** (GitHub → Actions → "Restore drill").
-      Write the result in `RECOVERY_RUNBOOK.md` section 7. *Not done yet.*
+- [x] **Restore drill has run and PASSED** (2026-11-01: 23 of 23 tables matched, 0 orphaned
+      rows). Result is recorded in `RECOVERY_RUNBOOK.md` section 7. It repeats monthly.
 - [x] **A support contact exists** and is monitored: `support@finverlo.com` (and
       `admin@finverlo.com` for you), both forwarded by Namecheap and tested.
 - [ ] **Invite-only sign-up is ON** (section 2) and you tested that an
