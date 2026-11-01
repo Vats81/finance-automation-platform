@@ -89,6 +89,12 @@ export default function PrivacyPage() {
                 delete or anonymize your data within a reasonable period, except where we&apos;re required
                 to keep records longer (e.g. billing records for tax/accounting purposes).
               </p>
+              <p className="mt-2">
+                Accounting and bookkeeping firms may keep their clients&apos; books here. That data belongs to
+                the client and is held for the firm, which decides who on its staff can see it. We process it
+                only to run the service, and we can delete a client&apos;s business and its data when the
+                firm or the client asks.
+              </p>
             </section>
 
             <section>

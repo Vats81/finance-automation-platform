@@ -77,6 +77,13 @@ export default function TermsPage() {
                 </Link>{" "}
                 for how we handle it.
               </p>
+              <p className="mt-2">
+                If you use Finverlo as an accounting or bookkeeping firm, the books you keep for your clients
+                are your clients&apos; data, held on their behalf. You confirm that you are authorised by each
+                client to store it here, that you will only add clients you act for, and that you will remove
+                a client&apos;s business from your firm, or ask us to delete it, when that engagement ends. You
+                are responsible for the staff you add and the access they have.
+              </p>
             </section>
 
             <section>
