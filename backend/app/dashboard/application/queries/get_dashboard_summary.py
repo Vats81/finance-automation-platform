@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.expenses.domain.value_objects import ExpenseStatus
+from app.purchases.domain.value_objects import PurchasePaymentStatus, PurchaseStatus
 from app.sales.domain.value_objects import SalePaymentStatus, SaleStatus
 
 # total_amount/payment_status are derived (not stored columns), so period
@@ -12,6 +13,7 @@ from app.sales.domain.value_objects import SalePaymentStatus, SaleStatus
 # sales/application/queries/list_outstanding_sales.py:_MAX_SALES_TO_SCAN.
 _MAX_SALES_TO_SCAN = 10_000
 _MAX_EXPENSES_TO_SCAN = 10_000
+_MAX_PURCHASES_TO_SCAN = 10_000
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,11 @@ class DashboardSummary:
     outstanding_receivables: Decimal
     period_start: date | None
     period_end: date | None
+    # What was bought from suppliers in the period, and what is still owed to them. Purchases are
+    # shown beside the profit figures but are NOT subtracted from net_profit (stock bought is not yet
+    # a cost): net_profit stays revenue minus expenses.
+    total_purchases: Decimal = Decimal("0.00")
+    outstanding_payables: Decimal = Decimal("0.00")
 
 
 def _in_range(value: date, start: date | None, end: date | None) -> bool:
@@ -87,6 +94,27 @@ class GetDashboardSummaryUseCase:
             ),
             Decimal("0.00"),
         )
+        purchases, _ = await self._uow.purchases.list_for_business(
+            query.business_id, offset=0, limit=_MAX_PURCHASES_TO_SCAN
+        )
+        total_purchases = sum(
+            (
+                purchase.total_amount.amount
+                for purchase in purchases
+                if purchase.status != PurchaseStatus.VOID
+                and _in_range(purchase.purchase_date, query.start_date, query.end_date)
+            ),
+            Decimal("0.00"),
+        )
+        outstanding_payables = sum(
+            (
+                purchase.outstanding_amount.amount
+                for purchase in purchases
+                if purchase.status != PurchaseStatus.VOID
+                and purchase.payment_status != PurchasePaymentStatus.PAID
+            ),
+            Decimal("0.00"),
+        )
 
         return DashboardSummary(
             total_revenue=total_revenue,
@@ -95,4 +123,6 @@ class GetDashboardSummaryUseCase:
             outstanding_receivables=outstanding_receivables,
             period_start=query.start_date,
             period_end=query.end_date,
+            total_purchases=total_purchases,
+            outstanding_payables=outstanding_payables,
         )

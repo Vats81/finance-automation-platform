@@ -33,9 +33,7 @@ def make_sale_command(business_id: uuid.UUID, amount: Decimal, invoice_date: dat
     )
 
 
-def make_expense_command(
-    business_id: uuid.UUID, amount: Decimal, expense_date: date
-) -> CreateExpenseCommand:
+def make_expense_command(business_id: uuid.UUID, amount: Decimal, expense_date: date) -> CreateExpenseCommand:
     return CreateExpenseCommand(
         business_id=business_id,
         expense_date=expense_date,
@@ -116,9 +114,7 @@ async def test_single_active_month_reports_unavailable() -> None:
     # reported as unavailable, not a "projection" built from it.
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, Decimal("500"), date(2026, 6, 15))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, Decimal("500"), date(2026, 6, 15)))
 
     forecast = await GetForecastUseCase(uow, FakeClock(_NOW)).execute(
         GetForecastQuery(business_id=business_id)
@@ -132,12 +128,8 @@ async def test_single_active_month_reports_unavailable() -> None:
 async def test_two_active_months_produces_an_available_forecast() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, Decimal("500"), date(2026, 5, 15))
-    )
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, Decimal("500"), date(2026, 6, 15))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, Decimal("500"), date(2026, 5, 15)))
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, Decimal("500"), date(2026, 6, 15)))
 
     forecast = await GetForecastUseCase(uow, FakeClock(_NOW)).execute(
         GetForecastQuery(business_id=business_id)
@@ -153,9 +145,7 @@ async def test_current_month_activity_excluded_from_regression_input() -> None:
     business_id = uuid.uuid4()
     # Dated in the current (still in-progress) month at _NOW — should not
     # leak into the Jan-Jun history window used for the regression.
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, Decimal("5000"), date(2026, 7, 10))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, Decimal("5000"), date(2026, 7, 10)))
 
     forecast = await GetForecastUseCase(uow, FakeClock(_NOW)).execute(
         GetForecastQuery(business_id=business_id)

@@ -36,7 +36,8 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
     {
         "name": "get_business_summary",
         "description": (
-            "Get total revenue (sales), total expenses, net profit, and outstanding receivables. "
+            "Get total revenue (sales), total expenses, net profit, outstanding receivables, total purchases "
+            "(bought from suppliers; NOT part of net profit) and outstanding payables (owed to suppliers). "
             "These are computed exactly by the system; report them verbatim. If the user does not name a "
             "period, OMIT both dates to get all-time totals (and say the figures are all-time). For a "
             "personal workspace this returns one month of income, spending, savings and budget progress "
@@ -167,6 +168,8 @@ async def _handle_get_business_summary(
         "total_expenses": str(summary.total_expenses),
         "net_profit": str(summary.net_profit),
         "outstanding_receivables": str(summary.outstanding_receivables),
+        "total_purchases": str(summary.total_purchases),
+        "outstanding_payables": str(summary.outstanding_payables),
     }
 
 

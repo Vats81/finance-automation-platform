@@ -48,9 +48,7 @@ def make_expense_command(business_id: uuid.UUID, **overrides) -> CreateExpenseCo
 async def test_day_granularity_buckets_a_sale_on_the_correct_day() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, invoice_date=date(2026, 1, 15))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, invoice_date=date(2026, 1, 15)))
 
     trend = await GetDashboardTrendUseCase(uow).execute(
         GetDashboardTrendQuery(
@@ -105,12 +103,8 @@ async def test_zero_activity_buckets_still_appear() -> None:
 async def test_records_outside_range_excluded() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, invoice_date=date(2025, 12, 31))
-    )
-    await CreateExpenseUseCase(uow).execute(
-        make_expense_command(business_id, expense_date=date(2026, 2, 1))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, invoice_date=date(2025, 12, 31)))
+    await CreateExpenseUseCase(uow).execute(make_expense_command(business_id, expense_date=date(2026, 2, 1)))
 
     trend = await GetDashboardTrendUseCase(uow).execute(
         GetDashboardTrendQuery(
@@ -161,9 +155,7 @@ async def test_week_granularity_buckets_sale_into_monday_start_week() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
     # 2026-01-14 is a Wednesday; its ISO week starts Monday 2026-01-12.
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, invoice_date=date(2026, 1, 14))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, invoice_date=date(2026, 1, 14)))
 
     trend = await GetDashboardTrendUseCase(uow).execute(
         GetDashboardTrendQuery(
@@ -184,12 +176,8 @@ async def test_week_granularity_spanning_a_month_boundary() -> None:
     business_id = uuid.uuid4()
     # 2026-01-30 (Friday) falls in the week starting Monday 2026-01-26;
     # 2026-02-02 (Monday) starts its own week.
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, invoice_date=date(2026, 1, 30))
-    )
-    await CreateExpenseUseCase(uow).execute(
-        make_expense_command(business_id, expense_date=date(2026, 2, 2))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, invoice_date=date(2026, 1, 30)))
+    await CreateExpenseUseCase(uow).execute(make_expense_command(business_id, expense_date=date(2026, 2, 2)))
 
     trend = await GetDashboardTrendUseCase(uow).execute(
         GetDashboardTrendQuery(

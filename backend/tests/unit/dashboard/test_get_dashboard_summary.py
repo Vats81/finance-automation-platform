@@ -50,9 +50,7 @@ async def test_empty_business_returns_all_zeros() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
 
-    summary = await GetDashboardSummaryUseCase(uow).execute(
-        GetDashboardSummaryQuery(business_id=business_id)
-    )
+    summary = await GetDashboardSummaryUseCase(uow).execute(GetDashboardSummaryQuery(business_id=business_id))
 
     assert summary.total_revenue == Decimal("0")
     assert summary.total_expenses == Decimal("0")
@@ -66,9 +64,7 @@ async def test_computes_revenue_expenses_and_net_profit() -> None:
     await CreateSaleUseCase(uow).execute(make_sale_command(business_id))
     await CreateExpenseUseCase(uow).execute(make_expense_command(business_id))
 
-    summary = await GetDashboardSummaryUseCase(uow).execute(
-        GetDashboardSummaryQuery(business_id=business_id)
-    )
+    summary = await GetDashboardSummaryUseCase(uow).execute(GetDashboardSummaryQuery(business_id=business_id))
 
     assert summary.total_revenue == Decimal("100.00")
     assert summary.total_expenses == Decimal("30.00")
@@ -78,12 +74,8 @@ async def test_computes_revenue_expenses_and_net_profit() -> None:
 async def test_records_outside_date_range_are_excluded() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, invoice_date=date(2025, 6, 1))
-    )
-    await CreateExpenseUseCase(uow).execute(
-        make_expense_command(business_id, expense_date=date(2025, 6, 1))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, invoice_date=date(2025, 6, 1)))
+    await CreateExpenseUseCase(uow).execute(make_expense_command(business_id, expense_date=date(2025, 6, 1)))
 
     summary = await GetDashboardSummaryUseCase(uow).execute(
         GetDashboardSummaryQuery(
@@ -101,9 +93,7 @@ async def test_voided_sales_and_expenses_are_excluded() -> None:
     sale = await CreateSaleUseCase(uow).execute(make_sale_command(business_id))
     await VoidSaleUseCase(uow).execute(VoidSaleCommand(business_id=business_id, sale_id=sale.id))
 
-    summary = await GetDashboardSummaryUseCase(uow).execute(
-        GetDashboardSummaryQuery(business_id=business_id)
-    )
+    summary = await GetDashboardSummaryUseCase(uow).execute(GetDashboardSummaryQuery(business_id=business_id))
 
     assert summary.total_revenue == Decimal("0")
     assert summary.outstanding_receivables == Decimal("0")
@@ -112,9 +102,7 @@ async def test_voided_sales_and_expenses_are_excluded() -> None:
 async def test_outstanding_receivables_is_not_period_scoped() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    await CreateSaleUseCase(uow).execute(
-        make_sale_command(business_id, invoice_date=date(2025, 1, 1))
-    )
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id, invoice_date=date(2025, 1, 1)))
 
     summary = await GetDashboardSummaryUseCase(uow).execute(
         GetDashboardSummaryQuery(
@@ -134,9 +122,63 @@ async def test_fully_paid_sales_excluded_from_outstanding_receivables() -> None:
         RecordSalePaymentCommand(business_id=business_id, sale_id=sale.id, amount=Decimal("100"))
     )
 
-    summary = await GetDashboardSummaryUseCase(uow).execute(
-        GetDashboardSummaryQuery(business_id=business_id)
-    )
+    summary = await GetDashboardSummaryUseCase(uow).execute(GetDashboardSummaryQuery(business_id=business_id))
 
     assert summary.outstanding_receivables == Decimal("0")
     assert summary.total_revenue == Decimal("100.00")
+
+
+async def test_purchases_show_in_the_summary_without_touching_net_profit() -> None:
+    from app.purchases.application.commands.create_purchase import (
+        CreatePurchaseCommand,
+        CreatePurchaseLineItemInput,
+        CreatePurchaseUseCase,
+    )
+    from app.purchases.application.commands.void_purchase import VoidPurchaseCommand, VoidPurchaseUseCase
+
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    await CreateSaleUseCase(uow).execute(make_sale_command(business_id))  # revenue 100
+    await CreateExpenseUseCase(uow).execute(make_expense_command(business_id))  # expense 30
+
+    def purchase(number: str, day: date, cost: str, tax: str | None = None) -> CreatePurchaseCommand:
+        return CreatePurchaseCommand(
+            business_id=business_id,
+            purchase_number=number,
+            vendor_id=None,
+            vendor_name="Supplier",
+            purchase_date=day,
+            line_items=[
+                CreatePurchaseLineItemInput(
+                    line_number=1, description="Flour", quantity=Decimal("2"), unit_cost=Decimal(cost)
+                )
+            ],
+            tax=Decimal(tax) if tax else None,
+        )
+
+    use_case = CreatePurchaseUseCase(uow)
+    await use_case.execute(purchase("P-1", date(2026, 1, 10), "50", "5"))  # 105, in January
+    await use_case.execute(purchase("P-2", date(2026, 2, 10), "20"))  # 40, in February
+    voided = await use_case.execute(purchase("P-3", date(2026, 1, 20), "500"))
+    await VoidPurchaseUseCase(uow).execute(
+        VoidPurchaseCommand(business_id=business_id, purchase_id=voided.id)
+    )
+
+    january = await GetDashboardSummaryUseCase(uow).execute(
+        GetDashboardSummaryQuery(
+            business_id=business_id, start_date=date(2026, 1, 1), end_date=date(2026, 1, 31)
+        )
+    )
+    everything = await GetDashboardSummaryUseCase(uow).execute(
+        GetDashboardSummaryQuery(business_id=business_id)
+    )
+
+    assert january.total_purchases == Decimal("105.00")  # only January's, and not the voided one
+    assert everything.total_purchases == Decimal("145.00")
+    assert everything.outstanding_payables == Decimal(
+        "145.00"
+    )  # nothing paid yet; a point in time, not a period
+    assert january.outstanding_payables == Decimal("145.00")
+    assert everything.net_profit == Decimal(
+        "70.00"
+    )  # revenue 100 minus expenses 30: purchases are not subtracted

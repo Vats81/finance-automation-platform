@@ -3,6 +3,8 @@ export interface DashboardSummaryResponse {
   total_expenses: string;
   net_profit: string;
   outstanding_receivables: string;
+  total_purchases: string;
+  outstanding_payables: string;
   period_start: string | null;
   period_end: string | null;
 }

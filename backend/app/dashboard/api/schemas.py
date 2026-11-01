@@ -17,6 +17,8 @@ class DashboardSummaryResponse(BaseModel):
     outstanding_receivables: Decimal
     period_start: date | None
     period_end: date | None
+    total_purchases: Decimal
+    outstanding_payables: Decimal
 
     @classmethod
     def from_domain(cls, summary: DashboardSummary) -> "DashboardSummaryResponse":
@@ -27,6 +29,8 @@ class DashboardSummaryResponse(BaseModel):
             outstanding_receivables=summary.outstanding_receivables,
             period_start=summary.period_start,
             period_end=summary.period_end,
+            total_purchases=summary.total_purchases,
+            outstanding_payables=summary.outstanding_payables,
         )
 
 

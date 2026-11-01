@@ -176,6 +176,18 @@ function BusinessDashboard() {
       value: summary?.outstanding_receivables,
       hint: "Connect Payments to see this",
     },
+    {
+      label: "Purchases",
+      value: summary?.total_purchases,
+      hint: "Record a purchase to see this",
+      note: "Bought from suppliers. Not part of net profit.",
+    },
+    {
+      label: "Outstanding payables",
+      value: summary?.outstanding_payables,
+      hint: "Record a purchase to see this",
+      note: "Still owed to suppliers.",
+    },
   ];
 
   return (
@@ -204,7 +216,7 @@ function BusinessDashboard() {
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map((metric) => (
           <Card key={metric.label}>
             <div className="text-sm font-medium text-slate-500">{metric.label}</div>
@@ -212,6 +224,9 @@ function BusinessDashboard() {
               {metric.value !== undefined ? formatCurrency(metric.value) : "—"}
             </div>
             {metric.value === undefined && <div className="mt-1 text-xs text-slate-400">{metric.hint}</div>}
+            {metric.value !== undefined && "note" in metric && metric.note && (
+              <div className="mt-1 text-xs text-slate-400">{metric.note}</div>
+            )}
           </Card>
         ))}
       </div>
