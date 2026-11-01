@@ -8,6 +8,7 @@ from app.purchases.application.stock import link_and_add_stock
 from app.purchases.domain.entities import Purchase
 from app.purchases.domain.value_objects import PurchaseLineItem
 from app.shared.domain.value_objects import Money
+from app.vendors.application.commands.ensure_supplier import ensure_supplier
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,13 @@ class CreatePurchaseUseCase:
         self._uow = uow
 
     async def execute(self, command: CreatePurchaseCommand) -> Purchase:
+        # A supplier named on the purchase becomes (or reuses) a saved vendor, so it shows on Vendors.
+        vendor_id = command.vendor_id
+        if vendor_id is None and command.vendor_name and command.vendor_name.strip():
+            supplier = await ensure_supplier(
+                self._uow, business_id=command.business_id, name=command.vendor_name
+            )
+            vendor_id = supplier.id
         line_items = [
             PurchaseLineItem(
                 line_number=item.line_number,
@@ -62,7 +70,7 @@ class CreatePurchaseUseCase:
         purchase = Purchase.create(
             business_id=command.business_id,
             purchase_number=command.purchase_number,
-            vendor_id=command.vendor_id,
+            vendor_id=vendor_id,
             vendor_name=command.vendor_name,
             purchase_date=command.purchase_date,
             due_date=command.due_date,

@@ -30,9 +30,13 @@ export function BusinessVendorTable({ vendors }: { vendors: VendorResponse[] }) 
                 {vendor.legal_name}
               </Link>
             </td>
-            <td className="py-2 pr-4 text-slate-600">{vendor.contact_email}</td>
+            <td className="py-2 pr-4 text-slate-600">{vendor.contact_email || "—"}</td>
             <td className="py-2 pr-4">
-              <Badge tone={STATUS_TONE[vendor.status]}>{vendor.status.replace("_", " ")}</Badge>
+              {vendor.contact_email === "" ? (
+                <Badge tone="neutral">from a purchase</Badge>
+              ) : (
+                <Badge tone={STATUS_TONE[vendor.status]}>{vendor.status.replace("_", " ")}</Badge>
+              )}
             </td>
           </tr>
         ))}

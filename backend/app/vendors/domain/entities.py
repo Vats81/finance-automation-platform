@@ -69,6 +69,19 @@ class Vendor(AggregateRoot):
         )
         return vendor
 
+    @classmethod
+    def create_supplier(cls, *, legal_name: str, business_id: uuid.UUID) -> "Vendor":
+        """A supplier known only by name, added automatically when a purchase names one. Tax ID, email and
+        address are filled in later if the owner wants them.
+        """
+        return cls.create(
+            legal_name=legal_name,
+            contact_email=VendorEmailAddress.not_provided(),
+            tax_id=TaxId.not_provided(),
+            address=Address.not_provided(),
+            business_id=business_id,
+        )
+
     def record_w9_document(self, document_reference: str) -> None:
         self.w9_document_reference = document_reference
         self._record_event(
@@ -79,9 +92,7 @@ class Vendor(AggregateRoot):
         if self.status == VendorStatus.ACTIVE:
             raise VendorAlreadyActiveException(f"Vendor {self.id} is already active")
         if self.w9_document_reference is None:
-            raise VendorMissingW9Exception(
-                f"Vendor {self.id} cannot be activated without a W-9 on file"
-            )
+            raise VendorMissingW9Exception(f"Vendor {self.id} cannot be activated without a W-9 on file")
         self.status = VendorStatus.ACTIVE
         self._record_event(VendorActivated(aggregate_id=self.id, legal_name=self.legal_name))
 

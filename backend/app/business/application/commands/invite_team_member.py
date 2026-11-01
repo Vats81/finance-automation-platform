@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass
 
 from app.bootstrap.unit_of_work import AppUnitOfWork
-from app.business.application.plan_limits import PLAN_LIMITS
+from app.business.application.plan_limits import max_team_members
 from app.business.domain.entities import BusinessMembership
 from app.business.domain.exceptions import (
     BusinessNotFoundException,
@@ -48,7 +48,7 @@ class InviteTeamMemberUseCase:
 
         existing_members = await self._uow.business_memberships.list_for_business(command.business_id)
         active_count = sum(1 for m in existing_members if m.is_active)
-        limit = PLAN_LIMITS[business.plan].max_team_members
+        limit = max_team_members(business.plan, business.kind)
         if active_count >= limit:
             raise TeamMemberLimitExceededException(
                 f"This business's {business.plan.value} plan allows up to {limit} team members. "

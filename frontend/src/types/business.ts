@@ -8,8 +8,8 @@ export type BusinessKind = "business" | "personal";
 // duplicated here per this codebase's established per-layer convention,
 // used only for the "X of Y team members used" display.
 export const PLAN_LIMITS: Record<BusinessPlan, { maxTeamMembers: number; label: string }> = {
-  free: { maxTeamMembers: 2, label: "Free" },
-  starter: { maxTeamMembers: 5, label: "Starter" },
+  free: { maxTeamMembers: 10, label: "Free" }, // raised for the private beta
+  starter: { maxTeamMembers: 10, label: "Starter" },
   pro: { maxTeamMembers: 20, label: "Pro" },
 };
 

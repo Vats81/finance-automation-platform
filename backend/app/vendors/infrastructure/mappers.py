@@ -4,18 +4,24 @@ from app.vendors.infrastructure.models import VendorModel
 
 
 def model_to_domain(model: VendorModel) -> Vendor:
+    # A supplier added automatically from a purchase is stored with empty contact fields.
+    has_address = any([model.street, model.city, model.state, model.postal_code])
     return Vendor(
         entity_id=model.id,
         legal_name=model.legal_name,
-        contact_email=VendorEmailAddress(model.contact_email),
-        tax_id=TaxId(model.tax_id),
+        contact_email=VendorEmailAddress(model.contact_email)
+        if model.contact_email
+        else VendorEmailAddress.not_provided(),
+        tax_id=TaxId(model.tax_id) if model.tax_id else TaxId.not_provided(),
         address=Address(
             street=model.street,
             city=model.city,
             state=model.state,
             postal_code=model.postal_code,
             country=model.country,
-        ),
+        )
+        if has_address
+        else Address.not_provided(),
         status=VendorStatus(model.status),
         w9_document_reference=model.w9_document_reference,
         business_id=model.business_id,

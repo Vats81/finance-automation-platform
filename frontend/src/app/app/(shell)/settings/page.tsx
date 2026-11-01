@@ -41,6 +41,8 @@ const MEMBERSHIP_STATUS_TONE: Record<string, "success" | "warning" | "neutral"> 
 
 const PERSONAL_PLANS: BusinessPlan[] = ["free", "starter"];
 const FREE_PERSONAL_BUDGETS = 5; // mirrors backend personal_finance/domain/rules.py
+// A personal account is shared with a few people at most (backend PERSONAL_PLAN_LIMITS).
+const PERSONAL_TEAM_LIMITS: Record<BusinessPlan, number> = { free: 2, starter: 5, pro: 5 };
 
 export default function SettingsPage() {
   const { getAccessToken } = useLocalAuth();
@@ -102,6 +104,8 @@ export default function SettingsPage() {
   // A personal account has two plans: Free and Plus (the second tier of a workspace).
   const planLabel = (plan: BusinessPlan) =>
     isPersonal ? (plan === "free" ? "Free" : "Plus") : PLAN_LIMITS[plan].label;
+  const teamLimit = (plan: BusinessPlan) =>
+    isPersonal ? PERSONAL_TEAM_LIMITS[plan] : PLAN_LIMITS[plan].maxTeamMembers;
   const canManageMembers = isOwner || currentBusiness?.role === "admin";
 
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -301,7 +305,7 @@ export default function SettingsPage() {
         <p className="mb-4 text-sm text-slate-500">
           {planLabel(currentBusiness.business.plan)} plan —{" "}
           {members ? members.filter((m) => m.status === "active").length : "…"} of{" "}
-          {PLAN_LIMITS[currentBusiness.business.plan].maxTeamMembers} {isPersonal ? "people" : "team members"} used
+          {teamLimit(currentBusiness.business.plan)} {isPersonal ? "people" : "team members"} used
           {isPersonal && currentBusiness.business.plan === "free"
             ? `, up to ${FREE_PERSONAL_BUDGETS} budgets.`
             : isPersonal
@@ -335,7 +339,7 @@ export default function SettingsPage() {
                 >
                   {(isPersonal ? PERSONAL_PLANS : BUSINESS_PLANS).map((plan) => (
                     <option key={plan} value={plan}>
-                      {planLabel(plan)} ({PLAN_LIMITS[plan].maxTeamMembers} {isPersonal ? "people" : "members"})
+                      {planLabel(plan)} ({teamLimit(plan)} {isPersonal ? "people" : "members"})
                     </option>
                   ))}
                 </Select>

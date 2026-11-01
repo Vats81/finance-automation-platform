@@ -34,7 +34,7 @@ from tests.fakes.fake_ports import FakePasswordHasher, FakePaymentGateway
 from tests.fakes.fake_unit_of_work import FakeUnitOfWork
 
 _HASHER = FakePasswordHasher()
-LABELS = ("owner", "admin", "extra1", "extra2", "extra3")
+LABELS = ("owner", "admin", *[f"extra{i}" for i in range(1, 11)])
 
 BILLING_ON = Settings(
     STRIPE_SECRET_KEY="sk_test_dummy",
@@ -124,15 +124,28 @@ def test_the_free_plan_stops_at_its_client_limit_with_a_clear_reason(api: tuple[
 def test_the_free_plan_stops_at_its_staff_limit(api: tuple[World, TestClient]) -> None:
     _, client = api
     firm_id = new_firm(client)
+    limit = FIRM_PLAN_LIMITS[FirmPlan.FREE].max_staff
+    assert limit == 10  # raised for the private beta
 
-    first = call(
-        client, "owner", "POST", f"/firms/{firm_id}/staff", {"email": "admin@example.com", "role": "admin"}
-    )
+    # the owner already counts as one, so limit - 1 more fit
+    others = ["admin", *[f"extra{i}" for i in range(1, limit - 1)]]
+    for label in others:
+        r = call(
+            client,
+            "owner",
+            "POST",
+            f"/firms/{firm_id}/staff",
+            {"email": f"{label}@example.com", "role": "viewer"},
+        )
+        assert r.status_code == 201, (label, r.text)
     over = call(
-        client, "owner", "POST", f"/firms/{firm_id}/staff", {"email": "extra1@example.com", "role": "viewer"}
+        client,
+        "owner",
+        "POST",
+        f"/firms/{firm_id}/staff",
+        {"email": f"extra{limit}@example.com", "role": "viewer"},
     )
 
-    assert first.status_code == 201  # owner + one = 2, the free limit
     assert over.status_code == 409 and over.json()["error_code"] == "firm_staff_limit_exceeded"
 
 

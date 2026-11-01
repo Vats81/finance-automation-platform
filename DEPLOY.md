@@ -411,8 +411,8 @@ Notes:
 
 | | Free | Paid |
 |---|---|---|
-| **Business** | 2 team members | Starter 5, Pro 20 team members |
-| **Accounting firm** | 2 client businesses, 2 staff | Growth: 15 clients, 5 staff. Practice: 50 clients, 15 staff |
+| **Business** | 10 team members (raised for the private beta) | Starter 10, Pro 20 team members |
+| **Accounting firm** | 2 client businesses, 10 staff (staff raised for the beta) | Growth: 15 clients, 10 staff. Practice: 50 clients, 15 staff |
 | **Personal** | 1 personal workspace per person, 5 budgets, shared with 1 other person | Plus: unlimited budgets, shared with up to 4 others |
 
 The firm is the subscriber, not each client: a client business a firm manages needs no plan of its

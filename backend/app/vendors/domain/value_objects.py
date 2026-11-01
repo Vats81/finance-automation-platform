@@ -30,6 +30,13 @@ class VendorEmailAddress(ValueObject):
         if not _EMAIL_RE.match(self.value):
             raise ValidationException(f"'{self.value}' is not a valid email address")
 
+    @classmethod
+    def not_provided(cls) -> "VendorEmailAddress":
+        """A supplier known only by name (added automatically from a purchase). Never accepted from input."""
+        blank = object.__new__(cls)
+        object.__setattr__(blank, "value", "")
+        return blank
+
     def __str__(self) -> str:
         return self.value
 
@@ -46,11 +53,19 @@ class TaxId(ValueObject):
         if not _EIN_RE.match(self.value):
             raise ValidationException(f"'{self.value}' is not a valid EIN (expected ##-#######)")
 
+    @classmethod
+    def not_provided(cls) -> "TaxId":
+        blank = object.__new__(cls)
+        object.__setattr__(blank, "value", "")
+        return blank
+
     @property
     def unmasked(self) -> str:
         return self.value
 
     def masked(self) -> str:
+        if not self.value:
+            return ""
         digits = self.value.replace("-", "")
         return f"**-***{digits[-4:]}"
 
@@ -69,3 +84,11 @@ class Address(ValueObject):
     def __post_init__(self) -> None:
         if not all([self.street, self.city, self.state, self.postal_code]):
             raise ValidationException("Address requires street, city, state, and postal_code")
+
+    @classmethod
+    def not_provided(cls) -> "Address":
+        blank = object.__new__(cls)
+        for name in ("street", "city", "state", "postal_code"):
+            object.__setattr__(blank, name, "")
+        object.__setattr__(blank, "country", "US")
+        return blank

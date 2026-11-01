@@ -15,12 +15,13 @@ from app.business.application.commands.register_business import (
     RegisterBusinessCommand,
     RegisterBusinessUseCase,
 )
+from app.business.application.plan_limits import PLAN_LIMITS, max_team_members
 from app.business.domain.exceptions import (
     InviteeNotRegisteredException,
     TeamMemberLimitExceededException,
     UserAlreadyMemberException,
 )
-from app.business.domain.value_objects import BusinessPlan, BusinessRole
+from app.business.domain.value_objects import BusinessKind, BusinessPlan, BusinessRole
 from app.config.settings import Settings
 from app.identity.domain.entities import User
 from app.identity.domain.value_objects import EmailAddress
@@ -97,32 +98,60 @@ async def test_invite_succeeds_even_when_the_notification_email_fails() -> None:
     assert any(m.user_id == invitee.id and m.is_active for m in members)
 
 
+async def _invite_until_full(
+    uow: FakeUnitOfWork, business_id: uuid.UUID, owner_id: uuid.UUID, limit: int
+) -> None:
+    """Invites people until the business is at its limit (the owner already counts as one)."""
+    for i in range(limit - 1):
+        seed_user(uow, f"member{i}@example.com")
+        await InviteTeamMemberUseCase(uow, FakeEmailSender()).execute(
+            InviteTeamMemberCommand(
+                business_id=business_id,
+                invited_by_user_id=owner_id,
+                email=f"member{i}@example.com",
+                role=BusinessRole.VIEWER,
+            )
+        )
+    seed_user(uow, "one-too-many@example.com")
+
+
 async def test_invite_blocked_at_plan_member_limit() -> None:
     uow = FakeUnitOfWork()
     owner_id = uuid.uuid4()
     business = await RegisterBusinessUseCase(uow).execute(
         RegisterBusinessCommand(owner_user_id=owner_id, name="Acme")
     )
-    # Free plan allows 2 members; the owner already counts as 1, so one more
-    # invite succeeds and a second should be blocked.
-    seed_user(uow, "first@example.com")
-    seed_user(uow, "second@example.com")
-
-    await InviteTeamMemberUseCase(uow, FakeEmailSender()).execute(
-        InviteTeamMemberCommand(
-            business_id=business.id,
-            invited_by_user_id=owner_id,
-            email="first@example.com",
-            role=BusinessRole.VIEWER,
-        )
-    )
+    limit = PLAN_LIMITS[BusinessPlan.FREE].max_team_members
+    assert limit == 10  # raised for the private beta
+    await _invite_until_full(uow, business.id, owner_id, limit)
 
     with pytest.raises(TeamMemberLimitExceededException):
         await InviteTeamMemberUseCase(uow, FakeEmailSender()).execute(
             InviteTeamMemberCommand(
                 business_id=business.id,
                 invited_by_user_id=owner_id,
-                email="second@example.com",
+                email="one-too-many@example.com",
+                role=BusinessRole.VIEWER,
+            )
+        )
+
+
+async def test_a_personal_account_keeps_its_small_limit() -> None:
+    uow = FakeUnitOfWork()
+    owner_id = uuid.uuid4()
+    mine = await RegisterBusinessUseCase(uow).execute(
+        RegisterBusinessCommand(owner_user_id=owner_id, name="Me", kind=BusinessKind.PERSONAL)
+    )
+    limit = max_team_members(BusinessPlan.FREE, BusinessKind.PERSONAL)
+    assert limit == 2  # you and one other person
+    await _invite_until_full(uow, mine.id, owner_id, limit)
+
+    with pytest.raises(TeamMemberLimitExceededException):
+        await InviteTeamMemberUseCase(uow, FakeEmailSender()).execute(
+            InviteTeamMemberCommand(
+                business_id=mine.id,
+                invited_by_user_id=owner_id,
+                email="one-too-many@example.com",
                 role=BusinessRole.VIEWER,
             )
         )

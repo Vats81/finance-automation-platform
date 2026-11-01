@@ -11,8 +11,8 @@ export type FirmPlan = "free" | "growth" | "practice";
 
 // Mirrors backend/app/firms/application/plan_limits.py, used for display only; the server enforces them.
 export const FIRM_PLANS: Record<FirmPlan, { label: string; maxClients: number; maxStaff: number }> = {
-  free: { label: "Free", maxClients: 2, maxStaff: 2 },
-  growth: { label: "Growth", maxClients: 15, maxStaff: 5 },
+  free: { label: "Free", maxClients: 2, maxStaff: 10 }, // staff raised for the private beta
+  growth: { label: "Growth", maxClients: 15, maxStaff: 10 },
   practice: { label: "Practice", maxClients: 50, maxStaff: 15 },
 };
 

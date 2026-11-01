@@ -40,23 +40,38 @@ export default function VendorDetailPage() {
     );
   }
 
+  const nameOnly = vendor.contact_email === "";
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{vendor.legal_name}</h1>
-        <Badge tone={STATUS_TONE[vendor.status]}>{vendor.status.replace("_", " ")}</Badge>
+        {nameOnly ? (
+          <Badge tone="neutral">from a purchase</Badge>
+        ) : (
+          <Badge tone={STATUS_TONE[vendor.status]}>{vendor.status.replace("_", " ")}</Badge>
+        )}
       </div>
 
       <Card className="max-w-lg space-y-3 text-sm">
         <div>
-          <span className="font-medium text-slate-500">Contact email:</span> {vendor.contact_email}
+          <span className="font-medium text-slate-500">Contact email:</span> {vendor.contact_email || "—"}
         </div>
         <div>
-          <span className="font-medium text-slate-500">Tax ID:</span> {vendor.tax_id_masked}
+          <span className="font-medium text-slate-500">Tax ID:</span> {vendor.tax_id_masked || "—"}
         </div>
         <div>
-          <span className="font-medium text-slate-500">Address:</span> {vendor.address.street},{" "}
-          {vendor.address.city}, {vendor.address.state} {vendor.address.postal_code}
+          <span className="font-medium text-slate-500">Address:</span>{" "}
+          {vendor.address.street
+            ? `${vendor.address.street}, ${vendor.address.city}, ${vendor.address.state} ${vendor.address.postal_code}`
+            : "—"}
+        </div>
+        {nameOnly && (
+          <div className="text-xs text-slate-500">
+            Added automatically from a purchase, so only the name is known. Contact details can be added later.
+          </div>
+        )}
+        <div>
         </div>
       </Card>
     </div>

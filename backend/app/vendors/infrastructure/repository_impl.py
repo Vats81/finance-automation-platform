@@ -35,9 +35,7 @@ class SqlAlchemyVendorRepository(IVendorRepository):
         return vendors, total
 
     async def get_by_id_for_business(self, vendor_id: uuid.UUID, business_id: uuid.UUID) -> Vendor | None:
-        stmt = select(VendorModel).where(
-            VendorModel.id == vendor_id, VendorModel.business_id == business_id
-        )
+        stmt = select(VendorModel).where(VendorModel.id == vendor_id, VendorModel.business_id == business_id)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         return model_to_domain(model) if model else None
