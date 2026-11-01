@@ -8,6 +8,7 @@ password-reset emails would go to whoever owns that domain, so replace it with a
     set ADMIN_PASSWORD=<a new strong password>              (or leave unset to be prompted)
     python scripts/create_platform_admin.py                 (create or promote, keep the old admin)
     python scripts/create_platform_admin.py --retire-seeded (also switch off admin@financeai.app)
+    python scripts/create_platform_admin.py --set-password  (set a new password on the existing admin)
 
 Run it from the backend folder. It makes the account verified and a platform admin, so you can sign
 in at /app/login and open /admin. With --retire-seeded the seeded admin loses admin rights, is made
@@ -44,6 +45,11 @@ async def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--retire-seeded", action="store_true", help=f"switch off {SEEDED_ADMIN}")
+    parser.add_argument(
+        "--set-password",
+        action="store_true",
+        help="also set this password on an account that already exists (for a forgotten or mistyped one)",
+    )
     args = parser.parse_args()
 
     email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
@@ -54,6 +60,9 @@ async def main() -> int:
         print(f"Use a real address you own, not {SEEDED_ADMIN}.")
         return 2
     password = os.environ.get("ADMIN_PASSWORD") or getpass.getpass("New admin password (hidden): ")
+    if not os.environ.get("ADMIN_PASSWORD") and getpass.getpass("Type it again to confirm: ") != password:
+        print("The two entries did not match, so nothing was changed. Run it again.")
+        return 2
     if len(password) < 12:
         print("Use a password of at least 12 characters.")
         return 2
@@ -77,6 +86,11 @@ async def main() -> int:
             ),
             {"e": email},
         )
+        if args.set_password:
+            await session.execute(
+                text("UPDATE users SET password_hash = :h WHERE email = :e"),
+                {"h": BcryptPasswordHasher().hash(password), "e": email},
+            )
         if args.retire_seeded:
             await session.execute(
                 text(
@@ -91,8 +105,12 @@ async def main() -> int:
     print(
         f"{'Created' if created else 'Promoted existing account'}: {email} is now a verified platform admin."
     )
-    if not created:
-        print("Its password was NOT changed (an existing account keeps its own).")
+    if not created and args.set_password:
+        print("Its password has been set to the one you just entered.")
+    elif not created:
+        print(
+            "Its password was NOT changed (an existing account keeps its own). Add --set-password to change it."
+        )
     if args.retire_seeded:
         print(f"{SEEDED_ADMIN} has been switched off. Delete it from Admin -> Users when you are signed in.")
     return 0
