@@ -33,6 +33,10 @@ Do not send an invitation until every box is ticked.
       Run `python backend/scripts/purge_qa_data.py` (a preview), then again with
       `--apply`; it needs `FINVERLO_API`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your
       environment. The demo account and `qa_demo_account.txt` are deleted.
+- [ ] **The seeded demo admin is replaced.** `admin@financeai.app` is on a domain you do not own, so its
+      reset emails could reach a stranger. Run `python backend/scripts/create_platform_admin.py --retire-seeded`
+      (needs `DATABASE_URL`, `ADMIN_EMAIL=admin@finverlo.com`, `ADMIN_PASSWORD` in your environment), sign in as the
+      new admin, then run `purge_qa_data.py` to delete the seeded accounts.
 - [ ] **Secrets cleaned**: `SEED_SECRET` and `SEED_ADMIN_PASSWORD` are not set in
       Render.
 - [ ] **You have done the demo walkthrough yourself in a browser** on a laptop

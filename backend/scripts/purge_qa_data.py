@@ -25,6 +25,17 @@ import httpx
 
 MARKER = "[QA]"
 
+# Accounts created by the demo seed on domains nobody here controls: whoever owns those domains
+# could receive their password-reset emails, so they are removed too. (The seeded admin can only be
+# deleted after create_platform_admin.py --retire-seeded has switched it off.)
+SEEDED_ADMIN = "admin@financeai.app"
+SEEDED_DOMAIN = "@financeai-test.app"
+
+
+def is_seeded(email: str) -> bool:
+    lowered = email.lower()
+    return lowered == SEEDED_ADMIN or lowered.endswith(SEEDED_DOMAIN)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -68,7 +79,11 @@ def main() -> int:
     contacts = get("/admin/contact-requests").json()
     contact_items = contacts["items"] if isinstance(contacts, dict) else contacts
 
-    qa_users = [u for u in users if u["display_name"].startswith(MARKER) and u["email"].lower() not in keep]
+    qa_users = [
+        u
+        for u in users
+        if (u["display_name"].startswith(MARKER) or is_seeded(u["email"])) and u["email"].lower() not in keep
+    ]
     qa_emails = {u["email"].lower() for u in qa_users}
     spared = {u["email"].lower() for u in users if u["email"].lower() in keep}
     qa_businesses = [
