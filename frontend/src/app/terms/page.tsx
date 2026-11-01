@@ -131,7 +131,13 @@ export default function TermsPage() {
 
             <section>
               <h2 className="mb-2 text-base font-semibold text-slate-900">12. Contact</h2>
-              <p>Questions about these Terms can be sent to the contact address for this business.</p>
+              <p>
+                Questions about these Terms can be sent to{" "}
+                <a href="mailto:support@finverlo.com" className="text-brand-600 underline">
+                  support@finverlo.com
+                </a>
+                .
+              </p>
             </section>
           </div>
         </Card>

@@ -2,7 +2,7 @@
 
 Thank you for helping test Finverlo. This guide takes you from your first
 login to a full week of use. The owner of the beta ({{your_name}},
-{{support_email}}) will set up the first session with you.
+support@finverlo.com) will set up the first session with you.
 
 ## What this is (and isn't)
 
@@ -129,7 +129,7 @@ payment is taken during the beta).
 
 ## 8. Reporting a problem or an idea
 
-Email {{support_email}} with:
+Email support@finverlo.com with:
 
 * **What you were doing** (the page and the steps)
 * **What you expected** and **what happened** (copy any red error message)

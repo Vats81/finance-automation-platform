@@ -4,7 +4,7 @@
 drafts for the owner to edit and send personally, to firms the owner has chosen, when the
 owner decides. Read "Before the first message" first.
 
-Placeholders: `{{first_name}}`, `{{firm_name}}`, `{{your_name}}`, `{{support_email}}`,
+Placeholders: `{{first_name}}`, `{{firm_name}}`, `{{your_name}}`,
 `{{beta_link}}` (the unlinked `/beta` interest form).
 
 ## What a firm is being asked to try
@@ -40,8 +40,7 @@ true by asking for one client at a time.
 ## Before the first message (do these first)
 
 - [ ] `REGISTRATION_REQUIRES_INVITE=true` is set in Render, so only people you invite can sign up.
-- [ ] A real **support email** replaces the placeholder on the `/beta` page, the tester guide and
-      these drafts.
+- [x] The support email is `support@finverlo.com` (forwarded to you, tested).
 - [ ] **Email actually delivers**: the Resend sending domain `finverlo.com` is verified. Until then,
       invitations and "forgot password" emails will not arrive (Admin -> Users -> Reset password is
       the fallback).
@@ -126,7 +125,7 @@ confirmed the email works.
 >
 > It's free during the beta and no payment details are involved. I'll check in once a week, and
 > there's a short tester guide at https://www.finverlo.com/beta. For anything urgent or odd,
-> write to {{support_email}}.
+> write to support@finverlo.com.
 >
 > Thank you for helping,
 > {{your_name}}

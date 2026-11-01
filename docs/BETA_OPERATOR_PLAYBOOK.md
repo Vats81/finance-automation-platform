@@ -15,8 +15,8 @@ Do not send an invitation until every box is ticked.
 
 - [ ] **Restore drill has run and PASSED** (GitHub → Actions → "Restore drill").
       Write the result in `RECOVERY_RUNBOOK.md` section 7. *Not done yet.*
-- [ ] **A support contact exists** and is monitored (a shared mailbox, not your
-      personal inbox). Put it in the tester guide in place of `{{support_email}}`.
+- [x] **A support contact exists** and is monitored: `support@finverlo.com` (and
+      `admin@finverlo.com` for you), both forwarded by Namecheap and tested.
 - [ ] **Invite-only sign-up is ON** (section 2) and you tested that an
       uninvited email is refused.
 - [ ] **Email can actually reach testers.** Email is in Resend test mode, which

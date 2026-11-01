@@ -11,7 +11,7 @@ supervised beta - not a finished accounting system, and not a replacement for an
 accountant. Be upfront about that in every message.
 
 Placeholders: `{{first_name}}`, `{{their_business}}`, `{{your_name}}`,
-`{{support_email}}`, `{{beta_link}}` (the unlinked `/beta` interest form).
+`{{beta_link}}` (the unlinked `/beta` interest form).
 
 ---
 
@@ -72,7 +72,7 @@ Placeholders: `{{first_name}}`, `{{their_business}}`, `{{your_name}}`,
 > - It's early software. Known limits: {{current_known_limits}}.
 > - Keep your original spreadsheets and receipts - we'll check the app's figures
 >   against them together, and you should not rely on the app alone yet.
-> - I'll ask for a short weekly check-in. Support: {{support_email}}.
+> - I'll ask for a short weekly check-in. Support: support@finverlo.com.
 >
 > If you'd like to go ahead, reply and we'll book a set-up session. I'll create
 > your account with you rather than sending a link to sign up unsupervised.

@@ -139,8 +139,11 @@ export default function PrivacyPage() {
             <section>
               <h2 className="mb-2 text-base font-semibold text-slate-900">10. Contact</h2>
               <p>
-                Questions about this policy, or requests regarding your data, can be sent to the contact
-                address for this business. See also our{" "}
+                Questions about this policy, or requests regarding your data, can be sent to{" "}
+                <a href="mailto:support@finverlo.com" className="text-brand-600 underline">
+                  support@finverlo.com
+                </a>
+                . See also our{" "}
                 <Link href="/terms" className="text-brand-600 underline">
                   Terms of Service
                 </Link>
