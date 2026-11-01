@@ -39,9 +39,7 @@ async def test_full_password_reset_flow() -> None:
     user = await seed_local_user(uow, clock)
     hasher = FakePasswordHasher()
 
-    await RequestPasswordResetUseCase(uow, clock).execute(
-        RequestPasswordResetCommand(email="owner@acme.com")
-    )
+    await RequestPasswordResetUseCase(uow, clock).execute(RequestPasswordResetCommand(email="owner@acme.com"))
     stored = await uow.users.get_by_id(user.id)
     assert stored is not None and stored.password_reset_token_hash is not None
 

@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     # Celery/Redis to run the send task). Leave false wherever real email works.
     auth_auto_verify_email: bool = Field(default=False, alias="AUTH_AUTO_VERIFY_EMAIL")
     password_reset_ttl_hours: int = Field(default=2, alias="PASSWORD_RESET_TTL_HOURS")
+    # Send account emails (password reset) straight from the API instead of through the outbox and a
+    # Celery worker. The hosted beta runs no worker, so without this they would never be sent. Turn
+    # it off only if you run the worker and its outbox relay, or each email would go out twice.
+    send_auth_emails_inline: bool = Field(default=True, alias="SEND_AUTH_EMAILS_INLINE")
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
 
     # --- Database TLS ---

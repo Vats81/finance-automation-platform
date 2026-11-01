@@ -32,17 +32,15 @@ async def _send_verification_email_async(
     user_id: str, email: str, display_name: str, verification_token: str
 ) -> None:
     from app.bootstrap.container import get_email_sender
+    from app.identity.application.auth_emails import send_verification_email as send
 
-    settings = get_settings()
-    link = f"{settings.frontend_base_url}/verify-email?uid={user_id}&token={verification_token}"
-    await get_email_sender().send(
-        to=email,
-        subject="Verify your email",
-        body=(
-            f"Hi {display_name},\n\n"
-            f"Welcome! Please verify your email address to activate your account:\n\n{link}\n\n"
-            f"This link expires in {settings.email_verification_ttl_hours} hours."
-        ),
+    await send(
+        get_email_sender(),
+        get_settings(),
+        user_id=user_id,
+        email=email,
+        display_name=display_name,
+        verification_token=verification_token,
     )
 
 
@@ -56,18 +54,9 @@ def send_password_reset_email(user_id: str, email: str, reset_token: str) -> Non
 
 async def _send_password_reset_email_async(user_id: str, email: str, reset_token: str) -> None:
     from app.bootstrap.container import get_email_sender
+    from app.identity.application.auth_emails import send_password_reset_email as send
 
-    settings = get_settings()
-    link = f"{settings.frontend_base_url}/reset-password?uid={user_id}&token={reset_token}"
-    await get_email_sender().send(
-        to=email,
-        subject="Reset your password",
-        body=(
-            f"We received a request to reset your password. Use the link below to choose a new one:\n\n"
-            f"{link}\n\nThis link expires in {settings.password_reset_ttl_hours} hours. "
-            f"If you didn't request this, you can safely ignore this email."
-        ),
-    )
+    await send(get_email_sender(), get_settings(), user_id=user_id, email=email, reset_token=reset_token)
 
 
 @celery_app.task(
@@ -99,8 +88,11 @@ async def _sweep_approval_reminders_async() -> int:
 
         for workflow_model in workflows:
             current = next(
-                (s for s in sorted(workflow_model.steps, key=lambda s: s.step_number)
-                 if s.status == ApprovalStepStatus.PENDING.value),
+                (
+                    s
+                    for s in sorted(workflow_model.steps, key=lambda s: s.step_number)
+                    if s.status == ApprovalStepStatus.PENDING.value
+                ),
                 None,
             )
             if current is not None:

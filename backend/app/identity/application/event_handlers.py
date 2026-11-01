@@ -28,6 +28,10 @@ async def handle_user_registered(payload: dict) -> None:
 
 async def handle_password_reset_requested(payload: dict) -> None:
     from app.bootstrap.container import get_task_queue
+    from app.config.settings import get_settings
+
+    if get_settings().send_auth_emails_inline:
+        return  # the API already sent it (see request_password_reset in identity/api/auth_routes.py)
 
     task_queue = get_task_queue()
     task_queue.enqueue(

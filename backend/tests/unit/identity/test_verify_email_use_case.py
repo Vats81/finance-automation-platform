@@ -22,9 +22,7 @@ async def test_verify_email_use_case_marks_user_verified() -> None:
     )
     uow.users.add(user)
 
-    verified = await VerifyEmailUseCase(uow, clock).execute(
-        VerifyEmailCommand(user_id=user.id, token="tok")
-    )
+    verified = await VerifyEmailUseCase(uow, clock).execute(VerifyEmailCommand(user_id=user.id, token="tok"))
 
     assert verified.is_email_verified is True
 
@@ -42,6 +40,4 @@ async def test_verify_email_use_case_with_wrong_token_raises() -> None:
     uow.users.add(user)
 
     with pytest.raises(InvalidOrExpiredTokenException):
-        await VerifyEmailUseCase(uow, clock).execute(
-            VerifyEmailCommand(user_id=user.id, token="wrong")
-        )
+        await VerifyEmailUseCase(uow, clock).execute(VerifyEmailCommand(user_id=user.id, token="wrong"))

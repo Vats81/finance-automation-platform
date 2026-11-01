@@ -8,6 +8,7 @@ from app.beta_waitlist.application.ports import IWaitlistStore
 from app.beta_waitlist.application.use_cases import is_invited, mark_onboarded_if_invited
 from app.bootstrap.container import (
     get_clock,
+    get_email_sender,
     get_local_token_issuer,
     get_password_hasher,
     get_uow,
@@ -24,6 +25,7 @@ from app.identity.api.auth_schemas import (
     VerifyEmailRequest,
 )
 from app.identity.api.dependencies import get_current_local_user
+from app.identity.application.auth_emails import send_password_reset_email
 from app.identity.application.commands.login_user import LoginUserCommand, LoginUserUseCase
 from app.identity.application.commands.register_user import RegisterUserCommand, RegisterUserUseCase
 from app.identity.application.commands.request_password_reset import (
@@ -35,7 +37,7 @@ from app.identity.application.commands.verify_email import VerifyEmailCommand, V
 from app.identity.domain.entities import User
 from app.identity.domain.exceptions import RegistrationInviteRequiredException
 from app.identity.infrastructure.local_auth.token_issuer import LocalTokenIssuer
-from app.shared.application.ports import IClock, IPasswordHasher
+from app.shared.application.ports import IClock, IEmailSender, IPasswordHasher
 
 logger = logging.getLogger(__name__)
 
@@ -117,9 +119,21 @@ async def request_password_reset(
     body: RequestPasswordResetRequest,
     uow: AppUnitOfWork = Depends(get_uow),
     clock: IClock = Depends(get_clock),
+    email_sender: IEmailSender = Depends(get_email_sender),
 ) -> Response:
     use_case = RequestPasswordResetUseCase(uow, clock, reset_ttl_hours=settings.password_reset_ttl_hours)
-    await use_case.execute(RequestPasswordResetCommand(email=body.email))
+    issued = await use_case.execute(RequestPasswordResetCommand(email=body.email))
+    if issued is not None and settings.send_auth_emails_inline:
+        try:
+            await send_password_reset_email(
+                email_sender,
+                settings,
+                user_id=issued.user_id,
+                email=issued.email,
+                reset_token=issued.reset_token,
+            )
+        except Exception:  # noqa: BLE001 - the answer is always 204: it must not reveal whether an account exists
+            logger.exception("Could not send the password reset email")
     return Response(status_code=204)
 
 

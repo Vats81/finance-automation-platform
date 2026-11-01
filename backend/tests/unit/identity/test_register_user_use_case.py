@@ -25,9 +25,7 @@ async def test_register_creates_unverified_local_user_and_records_event() -> Non
 
 async def test_register_with_auto_verify_email_creates_verified_user() -> None:
     uow = FakeUnitOfWork()
-    use_case = RegisterUserUseCase(
-        uow, FakePasswordHasher(), FakeClock(), auto_verify_email=True
-    )
+    use_case = RegisterUserUseCase(uow, FakePasswordHasher(), FakeClock(), auto_verify_email=True)
 
     user = await use_case.execute(
         RegisterUserCommand(email="owner@acme.com", password="s3cret-pw", display_name="Ada Owner")

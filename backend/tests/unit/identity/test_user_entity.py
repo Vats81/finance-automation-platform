@@ -6,9 +6,7 @@ from app.identity.domain.value_objects import EmailAddress, Role
 
 
 def make_user(role: Role = Role.AP_CLERK) -> User:
-    user = User.provision(
-        entra_object_id="oid-1", email=EmailAddress("a@b.com"), display_name="A B"
-    )
+    user = User.provision(entra_object_id="oid-1", email=EmailAddress("a@b.com"), display_name="A B")
     user.pull_domain_events()
     user.role = role
     return user
