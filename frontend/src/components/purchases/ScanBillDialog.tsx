@@ -103,8 +103,10 @@ export function ScanBillDialog({
       .catch(() => setProducts([]));
   }, [token, businessId]);
 
-  // Turning stock on suggests a product for rows whose name or SKU matches one exactly.
-  // Anything unmatched stays on "don't add" until the user chooses.
+  // Turning stock on suggests a product for rows whose name or SKU matches one exactly, and a NEW
+  // product (SKU suggested, selling price starting at the cost) for every other row. Ticking the box
+  // is a request to add stock, so it must not leave every row on "don't add"; the user can still set
+  // any row, such as a delivery fee, back to "Don't add to stock".
   function toggleStock(on: boolean) {
     setAddToStock(on);
     if (!on) return;
@@ -113,7 +115,14 @@ export function ScanBillDialog({
         if (row.stock) return row;
         const wanted = row.description.trim().toLowerCase();
         const match = products.find((p) => p.name.trim().toLowerCase() === wanted || p.sku.toLowerCase() === wanted);
-        return match ? { ...row, stock: match.id } : row;
+        if (match) return { ...row, stock: match.id };
+        if (row.description.trim() === "") return row;
+        return {
+          ...row,
+          stock: NEW_PRODUCT,
+          newSku: row.newSku || suggestSku(row.description),
+          newPrice: row.newPrice || row.unitCost,
+        };
       })
     );
   }
@@ -189,8 +198,10 @@ export function ScanBillDialog({
       decimalPlaces(r.quantity) > 4 ||
       (r.stock === NEW_PRODUCT && (!r.newSku.trim() || cents(r.newPrice) === null || (cents(r.newPrice) ?? 0) < 0))
   );
+  // Ticked "add to stock" but every item is set to "Don't add": confirming would silently add nothing.
+  const nothingToStock = addToStock && stockRows.length === 0;
   const canConfirm = Boolean(
-    typedVendor && billNumber.trim() && validRows.length > 0 && !hasInvalidRow && !stockProblem
+    typedVendor && billNumber.trim() && validRows.length > 0 && !hasInvalidRow && !stockProblem && !nothingToStock
   );
 
   function updateRow(key: number, patch: Partial<Row>) {
@@ -486,11 +497,20 @@ export function ScanBillDialog({
               <span>
                 Also add these counts to my stock
                 <span className="block text-xs text-slate-500">
-                  Choose a product for each item. Voiding this purchase later takes the stock back out, and the
-                  items can&apos;t be edited afterwards.
+                  Each item gets a product: an existing one if the name matches, otherwise a new product you can
+                  rename. Set any item to &ldquo;Don&apos;t add to stock&rdquo; if it isn&apos;t something you keep
+                  (a delivery fee, say). Voiding this purchase later takes the stock back out, and the items
+                  can&apos;t be edited afterwards.
                 </span>
               </span>
             </label>
+
+            {nothingToStock && (
+              <p role="alert" className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+                You ticked &ldquo;add these counts to my stock&rdquo;, but every item is set to &ldquo;Don&apos;t add to
+                stock&rdquo;. Choose a product (or &ldquo;+ New product&rdquo;) for at least one item, or untick the box.
+              </p>
+            )}
 
             <div className="space-y-1 rounded-md bg-slate-50 p-3 text-sm">
               <div className="flex justify-between">
