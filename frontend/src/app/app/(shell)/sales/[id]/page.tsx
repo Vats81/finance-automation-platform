@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
-import { getSale, recordSalePayment, voidSale } from "@/lib/api/sales";
+import { downloadSaleInvoicePdf, getSale, recordSalePayment, voidSale } from "@/lib/api/sales";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
@@ -31,6 +31,7 @@ export default function SaleDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const load = useCallback(async () => {
     if (!currentBusinessId) return;
@@ -60,6 +61,19 @@ export default function SaleDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to record payment");
     } finally {
       setIsUpdating(false);
+    }
+  }
+
+  async function handleDownloadInvoice() {
+    if (!currentBusinessId || !sale) return;
+    setIsDownloading(true);
+    setError(null);
+    try {
+      await downloadSaleInvoicePdf(getAccessToken(), currentBusinessId, id, sale.invoice_number);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not download the invoice");
+    } finally {
+      setIsDownloading(false);
     }
   }
 
@@ -98,6 +112,9 @@ export default function SaleDetailPage() {
         <div className="flex items-center gap-2">
           {sale.status === "void" && <Badge tone="neutral">void</Badge>}
           <Badge tone={STATUS_TONE[sale.payment_status]}>{sale.payment_status.replace("_", " ")}</Badge>
+          <Button variant="secondary" onClick={handleDownloadInvoice} disabled={isDownloading}>
+            {isDownloading ? "Preparing…" : "Download invoice"}
+          </Button>
           {sale.status !== "void" && (
             <Link href={`/app/sales/${sale.id}/edit`}>
               <Button variant="secondary">Edit</Button>

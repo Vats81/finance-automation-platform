@@ -13,6 +13,7 @@ Two layers:
 import uuid
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -236,6 +237,7 @@ _PROBES: list[tuple[str, str, Any, tuple[BusinessRole, ...]]] = [
     ("POST", "/businesses/{b}/expenses", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/customers", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/products", {}, CAN_WRITE),
+    ("GET", "/businesses/{b}/sales/" + _ID + "/invoice-pdf", None, ANY_MEMBER),
     ("POST", "/businesses/{b}/sales/" + _ID + "/payments", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/sales/" + _ID + "/void", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/expenses/" + _ID + "/void", {}, CAN_WRITE),
@@ -480,3 +482,56 @@ def test_describe_reads_the_record_from_the_path_or_the_create_response() -> Non
         new_id,
     )
     assert describe("/api/v1/businesses/{business_id}/sales", {}, b"not json") == ("sales", None)
+
+
+def _gst_sale_body() -> dict[str, Any]:
+    return {
+        "invoice_number": "INV-GST-1",
+        "invoice_date": "2026-11-01",
+        "line_items": [
+            {
+                "line_number": 1,
+                "description": "Service",
+                "quantity": "1",
+                "unit_price": "1000",
+                "gst_rate": "18",
+                "hsn_code": "998314",
+            }
+        ],
+        "place_of_supply": "27",
+    }
+
+
+def test_gst_fields_sent_to_the_api_are_used_and_returned(world: tuple[World, TestClient]) -> None:
+    w, client = world
+    base = f"/api/v1/businesses/{w.business_a}/sales"
+
+    created = client.post(base, headers={"x-test-user": "owner_a"}, json=_gst_sale_body())
+
+    assert created.status_code == 201, created.text
+    sale = created.json()
+    assert Decimal(sale["tax"]) == Decimal("180.00") and Decimal(sale["total_amount"]) == Decimal("1180.00")
+    assert sale["place_of_supply"] == "27"
+    assert sale["line_items"][0]["hsn_code"] == "998314"
+    assert [Decimal(g["tax"]) for g in sale["gst_breakdown"]] == [Decimal("180.00")]
+
+    edited = _gst_sale_body()
+    edited["line_items"][0]["gst_rate"] = "5"
+    edited["place_of_supply"] = "29"
+    updated = client.patch(f"{base}/{sale['id']}", headers={"x-test-user": "owner_a"}, json=edited)
+
+    assert updated.status_code == 200, updated.text
+    assert Decimal(updated.json()["tax"]) == Decimal("50.00") and updated.json()["place_of_supply"] == "29"
+
+
+def test_the_invoice_pdf_downloads_for_any_member(world: tuple[World, TestClient]) -> None:
+    w, client = world
+    base = f"/api/v1/businesses/{w.business_a}/sales"
+    sale = client.post(base, headers={"x-test-user": "owner_a"}, json=_gst_sale_body()).json()
+
+    response = client.get(f"{base}/{sale['id']}/invoice-pdf", headers={"x-test-user": "viewer"})
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content.startswith(b"%PDF-")
+    assert 'filename="invoice-INV-GST-1.pdf"' in response.headers["content-disposition"]

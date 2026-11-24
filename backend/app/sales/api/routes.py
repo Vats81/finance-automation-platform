@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.rate_limit import limiter
 from app.bootstrap.container import get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
 from app.business.api.permissions import CAN_WRITE
+from app.business.domain.exceptions import BusinessNotFoundException
 from app.config.settings import get_settings
 from app.identity.domain.entities import User
 from app.sales.api.schemas import (
@@ -28,6 +29,7 @@ from app.sales.application.commands.update_sale import (
     UpdateSaleUseCase,
 )
 from app.sales.application.commands.void_sale import VoidSaleCommand, VoidSaleUseCase
+from app.sales.application.invoice_pdf import generate_invoice_pdf
 from app.sales.application.queries.get_sale import GetSaleQuery, GetSaleUseCase
 from app.sales.application.queries.list_outstanding_sales import (
     ListOutstandingSalesQuery,
@@ -66,12 +68,15 @@ async def create_sale(
                     description=item.description,
                     quantity=item.quantity,
                     unit_price=item.unit_price,
+                    gst_rate=item.gst_rate,
+                    hsn_code=item.hsn_code,
                 )
                 for item in body.line_items
             ],
             discount=body.discount,
             tax=body.tax,
             notes=body.notes,
+            place_of_supply=body.place_of_supply,
         )
     )
     return SaleResponse.from_domain(sale)
@@ -124,6 +129,30 @@ async def get_sale(
     return SaleResponse.from_domain(sale)
 
 
+@router.get("/{sale_id}/invoice-pdf")
+async def get_sale_invoice_pdf(
+    business_id: uuid.UUID,
+    sale_id: uuid.UUID,
+    _actor: User = Depends(require_business_role()),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> Response:
+    """The printable invoice (a GST tax invoice when the lines carry GST rates)."""
+    business = await uow.businesses.get_by_id(business_id)
+    if business is None:
+        raise BusinessNotFoundException(f"Business {business_id} not found")
+    sale = await GetSaleUseCase(uow).execute(GetSaleQuery(business_id=business_id, sale_id=sale_id))
+    customer = None
+    if sale.customer_id:
+        customer = await uow.customers.get_by_id_for_business(sale.customer_id, business_id)
+    pdf_bytes = generate_invoice_pdf(business=business, sale=sale, customer=customer)
+    safe_number = "".join(c if c.isalnum() or c in "-_" else "-" for c in sale.invoice_number)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="invoice-{safe_number}.pdf"'},
+    )
+
+
 @router.patch("/{sale_id}", response_model=SaleResponse)
 @limiter.limit(settings.rate_limit_write)
 async def update_sale(
@@ -149,12 +178,15 @@ async def update_sale(
                     description=item.description,
                     quantity=item.quantity,
                     unit_price=item.unit_price,
+                    gst_rate=item.gst_rate,
+                    hsn_code=item.hsn_code,
                 )
                 for item in body.line_items
             ],
             discount=body.discount,
             tax=body.tax,
             notes=body.notes,
+            place_of_supply=body.place_of_supply,
         )
     )
     return SaleResponse.from_domain(sale)

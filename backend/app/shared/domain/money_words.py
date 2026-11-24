@@ -32,17 +32,20 @@ def number_to_words_indian(n: int) -> str:
     if n == 0:
         return "Zero"
     parts = []
-    for size, name in ((10_000_000, "Crore"), (100_000, "Lakh"), (1000, "Thousand")):
+    if n >= 10_000_000:  # crores can themselves run to hundreds of crores
+        parts.append(number_to_words_indian(n // 10_000_000) + " Crore")
+        n %= 10_000_000
+    for size, name in ((100_000, "Lakh"), (1000, "Thousand")):
         if n >= size:
-            parts.append(_below_hundred(n // size) + " " + name if size > 1000 or n // size < 100 else "")
+            parts.append(_below_hundred(n // size) + " " + name)
             n %= size
     if n:
         parts.append(_below_thousand(n))
-    return " ".join(p for p in parts if p)
+    return " ".join(parts)
 
 
 def rupees_in_words(amount: Decimal) -> str:
-    """"Rupees ... and ... Paise Only". Negative amounts are written without the sign."""
+    """ "Rupees ... and ... Paise Only". Negative amounts are written without the sign."""
     value = abs(amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     rupees = int(value)
     paise = int((value - rupees) * 100)

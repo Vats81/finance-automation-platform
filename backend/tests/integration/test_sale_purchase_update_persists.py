@@ -85,6 +85,56 @@ async def test_updated_sale_fields_actually_persist(db_session: AsyncSession) ->
     assert refetched.line_items[0].description == "Gadget"
 
 
+async def test_gst_fields_persist_and_survive_an_edit(db_session: AsyncSession) -> None:
+    uow = AppUnitOfWork(db_session)
+    business_id = uuid.uuid4()
+    sale = await CreateSaleUseCase(uow).execute(
+        CreateSaleCommand(
+            business_id=business_id,
+            invoice_number="INV-GST",
+            invoice_date=date(2026, 11, 1),
+            line_items=[
+                CreateSaleLineItemInput(
+                    line_number=1,
+                    description="Service",
+                    quantity=Decimal("1"),
+                    unit_price=Decimal("1000"),
+                    gst_rate=Decimal("18"),
+                    hsn_code="998314",
+                )
+            ],
+            place_of_supply="27",
+        )
+    )
+
+    stored = await GetSaleUseCase(uow).execute(GetSaleQuery(business_id=business_id, sale_id=sale.id))
+    assert stored.place_of_supply == "27" and stored.tax.amount == Decimal("180.00")
+    assert stored.line_items[0].gst_rate == Decimal("18") and stored.line_items[0].hsn_code == "998314"
+
+    await UpdateSaleUseCase(uow).execute(
+        UpdateSaleCommand(
+            business_id=business_id,
+            sale_id=sale.id,
+            invoice_number="INV-GST",
+            invoice_date=date(2026, 11, 1),
+            line_items=[
+                UpdateSaleLineItemInput(
+                    line_number=1,
+                    description="Service",
+                    quantity=Decimal("1"),
+                    unit_price=Decimal("1000"),
+                    gst_rate=Decimal("5"),
+                )
+            ],
+            place_of_supply="29",
+        )
+    )
+
+    edited = await GetSaleUseCase(uow).execute(GetSaleQuery(business_id=business_id, sale_id=sale.id))
+    assert edited.place_of_supply == "29" and edited.tax.amount == Decimal("50.00")
+    assert edited.line_items[0].gst_rate == Decimal("5")
+
+
 async def test_updated_purchase_fields_actually_persist(db_session: AsyncSession) -> None:
     uow = AppUnitOfWork(db_session)
     business_id = uuid.uuid4()
