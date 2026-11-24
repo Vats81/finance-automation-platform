@@ -32,6 +32,13 @@ class CompleteOnboardingRequest(BaseModel):
     number_of_branches: int | None = Field(default=None, ge=1)
     whatsapp_number: str | None = None
     contact_email: EmailStr | None = None
+    gstin: str | None = Field(default=None, max_length=15)
+    address_line: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=120)
+    state_code: str | None = Field(default=None, max_length=2)
+    pincode: str | None = Field(default=None, max_length=6)
+    phone: str | None = Field(default=None, max_length=32)
+    upi_id: str | None = Field(default=None, max_length=100)
 
 
 class BusinessResponse(BaseModel):
@@ -48,6 +55,13 @@ class BusinessResponse(BaseModel):
     number_of_branches: int
     whatsapp_number: str | None
     contact_email: str | None
+    gstin: str | None = None
+    address_line: str | None = None
+    city: str | None = None
+    state_code: str | None = None
+    pincode: str | None = None
+    phone: str | None = None
+    upi_id: str | None = None
     onboarding_completed: bool
     status: BusinessStatus
     plan: BusinessPlan
@@ -71,6 +85,13 @@ class BusinessResponse(BaseModel):
             number_of_branches=business.number_of_branches,
             whatsapp_number=business.whatsapp_number,
             contact_email=business.contact_email,
+            gstin=business.gstin,
+            address_line=business.address_line,
+            city=business.city,
+            state_code=business.state_code,
+            pincode=business.pincode,
+            phone=business.phone,
+            upi_id=business.upi_id,
             onboarding_completed=business.onboarding_completed,
             status=business.status,
             plan=business.plan,

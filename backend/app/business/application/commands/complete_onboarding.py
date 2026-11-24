@@ -19,6 +19,13 @@ class CompleteOnboardingCommand:
     number_of_branches: int | None = None
     whatsapp_number: str | None = None
     contact_email: str | None = None
+    gstin: str | None = None
+    address_line: str | None = None
+    city: str | None = None
+    state_code: str | None = None
+    pincode: str | None = None
+    phone: str | None = None
+    upi_id: str | None = None
 
 
 class CompleteOnboardingUseCase:
@@ -41,6 +48,13 @@ class CompleteOnboardingUseCase:
             number_of_branches=command.number_of_branches,
             whatsapp_number=command.whatsapp_number,
             contact_email=command.contact_email,
+            gstin=command.gstin,
+            address_line=command.address_line,
+            city=command.city,
+            state_code=command.state_code,
+            pincode=command.pincode,
+            phone=command.phone,
+            upi_id=command.upi_id,
         )
         await self._uow.businesses.update(business)
         await self._uow.commit()

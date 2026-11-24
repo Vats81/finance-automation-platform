@@ -16,6 +16,7 @@ import { getIntegrationsStatus } from "@/lib/api/integrations";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { CURRENCY_OPTIONS } from "@/lib/format";
+import { GST_STATES, stateCodeFromGstin } from "@/lib/gst";
 import {
   inviteTeamMember,
   listTeamMembers,
@@ -205,6 +206,13 @@ export default function SettingsPage() {
       number_of_branches: business.number_of_branches,
       whatsapp_number: business.whatsapp_number ?? undefined,
       contact_email: business.contact_email ?? undefined,
+      gstin: business.gstin ?? undefined,
+      address_line: business.address_line ?? undefined,
+      city: business.city ?? undefined,
+      state_code: business.state_code ?? undefined,
+      pincode: business.pincode ?? undefined,
+      phone: business.phone ?? undefined,
+      upi_id: business.upi_id ?? undefined,
     });
   }, [currentBusiness]);
 
@@ -292,6 +300,83 @@ export default function SettingsPage() {
                   onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
                 />
               </FormField>
+            </div>
+          )}
+          {!isPersonal && (
+            <div className="space-y-4 border-t border-slate-200 pt-4">
+              <div>
+                <h3 className="text-base font-semibold">Invoice details</h3>
+                <p className="text-sm text-slate-500">
+                  Printed on your invoices. Every field is optional; add your GSTIN if you are GST-registered.
+                </p>
+              </div>
+              <FormField label="GSTIN">
+                <Input
+                  maxLength={15}
+                  placeholder="e.g. 27AAPFU0939F1ZV"
+                  value={form.gstin ?? ""}
+                  onChange={(e) => {
+                    const gstin = e.target.value.toUpperCase();
+                    const state = stateCodeFromGstin(gstin);
+                    setForm({ ...form, gstin, ...(state ? { state_code: state } : {}) });
+                  }}
+                />
+              </FormField>
+              <FormField label="Address">
+                <Input
+                  maxLength={255}
+                  placeholder="Shop number, street, area"
+                  value={form.address_line ?? ""}
+                  onChange={(e) => setForm({ ...form, address_line: e.target.value })}
+                />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="City">
+                  <Input
+                    maxLength={120}
+                    value={form.city ?? ""}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="PIN code">
+                  <Input
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={form.pincode ?? ""}
+                    onChange={(e) => setForm({ ...form, pincode: e.target.value.replace(/\D/g, "") })}
+                  />
+                </FormField>
+              </div>
+              <FormField label="State">
+                <Select
+                  value={form.state_code ?? ""}
+                  onChange={(e) => setForm({ ...form, state_code: e.target.value })}
+                >
+                  <option value="">Choose your state</option>
+                  {GST_STATES.map((s) => (
+                    <option key={s.code} value={s.code}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Phone on invoices">
+                  <Input
+                    maxLength={32}
+                    value={form.phone ?? ""}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="UPI ID (so customers can pay)">
+                  <Input
+                    maxLength={100}
+                    placeholder="name@bank"
+                    value={form.upi_id ?? ""}
+                    onChange={(e) => setForm({ ...form, upi_id: e.target.value })}
+                  />
+                </FormField>
+              </div>
             </div>
           )}
           <Button type="submit" disabled={isSubmitting}>

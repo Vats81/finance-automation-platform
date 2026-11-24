@@ -27,6 +27,13 @@ export interface BusinessResponse {
   number_of_branches: number;
   whatsapp_number: string | null;
   contact_email: string | null;
+  gstin?: string | null;
+  address_line?: string | null;
+  city?: string | null;
+  state_code?: string | null;
+  pincode?: string | null;
+  phone?: string | null;
+  upi_id?: string | null;
   onboarding_completed: boolean;
   status: BusinessStatus;
   plan: BusinessPlan;
@@ -59,6 +66,13 @@ export interface CompleteOnboardingRequest {
   number_of_branches?: number;
   whatsapp_number?: string;
   contact_email?: string;
+  gstin?: string;
+  address_line?: string;
+  city?: string;
+  state_code?: string;
+  pincode?: string;
+  phone?: string;
+  upi_id?: string;
 }
 
 export interface ChangePlanRequest {

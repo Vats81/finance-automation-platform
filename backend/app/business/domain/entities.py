@@ -10,6 +10,7 @@ from app.business.domain.events import (
     MembershipRemoved,
     MembershipRoleChanged,
 )
+from app.business.domain.gst import clean_gstin, clean_pincode, clean_state_code, clean_upi_id
 from app.business.domain.value_objects import (
     SUPPORTED_CURRENCIES,
     BusinessKind,
@@ -50,6 +51,13 @@ class Business(AggregateRoot):
         number_of_branches: int = 1,
         whatsapp_number: str | None = None,
         contact_email: str | None = None,
+        gstin: str | None = None,
+        address_line: str | None = None,
+        city: str | None = None,
+        state_code: str | None = None,
+        pincode: str | None = None,
+        phone: str | None = None,
+        upi_id: str | None = None,
         onboarding_completed: bool = False,
         status: BusinessStatus = BusinessStatus.ACTIVE,
         plan: BusinessPlan = BusinessPlan.FREE,
@@ -76,6 +84,14 @@ class Business(AggregateRoot):
         self.number_of_branches = number_of_branches
         self.whatsapp_number = whatsapp_number
         self.contact_email = contact_email
+        # What a GST invoice prints about the seller. All optional; a GSTIN also implies the state.
+        self.gstin = gstin
+        self.address_line = address_line
+        self.city = city
+        self.state_code = state_code
+        self.pincode = pincode
+        self.phone = phone
+        self.upi_id = upi_id
         self.onboarding_completed = onboarding_completed
         self.status = status
         self.plan = plan
@@ -118,6 +134,13 @@ class Business(AggregateRoot):
         number_of_branches: int | None = None,
         whatsapp_number: str | None = None,
         contact_email: str | None = None,
+        gstin: str | None = None,
+        address_line: str | None = None,
+        city: str | None = None,
+        state_code: str | None = None,
+        pincode: str | None = None,
+        phone: str | None = None,
+        upi_id: str | None = None,
     ) -> None:
         """Every field is optional and skippable per the spec ('Allow users
         to skip optional fields and complete them later') — only fields
@@ -146,9 +169,55 @@ class Business(AggregateRoot):
             self.whatsapp_number = whatsapp_number
         if contact_email is not None:
             self.contact_email = contact_email
+        self._set_invoice_details(
+            gstin=gstin,
+            address_line=address_line,
+            city=city,
+            state_code=state_code,
+            pincode=pincode,
+            phone=phone,
+            upi_id=upi_id,
+        )
 
         self.onboarding_completed = True
         self._record_event(BusinessOnboardingCompleted(aggregate_id=self.id))
+
+    def _set_invoice_details(
+        self,
+        *,
+        gstin: str | None,
+        address_line: str | None,
+        city: str | None,
+        state_code: str | None,
+        pincode: str | None,
+        phone: str | None,
+        upi_id: str | None,
+    ) -> None:
+        """Only what is given is changed; an empty string clears a field. A GSTIN makes the business
+        GST-registered and fixes its state, so the two can never disagree.
+        """
+        if gstin is not None:
+            self.gstin = clean_gstin(gstin) if gstin.strip() else None
+            if self.gstin:
+                self.gst_registered = True
+                self.state_code = self.gstin[:2]
+        if state_code is not None:
+            if state_code.strip():
+                self.state_code = clean_state_code(state_code)
+            elif not self.gstin:  # a GSTIN fixes the state, so an empty form value must not erase it
+                self.state_code = None
+        if self.gstin and self.state_code and self.gstin[:2] != self.state_code:
+            raise ValidationException("The state does not match the first two digits of the GSTIN.")
+        if address_line is not None:
+            self.address_line = address_line.strip()[:255] or None
+        if city is not None:
+            self.city = city.strip()[:120] or None
+        if pincode is not None:
+            self.pincode = clean_pincode(pincode) if pincode.strip() else None
+        if phone is not None:
+            self.phone = phone.strip()[:32] or None
+        if upi_id is not None:
+            self.upi_id = clean_upi_id(upi_id) if upi_id.strip() else None
 
     def change_plan(self, *, plan: BusinessPlan) -> None:
         if plan == self.plan:

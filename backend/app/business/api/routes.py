@@ -101,6 +101,13 @@ async def complete_onboarding(
             number_of_branches=body.number_of_branches,
             whatsapp_number=body.whatsapp_number,
             contact_email=body.contact_email,
+            gstin=body.gstin,
+            address_line=body.address_line,
+            city=body.city,
+            state_code=body.state_code,
+            pincode=body.pincode,
+            phone=body.phone,
+            upi_id=body.upi_id,
         )
     )
     return BusinessResponse.from_domain(business)
