@@ -476,8 +476,9 @@ GST seller "Sales" includes the GST collected.
 The app can be switched between English and हिन्दी from the top bar (and on the sign-in and sign-up pages).
 The choice is remembered on that device; a phone set to Hindi starts in Hindi. It covers the daily screens: the
 sidebar, Overview, sales (list, detail, form, quick sale), udhaar, the WhatsApp summary, customers, expenses,
-sign-in and the first-visit tour. Screens not yet translated (Settings, Reports, Purchases, Inventory, Vendors,
-Payments, Data Upload, the Help page, the AI Assistant and the landing page) stay in English.
+sign-in, Settings (with Hindi names for the GST states) and the first-visit tour. Screens not yet translated
+(Reports, Purchases, Inventory, Vendors, Payments, Data Upload, the Help page, the AI Assistant, the accounting-firm
+pages and the landing page) stay in English.
 
 - All texts live in one file, `frontend/src/lib/i18n/messages.ts`, as `[English, Hindi]` pairs side by side. A
   text with no Hindi is a compile error, so nothing can ship half-translated. To translate a screen, replace its

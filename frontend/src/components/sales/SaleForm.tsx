@@ -10,7 +10,15 @@ import { CustomerResponse } from "@/types/customer";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { useT } from "@/lib/i18n/LanguageProvider";
 import { formatCurrency } from "@/lib/format";
-import { GST_RATES, GST_STATES, isInterState, normalizeRate, previewGst, stateCodeFromGstin } from "@/lib/gst";
+import {
+  GST_RATES,
+  GST_STATES,
+  isInterState,
+  normalizeRate,
+  previewGst,
+  stateCodeFromGstin,
+  stateName,
+} from "@/lib/gst";
 
 function emptyLine(lineNumber: number): CreateSaleLineItemRequest {
   return { line_number: lineNumber, description: "", quantity: "1", unit_price: "0" };
@@ -30,7 +38,7 @@ export function SaleForm({
   submitLabel?: string;
 }) {
   const { currentBusiness } = useCurrentBusiness();
-  const { t } = useT();
+  const { t, lang } = useT();
   const business = currentBusiness?.business;
   // GST controls appear for a GST-registered business; everyone else keeps the plain tax amount.
   const gstMode = Boolean(business?.gst_registered);
@@ -135,7 +143,7 @@ export function SaleForm({
             <option value="">{t("saleForm.sameState")}</option>
             {GST_STATES.map((s) => (
               <option key={s.code} value={s.code}>
-                {s.name} ({s.code})
+                {stateName(s.code, lang)} ({s.code})
               </option>
             ))}
           </Select>

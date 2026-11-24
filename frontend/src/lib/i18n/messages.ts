@@ -461,6 +461,112 @@ export const messages = {
     "Visit Help in the sidebar anytime for a written walkthrough of every feature, or replay this tour from there.",
     "हर सुविधा की लिखी हुई जानकारी के लिए कभी भी साइडबार में मदद खोलें, या वहीं से यह टूर दोबारा देखें।",
   ],
+
+  // ---- settings
+  "set.title": ["Settings", "सेटिंग्स"],
+  "set.profileBusiness": ["Business profile", "कारोबार की प्रोफ़ाइल"],
+  "set.profilePersonal": ["Your profile", "आपकी प्रोफ़ाइल"],
+  "set.saved": ["Saved.", "सेव हो गया।"],
+  "set.saveFailed": ["Failed to save changes", "बदलाव सेव नहीं हो सके"],
+  "set.saveChanges": ["Save changes", "बदलाव सेव करें"],
+  "set.businessType": ["Business type", "कारोबार का प्रकार"],
+  "set.industry": ["Industry", "क्षेत्र"],
+  "set.country": ["Country", "देश"],
+  "set.currency": ["Currency", "मुद्रा"],
+  "set.currency.USD": ["USD — US dollar ($)", "USD — अमेरिकी डॉलर ($)"],
+  "set.currency.INR": ["INR — Indian rupee (₹)", "INR — भारतीय रुपया (₹)"],
+  "set.branches": ["Number of branches", "शाखाओं की संख्या"],
+  "set.whatsapp": ["WhatsApp number", "व्हाट्सऐप नंबर"],
+
+  // ---- invoice details
+  "set.inv.title": ["Invoice details", "बिल की जानकारी"],
+  "set.inv.text": [
+    "Printed on your invoices. Every field is optional; add your GSTIN if you are GST-registered.",
+    "आपके बिलों पर छपती है। हर खाना ज़रूरी नहीं; GST रजिस्टर्ड हैं तो अपना GSTIN डालें।",
+  ],
+  "set.inv.gstin": ["GSTIN", "GSTIN"],
+  "set.inv.gstinHint": ["e.g. 27AAPFU0939F1ZV", "जैसे 27AAPFU0939F1ZV"],
+  "set.inv.address": ["Address", "पता"],
+  "set.inv.addressHint": ["Shop number, street, area", "दुकान नंबर, गली, इलाका"],
+  "set.inv.city": ["City", "शहर"],
+  "set.inv.pin": ["PIN code", "पिन कोड"],
+  "set.inv.state": ["State", "राज्य"],
+  "set.inv.chooseState": ["Choose your state", "अपना राज्य चुनें"],
+  "set.inv.phone": ["Phone on invoices", "बिल पर छपने वाला फ़ोन"],
+  "set.inv.upi": ["UPI ID (so customers can pay)", "UPI ID (ताकि ग्राहक भुगतान कर सकें)"],
+
+  // ---- plan
+  "set.plan.title": ["Plan", "प्लान"],
+  "set.plan.summary": ["{plan} plan — {used} of {limit} {unit} used", "{plan} प्लान — {limit} में से {used} {unit} इस्तेमाल में"],
+  "set.plan.people": ["people", "लोग"],
+  "set.plan.teamMembers": ["team members", "टीम सदस्य"],
+  "set.plan.members": ["members", "सदस्य"],
+  "set.plan.budgetsUpTo": [", up to {n} budgets.", ", अधिकतम {n} बजट।"],
+  "set.plan.budgetsUnlimited": [", unlimited budgets.", ", असीमित बजट।"],
+  "set.plan.upgrade": ["Upgrade to {plan}", "{plan} में अपग्रेड करें"],
+  "set.plan.redirecting": ["Redirecting…", "आगे भेजा जा रहा है…"],
+  "set.plan.manageBilling": ["Manage billing", "बिलिंग संभालें"],
+  "set.plan.change": ["Change plan", "प्लान बदलें"],
+  "set.plan.ownerOnly": ["Only the business owner can change the plan.", "प्लान सिर्फ़ कारोबार का मालिक बदल सकता है।"],
+  "set.plan.beta": [
+    "Private beta: every plan is free and no payment is taken. Plans currently only set the team-size limit.",
+    "प्राइवेट बीटा: हर प्लान मुफ़्त है और कोई भुगतान नहीं लिया जाता। प्लान फ़िलहाल सिर्फ़ टीम का आकार तय करते हैं।",
+  ],
+  "set.plan.checkoutFailed": ["Failed to start checkout", "भुगतान शुरू नहीं हो सका"],
+  "set.plan.portalFailed": ["Failed to open billing portal", "बिलिंग पोर्टल नहीं खुल सका"],
+  "set.plan.changeFailed": ["Failed to change plan", "प्लान नहीं बदल सका"],
+
+  // ---- team
+  "set.team.title": ["Team members", "टीम सदस्य"],
+  "set.team.role": ["Role", "भूमिका"],
+  "set.team.status": ["Status", "स्थिति"],
+  "set.team.actions": ["Actions", "कार्रवाई"],
+  "set.team.remove": ["Remove", "हटाएँ"],
+  "set.team.inviteByEmail": ["Invite by email", "ईमेल से न्योता भेजें"],
+  "set.team.invite": ["Invite", "न्योता भेजें"],
+  "set.team.inviting": ["Inviting…", "न्योता भेजा जा रहा है…"],
+  "set.team.inviteFailed": ["Failed to invite team member", "न्योता नहीं भेजा जा सका"],
+  "set.team.cantSave": ["That change couldn't be saved.", "यह बदलाव सेव नहीं हो सका।"],
+  "set.team.accountOnly": [
+    "Only people who already have a Finverlo account can be invited.",
+    "सिर्फ़ उन्हीं को न्योता भेजा जा सकता है जिनका Finverlo खाता पहले से है।",
+  ],
+  "set.role.owner": ["owner", "मालिक"],
+  "set.role.admin": ["admin", "एडमिन"],
+  "set.role.accountant": ["accountant", "अकाउंटेंट"],
+  "set.role.viewer": ["viewer", "सिर्फ़ देखने वाला"],
+  "set.member.active": ["active", "चालू"],
+  "set.member.invited": ["invited", "न्योता भेजा"],
+  "set.member.removed": ["removed", "हटाया गया"],
+
+  // ---- firm and install
+  "set.firm.title": ["Accounting firm", "अकाउंटिंग फ़र्म"],
+  "set.firm.member": [
+    "You work for {names}. Clients, staff and activity are in the Firm section of the menu.",
+    "आप {names} के लिए काम करते हैं। क्लाइंट, स्टाफ़ और गतिविधि मेन्यू के फ़र्म वाले हिस्से में हैं।",
+  ],
+  "set.firm.open": ["Open firm", "फ़र्म खोलें"],
+  "set.firm.pitch": [
+    "Do the books for other businesses? Set up a firm to manage your clients from one place, with your own staff and roles. Your own business stays as it is.",
+    "दूसरे कारोबारों का हिसाब रखते हैं? अपने स्टाफ़ और भूमिकाओं के साथ सारे क्लाइंट एक जगह संभालने के लिए फ़र्म बनाएँ। आपका अपना कारोबार जैसा है वैसा ही रहेगा।",
+  ],
+  "set.firm.setup": ["Set up an accounting firm", "अकाउंटिंग फ़र्म बनाएँ"],
+  "set.install.title": ["Install app", "ऐप इंस्टॉल करें"],
+  "set.install.text": [
+    "Add Finverlo to your home screen or desktop for quicker access, like a native app.",
+    "तेज़ पहुँच के लिए Finverlo को अपनी होम स्क्रीन या डेस्कटॉप पर जोड़ें, असली ऐप की तरह।",
+  ],
+  "set.install.button": ["Install App", "ऐप इंस्टॉल करें"],
+  "set.install.ios": [
+    "On iPhone/iPad: open this site in Safari, then Share → Add to Home Screen.",
+    "iPhone/iPad पर: इस साइट को Safari में खोलें, फिर Share → Add to Home Screen चुनें।",
+  ],
+  "set.language.title": ["Language", "भाषा"],
+  "set.language.text": [
+    "The language of the app on this device. Messages sent on your behalf use the setting on the WhatsApp summary page.",
+    "इस डिवाइस पर ऐप की भाषा। आपकी ओर से भेजे जाने वाले संदेश व्हाट्सऐप सारांश पेज की सेटिंग से चलते हैं।",
+  ],
+  "set.plan.end": [".", "।"],
   // <<more messages>>
 } as const satisfies Record<string, readonly [string, string]>;
 

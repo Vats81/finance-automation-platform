@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/FormField";
 import { errorMessage, InlineError } from "@/components/ui/InlineError";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { startBillingPortalSession, startCheckoutSession } from "@/lib/api/billing";
 import { changeBusinessPlan, completeOnboarding } from "@/lib/api/business";
@@ -16,7 +17,9 @@ import { getIntegrationsStatus } from "@/lib/api/integrations";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { CURRENCY_OPTIONS } from "@/lib/format";
-import { GST_STATES, stateCodeFromGstin } from "@/lib/gst";
+import { GST_STATES, stateCodeFromGstin, stateName } from "@/lib/gst";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey, messages } from "@/lib/i18n/messages";
 import {
   inviteTeamMember,
   listTeamMembers,
@@ -48,6 +51,10 @@ const PERSONAL_TEAM_LIMITS: Record<BusinessPlan, number> = { free: 2, starter: 5
 export default function SettingsPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusiness, firms, refresh } = useCurrentBusiness();
+  const { t, lang } = useT();
+  // A label for a value the server sends (a role, a status); anything unknown is shown as it came.
+  const label = (prefix: string, value: string) =>
+    `${prefix}.${value}` in messages ? t(`${prefix}.${value}` as MessageKey) : value;
   const [form, setForm] = useState<CompleteOnboardingRequest>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -77,7 +84,7 @@ export default function SettingsPage() {
       });
       window.location.href = checkout_url;
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "Failed to start checkout");
+      setPlanError(err instanceof Error ? err.message : t("set.plan.checkoutFailed"));
       setIsRedirectingToBilling(false);
     }
   }
@@ -90,7 +97,7 @@ export default function SettingsPage() {
       const { portal_url } = await startBillingPortalSession(getAccessToken(), currentBusiness.business.id);
       window.location.href = portal_url;
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "Failed to open billing portal");
+      setPlanError(err instanceof Error ? err.message : t("set.plan.portalFailed"));
       setIsRedirectingToBilling(false);
     }
   }
@@ -140,7 +147,7 @@ export default function SettingsPage() {
       await changeBusinessPlan(getAccessToken(), currentBusiness.business.id, { plan: selectedPlan });
       await refresh();
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "Failed to change plan");
+      setPlanError(err instanceof Error ? err.message : t("set.plan.changeFailed"));
     } finally {
       setIsChangingPlan(false);
     }
@@ -159,7 +166,7 @@ export default function SettingsPage() {
       setInviteEmail("");
       await refreshMembers();
     } catch (err) {
-      setInviteError(err instanceof Error ? err.message : "Failed to invite team member");
+      setInviteError(err instanceof Error ? err.message : t("set.team.inviteFailed"));
     } finally {
       setIsInviting(false);
     }
@@ -174,7 +181,7 @@ export default function SettingsPage() {
     try {
       await action();
     } catch (err) {
-      setMemberActionError(errorMessage(err, "That change couldn't be saved."));
+      setMemberActionError(errorMessage(err, t("set.team.cantSave")));
     }
     await refreshMembers().catch((err) => setMembersError(errorMessage(err)));
   }
@@ -228,7 +235,7 @@ export default function SettingsPage() {
       await refresh();
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save changes");
+      setError(err instanceof Error ? err.message : t("set.saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -238,25 +245,25 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("set.title")}</h1>
 
       <Card className="max-w-2xl">
-        <h2 className="mb-1 text-lg font-semibold">{isPersonal ? "Your profile" : "Business profile"}</h2>
+        <h2 className="mb-1 text-lg font-semibold">{isPersonal ? t("set.profilePersonal") : t("set.profileBusiness")}</h2>
         <p className="mb-6 text-sm text-slate-500">{currentBusiness.business.name}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {saved && <p className="text-sm text-emerald-600">Saved.</p>}
+          {saved && <p className="text-sm text-emerald-600">{t("set.saved")}</p>}
 
           {!isPersonal && (
             <>
-              <FormField label="Business type">
+              <FormField label={t("set.businessType")}>
                 <Input
                   value={form.business_type ?? ""}
                   onChange={(e) => setForm({ ...form, business_type: e.target.value })}
                 />
               </FormField>
-              <FormField label="Industry">
+              <FormField label={t("set.industry")}>
                 <Input
                   value={form.industry ?? ""}
                   onChange={(e) => setForm({ ...form, industry: e.target.value })}
@@ -265,20 +272,20 @@ export default function SettingsPage() {
             </>
           )}
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="Country">
+            <FormField label={t("set.country")}>
               <Input
                 value={form.country ?? ""}
                 onChange={(e) => setForm({ ...form, country: e.target.value })}
               />
             </FormField>
-            <FormField label="Currency">
+            <FormField label={t("set.currency")}>
               <Select
                 value={form.currency ?? "USD"}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
               >
-                {CURRENCY_OPTIONS.map(({ code, label }) => (
+                {CURRENCY_OPTIONS.map(({ code }) => (
                   <option key={code} value={code}>
-                    {label}
+                    {t(`set.currency.${code}` as MessageKey)}
                   </option>
                 ))}
               </Select>
@@ -286,7 +293,7 @@ export default function SettingsPage() {
           </div>
           {!isPersonal && (
             <div className="grid grid-cols-2 gap-4">
-              <FormField label="Number of branches">
+              <FormField label={t("set.branches")}>
                 <Input
                   type="number"
                   min={1}
@@ -294,7 +301,7 @@ export default function SettingsPage() {
                   onChange={(e) => setForm({ ...form, number_of_branches: Number(e.target.value) })}
                 />
               </FormField>
-              <FormField label="WhatsApp number">
+              <FormField label={t("set.whatsapp")}>
                 <Input
                   value={form.whatsapp_number ?? ""}
                   onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
@@ -305,15 +312,15 @@ export default function SettingsPage() {
           {!isPersonal && (
             <div className="space-y-4 border-t border-slate-200 pt-4">
               <div>
-                <h3 className="text-base font-semibold">Invoice details</h3>
+                <h3 className="text-base font-semibold">{t("set.inv.title")}</h3>
                 <p className="text-sm text-slate-500">
-                  Printed on your invoices. Every field is optional; add your GSTIN if you are GST-registered.
+                  {t("set.inv.text")}
                 </p>
               </div>
-              <FormField label="GSTIN">
+              <FormField label={t("set.inv.gstin")}>
                 <Input
                   maxLength={15}
-                  placeholder="e.g. 27AAPFU0939F1ZV"
+                  placeholder={t("set.inv.gstinHint")}
                   value={form.gstin ?? ""}
                   onChange={(e) => {
                     const gstin = e.target.value.toUpperCase();
@@ -322,23 +329,23 @@ export default function SettingsPage() {
                   }}
                 />
               </FormField>
-              <FormField label="Address">
+              <FormField label={t("set.inv.address")}>
                 <Input
                   maxLength={255}
-                  placeholder="Shop number, street, area"
+                  placeholder={t("set.inv.addressHint")}
                   value={form.address_line ?? ""}
                   onChange={(e) => setForm({ ...form, address_line: e.target.value })}
                 />
               </FormField>
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="City">
+                <FormField label={t("set.inv.city")}>
                   <Input
                     maxLength={120}
                     value={form.city ?? ""}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
                   />
                 </FormField>
-                <FormField label="PIN code">
+                <FormField label={t("set.inv.pin")}>
                   <Input
                     inputMode="numeric"
                     maxLength={6}
@@ -347,28 +354,28 @@ export default function SettingsPage() {
                   />
                 </FormField>
               </div>
-              <FormField label="State">
+              <FormField label={t("set.inv.state")}>
                 <Select
                   value={form.state_code ?? ""}
                   onChange={(e) => setForm({ ...form, state_code: e.target.value })}
                 >
-                  <option value="">Choose your state</option>
+                  <option value="">{t("set.inv.chooseState")}</option>
                   {GST_STATES.map((s) => (
                     <option key={s.code} value={s.code}>
-                      {s.name} ({s.code})
+                      {stateName(s.code, lang)} ({s.code})
                     </option>
                   ))}
                 </Select>
               </FormField>
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Phone on invoices">
+                <FormField label={t("set.inv.phone")}>
                   <Input
                     maxLength={32}
                     value={form.phone ?? ""}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   />
                 </FormField>
-                <FormField label="UPI ID (so customers can pay)">
+                <FormField label={t("set.inv.upi")}>
                   <Input
                     maxLength={100}
                     placeholder="name@bank"
@@ -380,22 +387,25 @@ export default function SettingsPage() {
             </div>
           )}
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving…" : "Save changes"}
+            {isSubmitting ? t("common.saving") : t("set.saveChanges")}
           </Button>
         </form>
       </Card>
 
       <Card className="mt-6 max-w-2xl">
-        <h2 className="mb-1 text-lg font-semibold">Plan</h2>
+        <h2 className="mb-1 text-lg font-semibold">{t("set.plan.title")}</h2>
         <p className="mb-4 text-sm text-slate-500">
-          {planLabel(currentBusiness.business.plan)} plan —{" "}
-          {members ? members.filter((m) => m.status === "active").length : "…"} of{" "}
-          {teamLimit(currentBusiness.business.plan)} {isPersonal ? "people" : "team members"} used
+          {t("set.plan.summary", {
+            plan: planLabel(currentBusiness.business.plan),
+            used: members ? members.filter((m) => m.status === "active").length : "…",
+            limit: teamLimit(currentBusiness.business.plan),
+            unit: isPersonal ? t("set.plan.people") : t("set.plan.teamMembers"),
+          })}
           {isPersonal && currentBusiness.business.plan === "free"
-            ? `, up to ${FREE_PERSONAL_BUDGETS} budgets.`
+            ? t("set.plan.budgetsUpTo", { n: FREE_PERSONAL_BUDGETS })
             : isPersonal
-              ? ", unlimited budgets."
-              : "."}
+              ? t("set.plan.budgetsUnlimited")
+              : t("set.plan.end")}
         </p>
         {planError && <p className="mb-3 text-sm text-red-600">{planError}</p>}
         {isOwner ? (
@@ -405,26 +415,26 @@ export default function SettingsPage() {
                 {(isPersonal ? (["starter"] as BusinessPlan[]) : (["starter", "pro"] as BusinessPlan[])).map(
                   (plan) => (
                     <Button key={plan} onClick={() => handleUpgrade(plan)} disabled={isRedirectingToBilling}>
-                      {isRedirectingToBilling ? "Redirecting…" : `Upgrade to ${planLabel(plan)}`}
+                      {isRedirectingToBilling ? t("set.plan.redirecting") : t("set.plan.upgrade", { plan: planLabel(plan) })}
                     </Button>
                   )
                 )}
               </div>
             ) : (
               <Button onClick={handleManageBilling} disabled={isRedirectingToBilling}>
-                {isRedirectingToBilling ? "Redirecting…" : "Manage billing"}
+                {isRedirectingToBilling ? t("set.plan.redirecting") : t("set.plan.manageBilling")}
               </Button>
             )
           ) : (
             <div className="flex items-end gap-3">
-              <FormField label="Change plan">
+              <FormField label={t("set.plan.change")}>
                 <Select
                   value={selectedPlan}
                   onChange={(e) => setSelectedPlan(e.target.value as BusinessPlan)}
                 >
                   {(isPersonal ? PERSONAL_PLANS : BUSINESS_PLANS).map((plan) => (
                     <option key={plan} value={plan}>
-                      {planLabel(plan)} ({teamLimit(plan)} {isPersonal ? "people" : "members"})
+                      {planLabel(plan)} ({teamLimit(plan)} {isPersonal ? t("set.plan.people") : t("set.plan.members")})
                     </option>
                   ))}
                 </Select>
@@ -433,23 +443,22 @@ export default function SettingsPage() {
                 onClick={handleChangePlan}
                 disabled={isChangingPlan || selectedPlan === currentBusiness.business.plan}
               >
-                {isChangingPlan ? "Saving…" : "Change plan"}
+                {isChangingPlan ? t("common.saving") : t("set.plan.change")}
               </Button>
             </div>
           )
         ) : (
-          <p className="text-xs text-slate-400">Only the business owner can change the plan.</p>
+          <p className="text-xs text-slate-400">{t("set.plan.ownerOnly")}</p>
         )}
         {!billingConnected && (
           <p className="mt-2 text-xs text-slate-400">
-            Private beta: every plan is free and no payment is taken. Plans currently only set the
-            team-size limit.
+            {t("set.plan.beta")}
           </p>
         )}
       </Card>
 
       <Card className="mt-6 max-w-2xl">
-        <h2 className="mb-4 text-lg font-semibold">Team members</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("set.team.title")}</h2>
 
         {memberActionError && <p className="mb-3 text-sm text-red-600">{memberActionError}</p>}
         {membersError ? (
@@ -457,16 +466,16 @@ export default function SettingsPage() {
             <InlineError message={membersError} onRetry={loadMembers} />
           </div>
         ) : !members ? (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm text-slate-500">{t("common.loading")}</p>
         ) : (
           <table className="mb-4 w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-slate-500">
-                <th className="py-2 pr-4 font-medium">Name</th>
-                <th className="py-2 pr-4 font-medium">Email</th>
-                <th className="py-2 pr-4 font-medium">Role</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                {canManageMembers && <th className="py-2 pr-4 font-medium">Actions</th>}
+                <th className="py-2 pr-4 font-medium">{t("common.name")}</th>
+                <th className="py-2 pr-4 font-medium">{t("common.email")}</th>
+                <th className="py-2 pr-4 font-medium">{t("set.team.role")}</th>
+                <th className="py-2 pr-4 font-medium">{t("set.team.status")}</th>
+                {canManageMembers && <th className="py-2 pr-4 font-medium">{t("set.team.actions")}</th>}
               </tr>
             </thead>
             <tbody>
@@ -486,22 +495,22 @@ export default function SettingsPage() {
                         >
                           {BUSINESS_ROLES.filter((r) => r !== "owner").map((role) => (
                             <option key={role} value={role}>
-                              {role}
+                              {label("set.role", role)}
                             </option>
                           ))}
                         </Select>
                       ) : (
-                        member.role
+                        label("set.role", member.role)
                       )}
                     </td>
                     <td className="py-2 pr-4">
-                      <Badge tone={MEMBERSHIP_STATUS_TONE[member.status] ?? "neutral"}>{member.status}</Badge>
+                      <Badge tone={MEMBERSHIP_STATUS_TONE[member.status] ?? "neutral"}>{label("set.member", member.status)}</Badge>
                     </td>
                     {canManageMembers && (
                       <td className="py-2 pr-4">
                         {!isOwnerRow && member.status === "active" && (
                           <Button variant="danger" onClick={() => handleRemove(member.membership_id)}>
-                            Remove
+                            {t("set.team.remove")}
                           </Button>
                         )}
                       </td>
@@ -517,7 +526,7 @@ export default function SettingsPage() {
           <>
           {inviteError && <p className="mb-2 text-sm text-red-600">{inviteError}</p>}
           <form onSubmit={handleInvite} className="flex items-end gap-3">
-            <FormField label="Invite by email">
+            <FormField label={t("set.team.inviteByEmail")}>
               <Input
                 type="email"
                 required
@@ -526,47 +535,45 @@ export default function SettingsPage() {
                 onChange={(e) => setInviteEmail(e.target.value)}
               />
             </FormField>
-            <FormField label="Role">
+            <FormField label={t("set.team.role")}>
               <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as BusinessRole)}>
                 {BUSINESS_ROLES.filter((r) => r !== "owner").map((role) => (
                   <option key={role} value={role}>
-                    {role}
+                    {label("set.role", role)}
                   </option>
                 ))}
               </Select>
             </FormField>
             <Button type="submit" disabled={isInviting}>
-              {isInviting ? "Inviting…" : "Invite"}
+              {isInviting ? t("set.team.inviting") : t("set.team.invite")}
             </Button>
           </form>
           </>
         )}
         <p className="mt-3 text-xs text-slate-400">
-          Only people who already have a Finverlo account can be invited.
+          {t("set.team.accountOnly")}
         </p>
       </Card>
 
       {!isPersonal && (
         <Card className="mt-6 max-w-2xl">
-          <h2 className="mb-1 text-lg font-semibold">Accounting firm</h2>
+          <h2 className="mb-1 text-lg font-semibold">{t("set.firm.title")}</h2>
           {firms.length > 0 ? (
             <>
               <p className="mb-4 text-sm text-slate-500">
-                You work for {firms.map((f) => f.name).join(", ")}. Clients, staff and activity are in the Firm
-                section of the menu.
+                {t("set.firm.member", { names: firms.map((f) => f.name).join(", ") })}
               </p>
               <Link href="/app/firm">
-                <Button variant="secondary">Open firm</Button>
+                <Button variant="secondary">{t("set.firm.open")}</Button>
               </Link>
             </>
           ) : (
             <>
               <p className="mb-4 text-sm text-slate-500">
-                Do the books for other businesses? Set up a firm to manage your clients from one place, with
-                your own staff and roles. Your own business stays as it is.
+                {t("set.firm.pitch")}
               </p>
               <Link href="/app/firm/new">
-                <Button variant="secondary">Set up an accounting firm</Button>
+                <Button variant="secondary">{t("set.firm.setup")}</Button>
               </Link>
             </>
           )}
@@ -574,13 +581,19 @@ export default function SettingsPage() {
       )}
 
       <Card className="mt-6 max-w-2xl">
-        <h2 className="mb-1 text-lg font-semibold">Install app</h2>
+        <h2 className="mb-1 text-lg font-semibold">{t("set.language.title")}</h2>
+        <p className="mb-4 text-sm text-slate-500">{t("set.language.text")}</p>
+        <LanguageSwitcher />
+      </Card>
+
+      <Card className="mt-6 max-w-2xl">
+        <h2 className="mb-1 text-lg font-semibold">{t("set.install.title")}</h2>
         <p className="mb-4 text-sm text-slate-500">
-          Add Finverlo to your home screen or desktop for quicker access, like a native app.
+          {t("set.install.text")}
         </p>
         <InstallAppButton />
         <p className="mt-2 text-xs text-slate-400">
-          On iPhone/iPad: open this site in Safari, then Share → Add to Home Screen.
+          {t("set.install.ios")}
         </p>
       </Card>
     </div>

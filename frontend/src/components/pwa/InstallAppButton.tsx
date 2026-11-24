@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 // `beforeinstallprompt` is a real, widely-supported (Chrome/Edge/Android)
 // event with no standard TS DOM typing — declared by hand here rather than
@@ -18,6 +19,7 @@ interface BeforeInstallPromptEvent extends Event {
  * can't install the app anyway.
  */
 export function InstallAppButton({ className }: { className?: string }) {
+  const { t } = useT();
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function InstallAppButton({ className }: { className?: string }) {
 
   return (
     <Button variant="secondary" className={className} onClick={handleInstall}>
-      Install App
+      {t("set.install.button")}
     </Button>
   );
 }

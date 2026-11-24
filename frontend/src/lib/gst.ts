@@ -41,8 +41,52 @@ export const GST_STATES: { code: string; name: string }[] = [
   { code: "99", name: "Centre Jurisdiction" },
 ];
 
-export function stateName(code: string | null | undefined): string {
-  return GST_STATES.find((s) => s.code === code)?.name ?? "";
+const GST_STATE_NAMES_HI: Record<string, string> = {
+  "01": "जम्मू और कश्मीर",
+  "02": "हिमाचल प्रदेश",
+  "03": "पंजाब",
+  "04": "चंडीगढ़",
+  "05": "उत्तराखंड",
+  "06": "हरियाणा",
+  "07": "दिल्ली",
+  "08": "राजस्थान",
+  "09": "उत्तर प्रदेश",
+  "10": "बिहार",
+  "11": "सिक्किम",
+  "12": "अरुणाचल प्रदेश",
+  "13": "नागालैंड",
+  "14": "मणिपुर",
+  "15": "मिज़ोरम",
+  "16": "त्रिपुरा",
+  "17": "मेघालय",
+  "18": "असम",
+  "19": "पश्चिम बंगाल",
+  "20": "झारखंड",
+  "21": "ओडिशा",
+  "22": "छत्तीसगढ़",
+  "23": "मध्य प्रदेश",
+  "24": "गुजरात",
+  "26": "दादरा और नगर हवेली तथा दमन और दीव",
+  "27": "महाराष्ट्र",
+  "29": "कर्नाटक",
+  "30": "गोवा",
+  "31": "लक्षद्वीप",
+  "32": "केरल",
+  "33": "तमिलनाडु",
+  "34": "पुडुचेरी",
+  "35": "अंडमान और निकोबार द्वीप समूह",
+  "36": "तेलंगाना",
+  "37": "आंध्र प्रदेश",
+  "38": "लद्दाख",
+  "97": "अन्य क्षेत्र",
+  "99": "केंद्र का क्षेत्राधिकार",
+};
+
+/** A state's name in the chosen language ("hi" or English). Empty when the code is unknown. */
+export function stateName(code: string | null | undefined, lang: "en" | "hi" = "en"): string {
+  const state = GST_STATES.find((s) => s.code === code);
+  if (!state) return "";
+  return lang === "hi" ? (GST_STATE_NAMES_HI[state.code] ?? state.name) : state.name;
 }
 
 /** The state a GSTIN belongs to (its first two digits), or "" while it is still being typed. */
