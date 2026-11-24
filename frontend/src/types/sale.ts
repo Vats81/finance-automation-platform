@@ -71,3 +71,26 @@ export interface CreateSaleRequest {
 // record rather than a sparse patch, matching how the backend's
 // Sale.update_details works (see its docstring).
 export type UpdateSaleRequest = CreateSaleRequest;
+
+export interface ReceivableInvoice {
+  sale_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string | null;
+  outstanding: string;
+  days_overdue: number;
+}
+
+export interface ReceivableCustomer {
+  customer_id: string | null;
+  name: string;
+  phone: string | null;
+  outstanding: string;
+  days_overdue: number;
+  invoices: ReceivableInvoice[];
+}
+
+export interface ReceivablesResponse {
+  total_outstanding: string;
+  customers: ReceivableCustomer[];
+}

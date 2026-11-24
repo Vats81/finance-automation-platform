@@ -237,6 +237,8 @@ _PROBES: list[tuple[str, str, Any, tuple[BusinessRole, ...]]] = [
     ("POST", "/businesses/{b}/expenses", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/customers", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/products", {}, CAN_WRITE),
+    ("GET", "/businesses/{b}/sales/receivables", None, ANY_MEMBER),
+    ("GET", "/businesses/{b}/sales/next-invoice-number", None, ANY_MEMBER),
     ("GET", "/businesses/{b}/sales/" + _ID + "/invoice-pdf", None, ANY_MEMBER),
     ("POST", "/businesses/{b}/sales/" + _ID + "/share-link", None, CAN_WRITE),
     ("POST", "/businesses/{b}/sales/" + _ID + "/share-link/revoke", None, CAN_WRITE),
@@ -598,3 +600,28 @@ def test_a_voided_invoice_cannot_be_shared(world: tuple[World, TestClient]) -> N
     assert client.post(void_url, headers={"x-test-user": "owner_a"}).status_code == 200
 
     assert _share(client, w, sale["id"]).status_code == 422
+
+
+def test_the_udhaar_list_and_the_next_invoice_number_come_through_the_api(
+    world: tuple[World, TestClient],
+) -> None:
+    w, client = world
+    owner = {"x-test-user": "owner_a"}
+    customers = f"/api/v1/businesses/{w.business_a}/customers"
+    customer = client.post(customers, headers=owner, json={"name": "Asha", "phone": "9123456780"}).json()
+    body = _gst_sale_body()
+    body["customer_id"] = customer["id"]
+    sales = f"/api/v1/businesses/{w.business_a}/sales"
+    assert client.post(sales, headers=owner, json=body).status_code == 201
+
+    owed = client.get(f"{sales}/receivables", headers={"x-test-user": "viewer"})
+
+    assert owed.status_code == 200, owed.text
+    data = owed.json()
+    assert Decimal(data["total_outstanding"]) == Decimal("1180.00")
+    (row,) = data["customers"]
+    assert row["name"] == "Asha" and row["phone"] == "9123456780"
+    assert [i["invoice_number"] for i in row["invoices"]] == ["INV-GST-1"]
+
+    number = client.get(f"{sales}/next-invoice-number", headers=owner)
+    assert number.status_code == 200 and number.json() == {"invoice_number": "INV-GST-2"}

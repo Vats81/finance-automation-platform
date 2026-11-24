@@ -1,4 +1,6 @@
 import uuid
+from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request, Response
 
@@ -12,7 +14,11 @@ from app.identity.domain.entities import User
 from app.sales.api.invoice_rendering import render_invoice_response
 from app.sales.api.schemas import (
     CreateSaleRequest,
+    NextInvoiceNumberResponse,
     PagedSalesResponse,
+    ReceivableCustomerSchema,
+    ReceivableInvoiceSchema,
+    ReceivablesResponse,
     RecordSalePaymentRequest,
     RevokeShareLinksResponse,
     SaleResponse,
@@ -37,12 +43,17 @@ from app.sales.application.commands.update_sale import (
     UpdateSaleUseCase,
 )
 from app.sales.application.commands.void_sale import VoidSaleCommand, VoidSaleUseCase
+from app.sales.application.queries.get_receivables import GetReceivablesQuery, GetReceivablesUseCase
 from app.sales.application.queries.get_sale import GetSaleQuery, GetSaleUseCase
 from app.sales.application.queries.list_outstanding_sales import (
     ListOutstandingSalesQuery,
     ListOutstandingSalesUseCase,
 )
 from app.sales.application.queries.list_sales import ListSalesQuery, ListSalesUseCase
+from app.sales.application.queries.next_invoice_number import (
+    NextInvoiceNumberQuery,
+    NextInvoiceNumberUseCase,
+)
 from app.shared.application.pagination import PageRequest
 
 router = APIRouter(prefix="/businesses/{business_id}/sales", tags=["sales"])
@@ -122,6 +133,56 @@ async def list_outstanding_sales(
     use_case = ListOutstandingSalesUseCase(uow)
     sales = await use_case.execute(ListOutstandingSalesQuery(business_id=business_id))
     return [SaleResponse.from_domain(s) for s in sales]
+
+
+@router.get("/next-invoice-number", response_model=NextInvoiceNumberResponse)
+async def get_next_invoice_number(
+    business_id: uuid.UUID,
+    _actor: User = Depends(require_business_role()),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> NextInvoiceNumberResponse:
+    """The next number in this business's invoice series (registered before /{sale_id}, like /outstanding)."""
+    number = await NextInvoiceNumberUseCase(uow).execute(NextInvoiceNumberQuery(business_id=business_id))
+    return NextInvoiceNumberResponse(invoice_number=number)
+
+
+@router.get("/receivables", response_model=ReceivablesResponse)
+async def get_receivables(
+    business_id: uuid.UUID,
+    _actor: User = Depends(require_business_role()),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> ReceivablesResponse:
+    """Who owes the business money (the udhaar list), by customer, largest first."""
+    groups = await GetReceivablesUseCase(uow).execute(
+        GetReceivablesQuery(business_id=business_id, today=date.today())
+    )
+    customers, _ = await uow.customers.list_for_business(business_id, offset=0, limit=10_000)
+    by_id = {c.id: c for c in customers}
+    rows = []
+    for group in groups:
+        customer = by_id.get(group.customer_id) if group.customer_id else None
+        rows.append(
+            ReceivableCustomerSchema(
+                customer_id=group.customer_id,
+                name=customer.name if customer else "Walk-in customers",
+                phone=customer.phone if customer else None,
+                outstanding=group.outstanding,
+                days_overdue=group.days_overdue,
+                invoices=[
+                    ReceivableInvoiceSchema(
+                        sale_id=i.sale_id,
+                        invoice_number=i.invoice_number,
+                        invoice_date=i.invoice_date,
+                        due_date=i.due_date,
+                        outstanding=i.outstanding,
+                        days_overdue=i.days_overdue,
+                    )
+                    for i in group.invoices
+                ],
+            )
+        )
+    total = sum((g.outstanding for g in groups), Decimal("0"))
+    return ReceivablesResponse(total_outstanding=total, customers=rows)
 
 
 @router.get("/{sale_id}", response_model=SaleResponse)

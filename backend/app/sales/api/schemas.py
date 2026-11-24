@@ -135,3 +135,30 @@ class ShareLinkResponse(BaseModel):
 
 class RevokeShareLinksResponse(BaseModel):
     revoked: int
+
+
+class NextInvoiceNumberResponse(BaseModel):
+    invoice_number: str
+
+
+class ReceivableInvoiceSchema(BaseModel):
+    sale_id: uuid.UUID
+    invoice_number: str
+    invoice_date: date
+    due_date: date | None
+    outstanding: Decimal
+    days_overdue: int
+
+
+class ReceivableCustomerSchema(BaseModel):
+    customer_id: uuid.UUID | None
+    name: str
+    phone: str | None
+    outstanding: Decimal
+    days_overdue: int
+    invoices: list[ReceivableInvoiceSchema]
+
+
+class ReceivablesResponse(BaseModel):
+    total_outstanding: Decimal
+    customers: list[ReceivableCustomerSchema]

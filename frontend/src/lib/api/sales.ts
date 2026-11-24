@@ -1,6 +1,12 @@
 import { ApiError, apiFetch } from "@/lib/api/client";
 import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
-import { CreateSaleRequest, PagedSalesResponse, SaleResponse, UpdateSaleRequest } from "@/types/sale";
+import {
+  CreateSaleRequest,
+  PagedSalesResponse,
+  ReceivablesResponse,
+  SaleResponse,
+  UpdateSaleRequest,
+} from "@/types/sale";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -113,4 +119,18 @@ export function revokeInvoiceShareLinks(
   return apiFetch<{ revoked: number }>(`/businesses/${businessId}/sales/${saleId}/share-link/revoke`, token, {
     method: "POST",
   });
+}
+
+/** Who owes the business money (the udhaar list), by customer, largest first. */
+export function getReceivables(token: string | null, businessId: string): Promise<ReceivablesResponse> {
+  return apiFetch<ReceivablesResponse>(`/businesses/${businessId}/sales/receivables`, token);
+}
+
+/** The next number in the business's own invoice series, such as INV-0041 after INV-0040. */
+export async function getNextInvoiceNumber(token: string | null, businessId: string): Promise<string> {
+  const result = await apiFetch<{ invoice_number: string }>(
+    `/businesses/${businessId}/sales/next-invoice-number`,
+    token
+  );
+  return result.invoice_number;
 }

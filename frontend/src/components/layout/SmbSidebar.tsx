@@ -7,6 +7,7 @@ import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 const NAV_ITEMS = [
   { href: "/app/dashboard", label: "Overview" },
   { href: "/app/sales", label: "Sales" },
+  { href: "/app/udhaar", label: "Udhaar" },
   { href: "/app/expenses", label: "Expenses" },
   { href: "/app/purchases", label: "Purchases" },
   { href: "/app/inventory", label: "Inventory" },

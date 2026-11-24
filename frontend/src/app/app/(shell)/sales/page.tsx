@@ -29,9 +29,14 @@ export default function SalesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Sales</h1>
-        <Link href="/app/sales/new">
-          <Button>New sale</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/app/sales/quick">
+            <Button variant="secondary">Quick sale</Button>
+          </Link>
+          <Link href="/app/sales/new">
+            <Button>New sale</Button>
+          </Link>
+        </div>
       </div>
 
       <Card>

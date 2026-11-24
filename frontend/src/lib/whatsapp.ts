@@ -36,3 +36,20 @@ export function invoiceMessage(args: {
     `dated ${args.invoiceDate}. Total: ${args.total}.${owing}\n\nView or download it here: ${args.url}`
   );
 }
+
+/** A polite payment reminder for what a customer owes (the udhaar list). */
+export function reminderMessage(args: {
+  customerName: string;
+  businessName: string;
+  amount: string;
+  invoiceNumbers: string[];
+  upiId?: string | null;
+}): string {
+  const shown = args.invoiceNumbers.slice(0, 3).join(", ");
+  const more = args.invoiceNumbers.length > 3 ? ` and ${args.invoiceNumbers.length - 3} more` : "";
+  const pay = args.upiId ? ` You can pay by UPI to ${args.upiId}.` : "";
+  return (
+    `Hello ${args.customerName}, a gentle reminder from ${args.businessName}: ${args.amount} is pending ` +
+    `(${shown}${more}).${pay} Kindly pay when you can. Thank you!`
+  );
+}
