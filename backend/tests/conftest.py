@@ -9,6 +9,7 @@ if Docker isn't reachable (see `docker_available`).
 
 import base64
 import json
+import os
 import subprocess
 from collections.abc import AsyncGenerator
 
@@ -53,6 +54,10 @@ def docker_available() -> bool:
 
 @pytest.fixture(scope="session")
 def postgres_container(docker_available: bool):
+    if os.environ.get("TEST_DATABASE_URL"):
+        # An already-running Postgres (no Docker needed): the integration tests use it instead of a container.
+        yield None
+        return
     if not docker_available:
         pytest.skip("Docker is not available in this environment")
 
@@ -62,9 +67,13 @@ def postgres_container(docker_available: bool):
         yield container
 
 
-@pytest_asyncio.fixture(scope="session")
+# Per test, not per session: a session-scoped async fixture needs a session-scoped event loop, which this
+# pytest-asyncio does not give it. create_all on an already-built schema is cheap.
+@pytest_asyncio.fixture
 async def engine(postgres_container) -> AsyncGenerator[AsyncEngine, None]:
-    url = postgres_container.get_connection_url().replace("psycopg2", "asyncpg")
+    url = os.environ.get("TEST_DATABASE_URL") or postgres_container.get_connection_url().replace(
+        "psycopg2", "asyncpg"
+    )
     test_engine = create_async_engine(url)
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
