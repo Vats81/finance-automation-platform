@@ -10,8 +10,10 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { CreateVendorRequest } from "@/types/vendor";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function NewVendorPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
@@ -29,14 +31,14 @@ export default function NewVendorPage() {
       router.push(`/app/vendors/${vendor.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
-      setError(err instanceof Error ? err.message : "Failed to create vendor");
+      setError(err instanceof Error ? err.message : t("s.failed_to_create_vendor"));
       setIsSubmitting(false);
     }
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">New vendor</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("s.new_vendor")}</h1>
       <Card className="max-w-lg">
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         <BusinessVendorForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />

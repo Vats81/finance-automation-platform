@@ -14,6 +14,7 @@ import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { PurchaseResponse } from "@/types/purchase";
 import { SaleResponse } from "@/types/sale";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 type DueBucket = "overdue" | "due_today" | "due_this_week" | "later" | "no_due_date";
 
@@ -89,20 +90,21 @@ function purchasesToRows(purchases: PurchaseResponse[], vendorNames: Record<stri
 }
 
 function PaymentsTable({ rows }: { rows: PaymentRow[] }) {
+  const { t, label } = useT();
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-500">Nothing outstanding.</p>;
+    return <p className="text-sm text-slate-500">{t("s.nothing_outstanding")}</p>;
   }
 
   return (
     <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-          <th className="py-2 pr-4">Reference</th>
-          <th className="py-2 pr-4">Counterparty</th>
-          <th className="py-2 pr-4">Due date</th>
-          <th className="py-2 pr-4">Due</th>
-          <th className="py-2 pr-4">Outstanding</th>
-          <th className="py-2 pr-4">Payment</th>
+          <th className="py-2 pr-4">{t("s.reference")}</th>
+          <th className="py-2 pr-4">{t("s.counterparty")}</th>
+          <th className="py-2 pr-4">{t("s.due_date")}</th>
+          <th className="py-2 pr-4">{t("s.due")}</th>
+          <th className="py-2 pr-4">{t("sales.col.outstanding")}</th>
+          <th className="py-2 pr-4">{t("quick.payment")}</th>
         </tr>
       </thead>
       <tbody>
@@ -123,7 +125,7 @@ function PaymentsTable({ rows }: { rows: PaymentRow[] }) {
               <td className="py-2 pr-4 text-slate-600">{formatCurrency(row.outstandingAmount)}</td>
               <td className="py-2 pr-4">
                 <Badge tone={PAYMENT_STATUS_TONE[row.paymentStatus] ?? "neutral"}>
-                  {row.paymentStatus.replace("_", " ")}
+                  {label("sales.status", row.paymentStatus)}
                 </Badge>
               </td>
             </tr>
@@ -135,6 +137,7 @@ function PaymentsTable({ rows }: { rows: PaymentRow[] }) {
 }
 
 export default function PaymentsPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const [sales, setSales] = useState<SaleResponse[] | null>(null);
@@ -159,18 +162,19 @@ export default function PaymentsPage() {
         setCustomerNames(Object.fromEntries(customersRes.items.map((c) => [c.id, c.name])));
         setVendorNames(Object.fromEntries(vendorsRes.items.map((v) => [v.id, v.legal_name])));
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load payments"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("s.failed_to_load_payments")));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Payments</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("nav.payments")}</h1>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <div className="space-y-6">
         <Card>
-          <h2 className="mb-4 text-lg font-semibold">Accounts Receivable</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t("s.accounts_receivable")}</h2>
           {!sales && !error ? (
             <div className="flex justify-center py-8">
               <Spinner />
@@ -181,7 +185,7 @@ export default function PaymentsPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-lg font-semibold">Accounts Payable</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t("s.accounts_payable")}</h2>
           {!purchases && !error ? (
             <div className="flex justify-center py-8">
               <Spinner />

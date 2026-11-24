@@ -10,8 +10,10 @@ import { listBusinessVendors } from "@/lib/api/businessVendors";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { VendorResponse } from "@/types/vendor";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function VendorsPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const [vendors, setVendors] = useState<VendorResponse[] | null>(null);
@@ -22,15 +24,16 @@ export default function VendorsPage() {
     const token = getAccessToken();
     listBusinessVendors(token, currentBusinessId)
       .then((page) => setVendors(page.items))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load vendors"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("s.failed_to_load_vendors")));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Vendors</h1>
+        <h1 className="text-2xl font-semibold">{t("nav.vendors")}</h1>
         <Link href="/app/vendors/new">
-          <Button>New vendor</Button>
+          <Button>{t("s.new_vendor")}</Button>
         </Link>
       </div>
 

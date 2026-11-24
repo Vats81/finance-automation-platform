@@ -18,6 +18,8 @@ interface LanguageContextValue {
   lang: Language;
   setLang: (lang: Language) => void;
   t: (key: MessageKey, vars?: Vars) => string;
+  /** The text for a value the server sends (a status, a role): `${prefix}.${value}` if there is one, else the value. */
+  label: (prefix: string, value: string) => string;
 }
 
 /** Fills {name}-style placeholders. A placeholder with no value is left as written. */
@@ -31,6 +33,7 @@ const LanguageContext = createContext<LanguageContextValue>({
   lang: "en",
   setLang: () => undefined,
   t: (key, vars) => translate("en", key, vars),
+  label: (_prefix, value) => value.replace(/_/g, " "),
 });
 
 function initialLanguage(): Language {
@@ -69,7 +72,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<LanguageContextValue>(
-    () => ({ lang, setLang, t: (key, vars) => translate(lang, key, vars) }),
+    () => ({
+      lang,
+      setLang,
+      t: (key, vars) => translate(lang, key, vars),
+      label: (prefix, value) => {
+        const key = `${prefix}.${value}`;
+        return key in messages ? translate(lang, key as MessageKey) : value.replace(/_/g, " ");
+      },
+    }),
     [lang, setLang]
   );
 

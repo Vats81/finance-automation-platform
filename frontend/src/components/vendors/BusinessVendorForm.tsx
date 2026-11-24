@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { CreateVendorRequest } from "@/types/vendor";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export function BusinessVendorForm({
   onSubmit,
@@ -13,6 +14,7 @@ export function BusinessVendorForm({
   onSubmit: (data: CreateVendorRequest) => void;
   isSubmitting: boolean;
 }) {
+  const { t } = useT();
   const [form, setForm] = useState<CreateVendorRequest>({
     legal_name: "",
     contact_email: "",
@@ -27,14 +29,14 @@ export function BusinessVendorForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Legal name">
+      <FormField label={t("s.legal_name")}>
         <Input
           required
           value={form.legal_name}
           onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
         />
       </FormField>
-      <FormField label="Contact email">
+      <FormField label={t("s.contact_email_2")}>
         <Input
           required
           type="email"
@@ -42,7 +44,7 @@ export function BusinessVendorForm({
           onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
         />
       </FormField>
-      <FormField label="Tax ID (EIN, ##-#######)">
+      <FormField label={t("s.tax_id_ein")}>
         <Input
           required
           placeholder="12-3456789"
@@ -52,7 +54,7 @@ export function BusinessVendorForm({
       </FormField>
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <FormField label="Street">
+          <FormField label={t("cust.street")}>
             <Input
               required
               value={form.address.street}
@@ -60,21 +62,21 @@ export function BusinessVendorForm({
             />
           </FormField>
         </div>
-        <FormField label="City">
+        <FormField label={t("cust.city")}>
           <Input
             required
             value={form.address.city}
             onChange={(e) => setForm({ ...form, address: { ...form.address, city: e.target.value } })}
           />
         </FormField>
-        <FormField label="State">
+        <FormField label={t("cust.state")}>
           <Input
             required
             value={form.address.state}
             onChange={(e) => setForm({ ...form, address: { ...form.address, state: e.target.value } })}
           />
         </FormField>
-        <FormField label="Postal code">
+        <FormField label={t("cust.postal")}>
           <Input
             required
             value={form.address.postal_code}
@@ -85,7 +87,7 @@ export function BusinessVendorForm({
         </FormField>
       </div>
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Creating…" : "Create vendor"}
+        {isSubmitting ? t("s.creating") : t("s.create_vendor")}
       </Button>
     </form>
   );

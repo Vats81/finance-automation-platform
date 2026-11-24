@@ -15,6 +15,7 @@ import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { PurchasePaymentStatus, PurchaseResponse } from "@/types/purchase";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 const STATUS_TONE: Record<PurchasePaymentStatus, "success" | "warning" | "neutral"> = {
   paid: "success",
@@ -23,6 +24,7 @@ const STATUS_TONE: Record<PurchasePaymentStatus, "success" | "warning" | "neutra
 };
 
 export default function PurchaseDetailPage() {
+  const { t, label } = useT();
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
@@ -45,8 +47,9 @@ export default function PurchaseDetailPage() {
           .catch(() => setVendorName(null));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load purchase");
+      setError(err instanceof Error ? err.message : t("s.failed_to_load_purchase"));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken, id]);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function PurchaseDetailPage() {
       setPaymentAmount("");
       paymentKey.renew();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to record payment");
+      setError(err instanceof Error ? err.message : t("sale.paymentFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -84,7 +87,7 @@ export default function PurchaseDetailPage() {
       const token = getAccessToken();
       setPurchase(await voidPurchase(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to void purchase");
+      setError(err instanceof Error ? err.message : t("s.failed_to_void_purchase"));
     } finally {
       setIsUpdating(false);
     }
@@ -109,14 +112,14 @@ export default function PurchaseDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {purchase.status === "void" && <Badge tone="neutral">void</Badge>}
-          {purchase.stock_added && <Badge tone="success">added to stock</Badge>}
+          {purchase.status === "void" && <Badge tone="neutral">{t("sales.void")}</Badge>}
+          {purchase.stock_added && <Badge tone="success">{t("s.added_to_stock")}</Badge>}
           <Badge tone={STATUS_TONE[purchase.payment_status]}>
-            {purchase.payment_status.replace("_", " ")}
+            {label("sales.status", purchase.payment_status)}
           </Badge>
           {purchase.status !== "void" && (
             <Link href={`/app/purchases/${purchase.id}/edit`}>
-              <Button variant="secondary">Edit</Button>
+              <Button variant="secondary">{t("common.edit")}</Button>
             </Link>
           )}
         </div>
@@ -128,10 +131,10 @@ export default function PurchaseDetailPage() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <th className="py-2 pr-4">Description</th>
-              <th className="py-2 pr-4">Qty</th>
-              <th className="py-2 pr-4">Unit cost</th>
-              <th className="py-2 pr-4">Line total</th>
+              <th className="py-2 pr-4">{t("common.description")}</th>
+              <th className="py-2 pr-4">{t("sale.qty")}</th>
+              <th className="py-2 pr-4">{t("s.unit_cost")}</th>
+              <th className="py-2 pr-4">{t("sale.lineTotal")}</th>
             </tr>
           </thead>
           <tbody>
@@ -148,23 +151,23 @@ export default function PurchaseDetailPage() {
 
         <div className="mt-4 space-y-1 border-t border-slate-200 pt-4 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-500">Subtotal</span>
+            <span className="text-slate-500">{t("sale.subtotal")}</span>
             <span>{formatCurrency(purchase.subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Tax</span>
+            <span className="text-slate-500">{t("sale.tax")}</span>
             <span>{formatCurrency(purchase.tax)}</span>
           </div>
           <div className="flex justify-between font-semibold">
-            <span>Total</span>
+            <span>{t("common.total")}</span>
             <span>{formatCurrency(purchase.total_amount)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Paid</span>
+            <span className="text-slate-500">{t("quick.paid")}</span>
             <span>{formatCurrency(purchase.amount_paid)}</span>
           </div>
           <div className="flex justify-between font-semibold">
-            <span>Outstanding</span>
+            <span>{t("sales.col.outstanding")}</span>
             <span>{formatCurrency(purchase.outstanding_amount)}</span>
           </div>
         </div>
@@ -175,7 +178,7 @@ export default function PurchaseDetailPage() {
           {purchase.payment_status !== "paid" && (
             <form onSubmit={handleRecordPayment} className="flex items-end gap-2">
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium">Record payment</label>
+                <label className="mb-1 block text-sm font-medium">{t("sale.recordPayment")}</label>
                 <Input
                   required
                   type="number"
@@ -185,12 +188,12 @@ export default function PurchaseDetailPage() {
                 />
               </div>
               <Button type="submit" disabled={isUpdating}>
-                Record
+                {t("sale.record")}
               </Button>
             </form>
           )}
           <Button variant="danger" disabled={isUpdating} onClick={handleVoid}>
-            Void purchase
+            {t("s.void_purchase")}
           </Button>
         </Card>
       )}

@@ -2,27 +2,30 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { ProductResponse } from "@/types/product";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 
-function stockBadge(product: ProductResponse): { tone: "danger" | "warning" | "success"; label: string } {
-  if (product.is_out_of_stock) return { tone: "danger", label: "out of stock" };
-  if (product.is_low_stock) return { tone: "warning", label: "low stock" };
-  return { tone: "success", label: "in stock" };
+function stockBadge(product: ProductResponse): { tone: "danger" | "warning" | "success"; label: MessageKey } {
+  if (product.is_out_of_stock) return { tone: "danger", label: "stock.out" };
+  if (product.is_low_stock) return { tone: "warning", label: "stock.low" };
+  return { tone: "success", label: "stock.in" };
 }
 
 export function ProductTable({ products }: { products: ProductResponse[] }) {
+  const { t } = useT();
   if (products.length === 0) {
-    return <p className="text-sm text-slate-500">No products yet.</p>;
+    return <p className="text-sm text-slate-500">{t("s.no_products_yet")}</p>;
   }
 
   return (
     <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-          <th className="py-2 pr-4">Name</th>
-          <th className="py-2 pr-4">SKU</th>
-          <th className="py-2 pr-4">Quantity</th>
-          <th className="py-2 pr-4">Selling price</th>
-          <th className="py-2 pr-4">Stock status</th>
+          <th className="py-2 pr-4">{t("common.name")}</th>
+          <th className="py-2 pr-4">{t("s.sku")}</th>
+          <th className="py-2 pr-4">{t("s.quantity")}</th>
+          <th className="py-2 pr-4">{t("s.selling_price")}</th>
+          <th className="py-2 pr-4">{t("s.stock_status")}</th>
         </tr>
       </thead>
       <tbody>
@@ -44,7 +47,7 @@ export function ProductTable({ products }: { products: ProductResponse[] }) {
               </td>
               <td className="py-2 pr-4 text-slate-600">{formatCurrency(product.selling_price)}</td>
               <td className="py-2 pr-4">
-                <Badge tone={badge.tone}>{badge.label}</Badge>
+                <Badge tone={badge.tone}>{t(badge.label)}</Badge>
               </td>
             </tr>
           );

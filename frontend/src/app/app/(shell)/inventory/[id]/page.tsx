@@ -17,14 +17,17 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ProductResponse } from "@/types/product";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 
-function stockBadge(product: ProductResponse): { tone: "danger" | "warning" | "success"; label: string } {
-  if (product.is_out_of_stock) return { tone: "danger", label: "out of stock" };
-  if (product.is_low_stock) return { tone: "warning", label: "low stock" };
-  return { tone: "success", label: "in stock" };
+function stockBadge(product: ProductResponse): { tone: "danger" | "warning" | "success"; label: MessageKey } {
+  if (product.is_out_of_stock) return { tone: "danger", label: "stock.out" };
+  if (product.is_low_stock) return { tone: "warning", label: "stock.low" };
+  return { tone: "success", label: "stock.in" };
 }
 
 export default function ProductDetailPage() {
+  const { t } = useT();
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
@@ -40,8 +43,9 @@ export default function ProductDetailPage() {
     try {
       setProduct(await getProduct(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load product");
+      setError(err instanceof Error ? err.message : t("s.failed_to_load_product"));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken, id]);
 
   useEffect(() => {
@@ -59,7 +63,7 @@ export default function ProductDetailPage() {
       setDelta("");
       setReason("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to adjust stock");
+      setError(err instanceof Error ? err.message : t("s.failed_to_adjust_stock"));
     } finally {
       setIsUpdating(false);
     }
@@ -77,7 +81,7 @@ export default function ProductDetailPage() {
           : await reactivateProduct(token, currentBusinessId, id)
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update product");
+      setError(err instanceof Error ? err.message : t("s.failed_to_update_product"));
     } finally {
       setIsUpdating(false);
     }
@@ -101,8 +105,8 @@ export default function ProductDetailPage() {
           <p className="text-sm text-slate-500">{product.sku}</p>
         </div>
         <div className="flex items-center gap-2">
-          {product.status === "inactive" && <Badge tone="neutral">inactive</Badge>}
-          <Badge tone={badge.tone}>{badge.label}</Badge>
+          {product.status === "inactive" && <Badge tone="neutral">{t("cust.status.inactive")}</Badge>}
+          <Badge tone={badge.tone}>{t(badge.label)}</Badge>
         </div>
       </div>
 
@@ -110,54 +114,54 @@ export default function ProductDetailPage() {
 
       <Card className="mb-6 max-w-lg space-y-1 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-500">Current quantity</span>
+          <span className="text-slate-500">{t("s.current_quantity")}</span>
           <span>
             {product.current_quantity} {product.unit_of_measurement}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Minimum stock level</span>
+          <span className="text-slate-500">{t("s.minimum_stock_level")}</span>
           <span>{product.minimum_stock_level}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Reorder quantity</span>
+          <span className="text-slate-500">{t("s.reorder_quantity")}</span>
           <span>{product.reorder_quantity}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Selling price</span>
+          <span className="text-slate-500">{t("s.selling_price")}</span>
           <span>{formatCurrency(product.selling_price)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Purchase cost</span>
+          <span className="text-slate-500">{t("s.purchase_cost")}</span>
           <span>{formatCurrency(product.purchase_cost)}</span>
         </div>
         <div className="flex justify-between font-semibold">
-          <span>Stock value</span>
+          <span>{t("s.stock_value")}</span>
           <span>{formatCurrency(product.stock_value)}</span>
         </div>
       </Card>
 
       <Card className="max-w-lg space-y-4">
         <form onSubmit={handleAdjustStock} className="space-y-3">
-          <label className="block text-sm font-medium">Adjust stock</label>
+          <label className="block text-sm font-medium">{t("s.adjust_stock")}</label>
           <div className="grid grid-cols-2 gap-2">
             <Input
               required
               type="number"
               step="any"
-              placeholder="+10 or -5"
+              placeholder={t("s.10_or_5")}
               value={delta}
               onChange={(e) => setDelta(e.target.value)}
             />
             <Input
               required
-              placeholder="Reason"
+              placeholder={t("s.reason")}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
           <Button type="submit" disabled={isUpdating}>
-            Apply adjustment
+            {t("s.apply_adjustment")}
           </Button>
         </form>
 
@@ -166,7 +170,7 @@ export default function ProductDetailPage() {
           disabled={isUpdating}
           onClick={handleToggleActive}
         >
-          {product.status === "active" ? "Deactivate" : "Reactivate"}
+          {product.status === "active" ? t("cust.deactivate") : t("cust.reactivate")}
         </Button>
       </Card>
     </div>

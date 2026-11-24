@@ -9,6 +9,7 @@ import { CreatePurchaseLineItemRequest, CreatePurchaseRequest } from "@/types/pu
 import { ProductResponse } from "@/types/product";
 import { VendorResponse } from "@/types/vendor";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 function emptyLine(lineNumber: number): CreatePurchaseLineItemRequest {
   return { line_number: lineNumber, description: "", quantity: "1", unit_cost: "0" };
@@ -29,6 +30,7 @@ export function PurchaseForm({
   initialValues?: CreatePurchaseRequest;
   submitLabel?: string;
 }) {
+  const { t } = useT();
   const [purchaseNumber, setPurchaseNumber] = useState(initialValues?.purchase_number ?? "");
   const [purchaseDate, setPurchaseDate] = useState(
     initialValues?.purchase_date ?? new Date().toISOString().slice(0, 10)
@@ -73,10 +75,10 @@ export function PurchaseForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Purchase number">
+        <FormField label={t("s.purchase_number")}>
           <Input required value={purchaseNumber} onChange={(e) => setPurchaseNumber(e.target.value)} />
         </FormField>
-        <FormField label="Purchase date">
+        <FormField label={t("s.purchase_date")}>
           <Input
             required
             type="date"
@@ -86,9 +88,9 @@ export function PurchaseForm({
         </FormField>
       </div>
 
-      <FormField label="Vendor">
+      <FormField label={t("s.vendor")}>
         <Select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
-          <option value="">Not a saved vendor (type a name below)</option>
+          <option value="">{t("s.not_a_saved_vendor_type_a_name_bel")}</option>
           {vendors.map((vendor) => (
             <option key={vendor.id} value={vendor.id}>
               {vendor.legal_name}
@@ -97,11 +99,11 @@ export function PurchaseForm({
         </Select>
       </FormField>
       {!vendorId && (
-        <FormField label="Vendor name">
+        <FormField label={t("s.vendor_name")}>
           <Input
             required
             maxLength={200}
-            placeholder="Who is this purchase from?"
+            placeholder={t("s.who_is_this_purchase_from")}
             value={vendorName}
             onChange={(e) => setVendorName(e.target.value)}
           />
@@ -109,12 +111,12 @@ export function PurchaseForm({
       )}
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium">Line items</label>
+        <label className="block text-sm font-medium">{t("saleForm.lineItems")}</label>
         {lines.map((line, index) => (
           <div key={index} className="grid grid-cols-12 gap-2">
             <Input
               required
-              placeholder="Description"
+              placeholder={t("common.description")}
               className="col-span-4"
               value={line.description}
               onChange={(e) => updateLine(index, { description: e.target.value })}
@@ -124,7 +126,7 @@ export function PurchaseForm({
               value={line.product_id ?? ""}
               onChange={(e) => updateLine(index, { product_id: e.target.value || undefined })}
             >
-              <option value="">No product link</option>
+              <option value="">{t("s.no_product_link")}</option>
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
                   {product.name}
@@ -135,7 +137,7 @@ export function PurchaseForm({
               required
               type="number"
               step="any"
-              placeholder="Qty"
+              placeholder={t("sale.qty")}
               className="col-span-2"
               value={line.quantity}
               onChange={(e) => updateLine(index, { quantity: e.target.value })}
@@ -144,7 +146,7 @@ export function PurchaseForm({
               required
               type="number"
               step="0.01"
-              placeholder="Unit cost"
+              placeholder={t("s.unit_cost")}
               className="col-span-2"
               value={line.unit_cost}
               onChange={(e) => updateLine(index, { unit_cost: e.target.value })}
@@ -154,28 +156,28 @@ export function PurchaseForm({
               onClick={() => removeLine(index)}
               disabled={lines.length === 1}
               className="col-span-1 text-slate-400 hover:text-red-600 disabled:opacity-30"
-              aria-label="Remove line"
+              aria-label={t("saleForm.removeLine")}
             >
               ✕
             </button>
           </div>
         ))}
         <Button type="button" variant="secondary" onClick={addLine}>
-          Add line
+          {t("saleForm.addLine")}
         </Button>
       </div>
 
-      <FormField label="Tax">
+      <FormField label={t("sale.tax")}>
         <Input type="number" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
       </FormField>
 
       <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
-        <span className="font-medium">Total</span>
+        <span className="font-medium">{t("common.total")}</span>
         <span className="font-semibold">{formatCurrency(total)}</span>
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Saving…" : submitLabel ?? "Record purchase"}
+        {isSubmitting ? t("common.saving") : submitLabel ?? t("s.record_purchase")}
       </Button>
     </form>
   );

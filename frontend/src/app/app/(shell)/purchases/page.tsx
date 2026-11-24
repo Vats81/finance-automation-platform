@@ -13,8 +13,10 @@ import { listPurchases } from "@/lib/api/purchases";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { PurchaseResponse } from "@/types/purchase";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function PurchasesPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   const router = useRouter();
@@ -32,20 +34,21 @@ export default function PurchasesPage() {
       .catch(() => setVendorNames({}));
     listPurchases(token, currentBusinessId)
       .then((page) => setPurchases(page.items))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load purchases"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("s.failed_to_load_purchases")));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Purchases</h1>
+        <h1 className="text-2xl font-semibold">{t("nav.purchases")}</h1>
         {canWrite && (
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setScanning(true)}>
-              Scan a bill
+              {t("s.scan_a_bill")}
             </Button>
             <Link href="/app/purchases/new">
-              <Button>New purchase</Button>
+              <Button>{t("s.new_purchase")}</Button>
             </Link>
           </div>
         )}

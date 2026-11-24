@@ -14,8 +14,10 @@ import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ProductResponse } from "@/types/product";
 import { CreatePurchaseRequest } from "@/types/purchase";
 import { VendorResponse } from "@/types/vendor";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function NewPurchasePage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
@@ -46,14 +48,14 @@ export default function NewPurchasePage() {
       router.push(`/app/purchases/${purchase.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
-      setError(err instanceof Error ? err.message : "Failed to record purchase");
+      setError(err instanceof Error ? err.message : t("s.failed_to_record_purchase"));
       setIsSubmitting(false);
     }
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">New purchase</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("s.new_purchase")}</h1>
       <Card className="max-w-2xl">
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         <PurchaseForm

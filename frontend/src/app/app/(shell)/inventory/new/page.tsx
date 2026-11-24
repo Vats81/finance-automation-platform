@@ -10,8 +10,10 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { CreateProductRequest } from "@/types/product";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function NewProductPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
@@ -29,14 +31,14 @@ export default function NewProductPage() {
       router.push(`/app/inventory/${product.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
-      setError(err instanceof Error ? err.message : "Failed to create product");
+      setError(err instanceof Error ? err.message : t("s.failed_to_create_product"));
       setIsSubmitting(false);
     }
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">New product</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("s.new_product")}</h1>
       <Card className="max-w-lg">
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         <ProductForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />

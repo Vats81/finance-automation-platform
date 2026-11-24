@@ -10,8 +10,10 @@ import { listProducts } from "@/lib/api/products";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ProductResponse } from "@/types/product";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function InventoryPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const [products, setProducts] = useState<ProductResponse[] | null>(null);
@@ -22,15 +24,16 @@ export default function InventoryPage() {
     const token = getAccessToken();
     listProducts(token, currentBusinessId)
       .then((page) => setProducts(page.items))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load products"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("s.failed_to_load_products")));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Inventory</h1>
+        <h1 className="text-2xl font-semibold">{t("nav.inventory")}</h1>
         <Link href="/app/inventory/new">
-          <Button>New product</Button>
+          <Button>{t("s.new_product")}</Button>
         </Link>
       </div>
 
