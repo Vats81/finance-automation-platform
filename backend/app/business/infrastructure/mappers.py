@@ -31,6 +31,8 @@ def business_model_to_domain(model: BusinessModel) -> Business:
         pincode=model.pincode,
         phone=model.phone,
         upi_id=model.upi_id,
+        summary_frequency=model.summary_frequency,
+        summary_last_sent_on=model.summary_last_sent_on,
         onboarding_completed=model.onboarding_completed,
         status=BusinessStatus(model.status),
         plan=BusinessPlan(model.plan),
@@ -64,6 +66,8 @@ def business_domain_to_model(business: Business) -> BusinessModel:
         pincode=business.pincode,
         phone=business.phone,
         upi_id=business.upi_id,
+        summary_frequency=business.summary_frequency,
+        summary_last_sent_on=business.summary_last_sent_on,
         onboarding_completed=business.onboarding_completed,
         status=business.status.value,
         plan=business.plan.value,
@@ -94,6 +98,8 @@ def apply_business_domain_to_existing_model(business: Business, model: BusinessM
     model.pincode = business.pincode
     model.phone = business.phone
     model.upi_id = business.upi_id
+    model.summary_frequency = business.summary_frequency
+    model.summary_last_sent_on = business.summary_last_sent_on
     model.onboarding_completed = business.onboarding_completed
     model.status = business.status.value
     model.plan = business.plan.value

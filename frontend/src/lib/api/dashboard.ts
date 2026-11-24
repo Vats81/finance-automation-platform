@@ -108,3 +108,23 @@ export function sendReportWhatsApp(
     { method: "POST", body: JSON.stringify({ recipient_phone: args.recipientPhone }) }
   );
 }
+
+export type SummaryPeriod = "today" | "yesterday" | "week";
+
+export interface WhatsAppSummary {
+  label: string;
+  message: string;
+  sales_total: string;
+  expenses_total: string;
+  profit: string;
+  to_collect_total: string;
+}
+
+/** The sales, expenses, profit and what customers owe for a period, as the text the WhatsApp summary sends. */
+export function getWhatsAppSummary(
+  token: string | null,
+  businessId: string,
+  period: SummaryPeriod
+): Promise<WhatsAppSummary> {
+  return apiFetch<WhatsAppSummary>(`/businesses/${businessId}/dashboard/whatsapp-summary?period=${period}`, token);
+}

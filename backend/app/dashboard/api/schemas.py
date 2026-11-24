@@ -106,3 +106,12 @@ class ForecastResponse(BaseModel):
             is_available=forecast.is_available,
             points=[ForecastPointResponse.from_domain(p) for p in forecast.points],
         )
+
+
+class WhatsAppSummaryResponse(BaseModel):
+    label: str
+    message: str
+    sales_total: Decimal
+    expenses_total: Decimal
+    profit: Decimal
+    to_collect_total: Decimal

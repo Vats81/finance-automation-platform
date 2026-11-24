@@ -9,6 +9,7 @@ from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
 from app.business.api.permissions import CAN_EXPORT, CAN_WRITE
 from app.business.domain.exceptions import BusinessNotFoundException
+from app.config.settings import get_settings
 from app.dashboard.api.schemas import (
     BusinessHealthScoreResponse,
     DashboardSummaryResponse,
@@ -16,6 +17,13 @@ from app.dashboard.api.schemas import (
     ForecastResponse,
     SendReportEmailRequest,
     SendReportWhatsAppRequest,
+    WhatsAppSummaryResponse,
+)
+from app.dashboard.application.business_summary import (
+    BuildBusinessSummaryUseCase,
+    SummaryPeriod,
+    business_today,
+    format_summary_message,
 )
 from app.dashboard.application.pdf_generator import generate_profit_loss_pdf
 from app.dashboard.application.queries.get_business_health_score import (
@@ -42,6 +50,34 @@ from app.shared.application.ports import IClock, IEmailSender, IWhatsAppSender
 router = APIRouter(prefix="/businesses/{business_id}/dashboard", tags=["dashboard"])
 
 _can_write = CAN_WRITE
+
+
+@router.get("/whatsapp-summary", response_model=WhatsAppSummaryResponse)
+async def get_whatsapp_summary(
+    business_id: uuid.UUID,
+    period: SummaryPeriod = "yesterday",
+    _actor: User = Depends(require_business_role()),
+    uow: AppUnitOfWork = Depends(get_uow),
+    clock: IClock = Depends(get_clock),
+) -> WhatsAppSummaryResponse:
+    """The sales, expenses, profit and what customers owe for a period, as the text the WhatsApp summary
+    sends (the app opens WhatsApp with it, so the owner can send it to themselves or anyone).
+    """
+    business = await uow.businesses.get_by_id(business_id)
+    if business is None:
+        raise BusinessNotFoundException(f"Business {business_id} not found")
+    summary = await BuildBusinessSummaryUseCase(uow).execute(
+        business_id=business_id, period=period, today=business_today(business, clock.now())
+    )
+    link = f"{get_settings().frontend_base_url.rstrip('/')}/app/dashboard"
+    return WhatsAppSummaryResponse(
+        label=summary.label,
+        message=format_summary_message(summary, link=link),
+        sales_total=summary.sales_total,
+        expenses_total=summary.expenses_total,
+        profit=summary.profit,
+        to_collect_total=summary.to_collect_total,
+    )
 
 
 @router.get("/summary", response_model=DashboardSummaryResponse)

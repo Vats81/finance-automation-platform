@@ -39,6 +39,7 @@ class CompleteOnboardingRequest(BaseModel):
     pincode: str | None = Field(default=None, max_length=6)
     phone: str | None = Field(default=None, max_length=32)
     upi_id: str | None = Field(default=None, max_length=100)
+    summary_frequency: str | None = Field(default=None, max_length=10)
 
 
 class BusinessResponse(BaseModel):
@@ -62,6 +63,7 @@ class BusinessResponse(BaseModel):
     pincode: str | None = None
     phone: str | None = None
     upi_id: str | None = None
+    summary_frequency: str = "off"
     onboarding_completed: bool
     status: BusinessStatus
     plan: BusinessPlan
@@ -92,6 +94,7 @@ class BusinessResponse(BaseModel):
             pincode=business.pincode,
             phone=business.phone,
             upi_id=business.upi_id,
+            summary_frequency=business.summary_frequency,
             onboarding_completed=business.onboarding_completed,
             status=business.status,
             plan=business.plan,

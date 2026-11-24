@@ -108,6 +108,7 @@ async def complete_onboarding(
             pincode=body.pincode,
             phone=body.phone,
             upi_id=body.upi_id,
+            summary_frequency=body.summary_frequency,
         )
     )
     return BusinessResponse.from_domain(business)

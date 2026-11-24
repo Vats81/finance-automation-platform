@@ -426,3 +426,48 @@ the matching variable above, and the Stripe webhook keeps plans in sync (a check
 and a cancellation all flow through the same `/billing/webhook`; a firm's checkout is recognised by
 its `firm:` reference). Until `STRIPE_SECRET_KEY` is set, the whole product runs in beta mode: an
 owner can switch plan directly on the Settings or firm Plan & billing page and no payment is taken.
+
+## 15. Features for small businesses in India
+
+All of these work for any business; they matter most for a rupee business with a GSTIN.
+
+- **Invoice details** (Settings → Invoice details): GSTIN (checked, including its check character), address,
+  state, PIN, phone, UPI ID. A GSTIN makes the business GST-registered and fixes its state. Migration `0033`.
+- **GST on sales**: each line has a GST rate and an optional HSN/SAC code, and the sale has a place of supply
+  (defaults to the customer's state, else the seller's). Tax is worked out per rate after the discount is shared
+  over the lines, as CGST + SGST within the state and IGST between states. Migration `0034`. A sale with no
+  rates behaves as before.
+- **Invoice PDF**: `GET /businesses/{id}/sales/{sale_id}/invoice-pdf` (any member). A tax invoice when the
+  lines carry GST, with both GSTINs, HSN, a GST summary per rate, the amount in words, and a UPI QR for the
+  amount due. Amounts print as "Rs." because the built-in PDF fonts have no rupee sign.
+- **Sending an invoice**: the sale page's *Send on WhatsApp* button makes a private link
+  (`POST .../share-link`, migration `0035`) and opens WhatsApp with a ready message. The link opens the PDF with
+  no sign-in at `{FRONTEND_BASE_URL}/i/<token>`; it is unguessable, only its hash is stored, it expires after 60
+  days, and *Stop the invoice links I have sent* revokes them all. Voided invoices cannot be shared.
+- **Quick sale** (`/app/sales/quick`) and **Udhaar** (`/app/udhaar`): a phone-friendly sale entry with the next
+  invoice number filled in (GST invoices need a consecutive series), and a list of who owes what with a
+  one-tap WhatsApp reminder.
+- **WhatsApp summary** (`/app/summary`): sales, expenses, profit and who owes you, for yesterday, today or the
+  last 7 days. The *Send on WhatsApp* button works for everyone today: it opens WhatsApp with the text, no
+  Twilio needed. Migration `0036` adds the per-business setting (off, daily, weekly).
+
+### Sending the summaries automatically
+
+Optional, and off until you set it up. A daily GitHub Actions job (`.github/workflows/send-summaries.yml`,
+02:30 UTC = 08:00 in India) calls `POST /api/v1/internal/summaries/send`. The backend decides who is due and
+never sends the same day's summary twice, so a late or repeated run is harmless. Daily businesses get
+yesterday's numbers each morning; weekly ones get the last 7 days on Monday (or Tuesday if Monday was missed).
+
+1. Pick a long random value and set it as `CRON_SECRET` in Render's environment **and** as the repository
+   secret `CRON_SECRET` in GitHub (Settings → Secrets and variables → Actions). Until `CRON_SECRET` is set the
+   endpoint answers 404, and the job reports that without failing.
+2. Turn on Twilio WhatsApp (section 7). **Important:** WhatsApp only lets a business send free-form text to
+   someone who messaged the number in the last 24 hours. A morning summary is almost always outside that
+   window, so for real use you need an approved WhatsApp *message template* in Twilio and the sender changed to
+   send it (`TwilioWhatsAppSender` currently sends plain text, which works in the Twilio sandbox after the
+   recipient joins it, but is refused for normal customers). Until that is done, businesses use the button.
+3. A business also needs a WhatsApp number saved in Settings (a 10-digit Indian number is read as +91).
+
+Counted as revenue: the Overview and the summary count a sale at its full amount, tax included, so for a
+GST seller "Sales" includes the GST collected.
+

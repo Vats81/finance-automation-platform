@@ -3,6 +3,7 @@ from datetime import datetime
 
 from app.business.domain.entities import Business, BusinessMembership
 from app.business.domain.repository import IBusinessMembershipRepository, IBusinessRepository
+from app.business.domain.value_objects import BusinessStatus
 from app.customers.domain.entities import Customer
 from app.customers.domain.repository import ICustomerRepository
 from app.expenses.domain.entities import Expense
@@ -67,6 +68,13 @@ class FakeBusinessRepository(IBusinessRepository):
 
     async def list_by_firm_id(self, firm_id: uuid.UUID) -> list[Business]:
         return sorted((b for b in self._store.values() if b.firm_id == firm_id), key=lambda b: b.created_at)
+
+    async def list_with_summary_frequency(self, frequencies: tuple[str, ...]) -> list[Business]:
+        return [
+            b
+            for b in self._store.values()
+            if b.summary_frequency in frequencies and b.status == BusinessStatus.ACTIVE
+        ]
 
     async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
         return next((b for b in self._store.values() if b.stripe_subscription_id == subscription_id), None)

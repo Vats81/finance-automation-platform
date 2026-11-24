@@ -44,6 +44,17 @@ class SqlAlchemyBusinessRepository(IBusinessRepository):
         )
         return [business_model_to_domain(m) for m in result.scalars().all()]
 
+    async def list_with_summary_frequency(self, frequencies: tuple[str, ...]) -> list[Business]:
+        result = await self._session.execute(
+            select(BusinessModel)
+            .where(
+                BusinessModel.summary_frequency.in_(frequencies),
+                BusinessModel.status == "active",
+            )
+            .order_by(BusinessModel.created_at)
+        )
+        return [business_model_to_domain(m) for m in result.scalars().all()]
+
     async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
         stmt = select(BusinessModel).where(BusinessModel.stripe_subscription_id == subscription_id)
         result = await self._session.execute(stmt)

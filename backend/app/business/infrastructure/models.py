@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,6 +31,10 @@ class BusinessModel(Base):
     pincode: Mapped[str | None] = mapped_column(String(6), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     upi_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    summary_frequency: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="off", server_default="off"
+    )
+    summary_last_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
     plan: Mapped[str] = mapped_column(String(30), nullable=False, default="free")

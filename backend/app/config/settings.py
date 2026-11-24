@@ -160,6 +160,9 @@ class Settings(BaseSettings):
     # Explicit provider flag rather than an inferred "is a SID set" toggle
     # like smtp_configured — a Twilio SID being present is a less natural
     # on/off signal than an SMTP host being present.
+    # Shared secret for the scheduled job that sends the WhatsApp summaries (POST /internal/summaries/send).
+    # Empty disables the endpoint entirely.
+    cron_secret: str = Field(default="", alias="CRON_SECRET")
     whatsapp_provider: Literal["console", "twilio"] = Field(default="console", alias="WHATSAPP_PROVIDER")
     twilio_account_sid: str = Field(default="", alias="TWILIO_ACCOUNT_SID")
     twilio_auth_token: str = Field(default="", alias="TWILIO_AUTH_TOKEN")

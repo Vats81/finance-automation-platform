@@ -26,6 +26,7 @@ class CompleteOnboardingCommand:
     pincode: str | None = None
     phone: str | None = None
     upi_id: str | None = None
+    summary_frequency: str | None = None
 
 
 class CompleteOnboardingUseCase:
@@ -55,6 +56,7 @@ class CompleteOnboardingUseCase:
             pincode=command.pincode,
             phone=command.phone,
             upi_id=command.upi_id,
+            summary_frequency=command.summary_frequency,
         )
         await self._uow.businesses.update(business)
         await self._uow.commit()

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from app.business.domain.events import (
     BusinessOnboardingCompleted,
@@ -11,6 +11,7 @@ from app.business.domain.events import (
     MembershipRoleChanged,
 )
 from app.business.domain.value_objects import (
+    SUMMARY_FREQUENCIES,
     SUPPORTED_CURRENCIES,
     BusinessKind,
     BusinessPlan,
@@ -58,6 +59,8 @@ class Business(AggregateRoot):
         pincode: str | None = None,
         phone: str | None = None,
         upi_id: str | None = None,
+        summary_frequency: str = "off",
+        summary_last_sent_on: date | None = None,
         onboarding_completed: bool = False,
         status: BusinessStatus = BusinessStatus.ACTIVE,
         plan: BusinessPlan = BusinessPlan.FREE,
@@ -92,6 +95,8 @@ class Business(AggregateRoot):
         self.pincode = pincode
         self.phone = phone
         self.upi_id = upi_id
+        self.summary_frequency = summary_frequency
+        self.summary_last_sent_on = summary_last_sent_on
         self.onboarding_completed = onboarding_completed
         self.status = status
         self.plan = plan
@@ -141,6 +146,7 @@ class Business(AggregateRoot):
         pincode: str | None = None,
         phone: str | None = None,
         upi_id: str | None = None,
+        summary_frequency: str | None = None,
     ) -> None:
         """Every field is optional and skippable per the spec ('Allow users
         to skip optional fields and complete them later') — only fields
@@ -169,6 +175,10 @@ class Business(AggregateRoot):
             self.whatsapp_number = whatsapp_number
         if contact_email is not None:
             self.contact_email = contact_email
+        if summary_frequency is not None:
+            if summary_frequency not in SUMMARY_FREQUENCIES:
+                raise ValidationException(f"The WhatsApp summary can be: {', '.join(SUMMARY_FREQUENCIES)}.")
+            self.summary_frequency = summary_frequency
         self._set_invoice_details(
             gstin=gstin,
             address_line=address_line,

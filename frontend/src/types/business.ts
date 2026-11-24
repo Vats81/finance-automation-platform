@@ -34,6 +34,7 @@ export interface BusinessResponse {
   pincode?: string | null;
   phone?: string | null;
   upi_id?: string | null;
+  summary_frequency?: SummaryFrequency;
   onboarding_completed: boolean;
   status: BusinessStatus;
   plan: BusinessPlan;
@@ -73,6 +74,7 @@ export interface CompleteOnboardingRequest {
   pincode?: string;
   phone?: string;
   upi_id?: string;
+  summary_frequency?: SummaryFrequency;
 }
 
 export interface ChangePlanRequest {
@@ -96,3 +98,6 @@ export interface InviteTeamMemberRequest {
 export interface UpdateTeamMemberRoleRequest {
   role: BusinessRole;
 }
+
+/** How often the WhatsApp summary is sent on its own. */
+export type SummaryFrequency = "off" | "daily" | "weekly";

@@ -1,0 +1,51 @@
+name: Send WhatsApp summaries
+
+# Once a day, asks the backend to send the WhatsApp summary (yesterday's sales, expenses, profit and who owes
+# what) to every business that switched it on under Summary. The backend decides who is due, and never sends
+# the same day's summary twice, so a late or repeated run is harmless.
+#
+# Needs two secrets, both the same value:
+#   - the backend's CRON_SECRET environment variable on Render
+#   - the repository secret CRON_SECRET (Settings > Secrets and variables > Actions)
+# Until both exist the endpoint answers 404 and this job just reports that. Sending for real also needs
+# WhatsApp (Twilio) switched on; see DEPLOY.md.
+#
+# GitHub scheduled runs can start hours late; 02:30 UTC (08:00 in India) leaves plenty of room.
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: send-summaries
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ask the backend to send the due summaries
+        env:
+          URL: ${{ vars.SUMMARY_URL || 'https://finance-automation-platform-1.onrender.com/api/v1/internal/summaries/send' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::warning::The CRON_SECRET repository secret is not set, so nothing was sent."
+            exit 0
+          fi
+          for attempt in 1 2 3; do
+            code="$(curl -sS --max-time 180 -o body.txt -w '%{http_code}' -X POST -H "X-Cron-Secret: ${CRON_SECRET}" "${URL}" || true)"
+            echo "attempt ${attempt}: HTTP ${code}: $(head -c 300 body.txt 2>/dev/null)"
+            if [ "${code}" = "200" ]; then exit 0; fi
+            if [ "${code}" = "404" ] || [ "${code}" = "403" ]; then
+              echo "::error::The backend refused the request (HTTP ${code}). Check CRON_SECRET matches on Render and GitHub."
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::The backend did not accept the request after 3 attempts."
+          exit 1

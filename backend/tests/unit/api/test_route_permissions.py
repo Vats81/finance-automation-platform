@@ -237,6 +237,7 @@ _PROBES: list[tuple[str, str, Any, tuple[BusinessRole, ...]]] = [
     ("POST", "/businesses/{b}/expenses", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/customers", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/products", {}, CAN_WRITE),
+    ("GET", "/businesses/{b}/dashboard/whatsapp-summary", None, ANY_MEMBER),
     ("GET", "/businesses/{b}/sales/receivables", None, ANY_MEMBER),
     ("GET", "/businesses/{b}/sales/next-invoice-number", None, ANY_MEMBER),
     ("GET", "/businesses/{b}/sales/" + _ID + "/invoice-pdf", None, ANY_MEMBER),
@@ -625,3 +626,37 @@ def test_the_udhaar_list_and_the_next_invoice_number_come_through_the_api(
 
     number = client.get(f"{sales}/next-invoice-number", headers=owner)
     assert number.status_code == 200 and number.json() == {"invoice_number": "INV-GST-2"}
+
+
+def test_the_whatsapp_summary_and_its_setting_work_through_the_api(world: tuple[World, TestClient]) -> None:
+    w, client = world
+    owner = {"x-test-user": "owner_a"}
+    base = f"/api/v1/businesses/{w.business_a}"
+    today = datetime.now(timezone.utc).date().isoformat()
+    sale = _gst_sale_body()
+    sale["invoice_date"] = today
+    assert client.post(f"{base}/sales", headers=owner, json=sale).status_code == 201
+
+    summary = client.get(f"{base}/dashboard/whatsapp-summary?period=today", headers={"x-test-user": "viewer"})
+
+    assert summary.status_code == 200, summary.text
+    data = summary.json()
+    # the Overview counts a sale at its full amount, tax included, and the summary matches it
+    assert Decimal(data["sales_total"]) == Decimal("1180.00")
+    assert Decimal(data["to_collect_total"]) == Decimal("1180.00")
+    assert data["message"].startswith("*Biz A*") and "To collect (udhaar)" in data["message"]
+    assert client.get(f"{base}/dashboard/whatsapp-summary?period=lastweek", headers=owner).status_code == 422
+
+    assert client.get(base, headers=owner).json()["summary_frequency"] == "off"
+    on = client.patch(f"{base}/onboarding", headers=owner, json={"summary_frequency": "daily"})
+    assert on.status_code == 200 and on.json()["summary_frequency"] == "daily"
+    assert (
+        client.patch(f"{base}/onboarding", headers=owner, json={"summary_frequency": "hourly"}).status_code
+        == 422
+    )
+    assert (
+        client.patch(
+            f"{base}/onboarding", headers={"x-test-user": "viewer"}, json={"summary_frequency": "off"}
+        ).status_code
+        == 403
+    )

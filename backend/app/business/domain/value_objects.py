@@ -52,3 +52,6 @@ class BusinessPlan(str, enum.Enum):
 # Amounts are stored as plain numbers and never converted, so a business's currency is
 # a display choice. Dollars and rupees are the two the product presents today.
 SUPPORTED_CURRENCIES = ("USD", "INR")
+
+# How often a business wants its WhatsApp summary of sales, expenses and what customers owe.
+SUMMARY_FREQUENCIES = ("off", "daily", "weekly")
