@@ -124,7 +124,11 @@ export interface WhatsAppSummary {
 export function getWhatsAppSummary(
   token: string | null,
   businessId: string,
-  period: SummaryPeriod
+  period: SummaryPeriod,
+  lang: "en" | "hi" = "en"
 ): Promise<WhatsAppSummary> {
-  return apiFetch<WhatsAppSummary>(`/businesses/${businessId}/dashboard/whatsapp-summary?period=${period}`, token);
+  return apiFetch<WhatsAppSummary>(
+    `/businesses/${businessId}/dashboard/whatsapp-summary?period=${period}&lang=${lang}`,
+    token
+  );
 }

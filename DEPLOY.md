@@ -471,3 +471,23 @@ yesterday's numbers each morning; weekly ones get the last 7 days on Monday (or 
 Counted as revenue: the Overview and the summary count a sale at its full amount, tax included, so for a
 GST seller "Sales" includes the GST collected.
 
+### Hindi (and other languages)
+
+The app can be switched between English and हिन्दी from the top bar (and on the sign-in and sign-up pages).
+The choice is remembered on that device; a phone set to Hindi starts in Hindi. It covers the daily screens: the
+sidebar, Overview, sales (list, detail, form, quick sale), udhaar, the WhatsApp summary, customers, expenses,
+sign-in and the first-visit tour. Screens not yet translated (Settings, Reports, Purchases, Inventory, Vendors,
+Payments, Data Upload, the Help page, the AI Assistant and the landing page) stay in English.
+
+- All texts live in one file, `frontend/src/lib/i18n/messages.ts`, as `[English, Hindi]` pairs side by side. A
+  text with no Hindi is a compile error, so nothing can ship half-translated. To translate a screen, replace its
+  literals with `t("some.key")` (from `useT()`) and add the pair.
+- **Please have a Hindi speaker read through `messages.ts`**: the translations were written by an AI and are
+  everyday business Hindi, not checked by a native speaker.
+- WhatsApp texts follow the language too: the ones the app writes for you to send (invoice link, udhaar
+  reminder, summary preview) use the language you are viewing the app in, and the automatic summary uses the
+  business's own setting (WhatsApp summary page → language of the automatic message; migration `0037`).
+- Not translated: the invoice PDF (the built-in PDF fonts have no Devanagari, and invoices are normally in
+  English anyway), AI Insights and AI Assistant answers, error messages that come from the server, and the
+  customer-facing invoice page.
+

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { getNotifications } from "@/lib/api/notifications";
 import { MyBusinessResponse } from "@/types/business";
 
@@ -20,6 +22,7 @@ export function SmbTopbar({
   onBusinessChange: (businessId: string) => void;
 }) {
   const { user, logout, getAccessToken } = useLocalAuth();
+  const { t } = useT();
   const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
@@ -34,7 +37,7 @@ export function SmbTopbar({
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          aria-label="Open menu"
+          aria-label={t("nav.openMenu")}
           className="rounded-md p-2 text-slate-600 hover:bg-slate-100 md:hidden"
         >
           ☰
@@ -45,7 +48,7 @@ export function SmbTopbar({
             value={currentBusinessId ?? ""}
             onChange={(e) => onBusinessChange(e.target.value)}
             className="max-w-[10rem] sm:max-w-xs"
-            aria-label="Select business"
+            aria-label={t("top.selectBusiness")}
           >
             {businesses.map(({ business, via_firm, firm_name }) => (
               <option key={business.id} value={business.id}>
@@ -60,16 +63,16 @@ export function SmbTopbar({
       <div className="flex items-center gap-2 sm:gap-4">
         <button
           className="hidden rounded-md p-2 text-slate-500 hover:bg-slate-100 sm:block"
-          aria-label="Search"
-          title="Search (coming soon)"
+          aria-label={t("top.search")}
+          title={t("top.searchSoon")}
         >
           🔍
         </button>
         <Link
           href="/app/automations"
           className="relative rounded-md p-2 text-slate-500 hover:bg-slate-100"
-          aria-label="Notifications"
-          title="Notifications & Alerts"
+          aria-label={t("top.notifications")}
+          title={t("top.notificationsTitle")}
         >
           🔔
           {notificationCount > 0 && (
@@ -78,13 +81,14 @@ export function SmbTopbar({
             </span>
           )}
         </Link>
+        <LanguageSwitcher />
         {user && (
           <div className="hidden text-right text-sm sm:block">
             <div className="font-medium">{user.display_name}</div>
           </div>
         )}
         <Button variant="secondary" onClick={logout}>
-          Sign out
+          {t("common.signOut")}
         </Button>
       </div>
     </header>

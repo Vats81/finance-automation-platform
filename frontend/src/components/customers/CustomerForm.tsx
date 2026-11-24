@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
+import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { CreateCustomerRequest } from "@/types/customer";
 
 export function CustomerForm({
@@ -15,6 +17,9 @@ export function CustomerForm({
   isSubmitting: boolean;
   initial?: Partial<CreateCustomerRequest>;
 }) {
+  const { t } = useT();
+  const { currentBusiness } = useCurrentBusiness();
+  const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<CreateCustomerRequest>({
     name: initial?.name ?? "",
     phone: initial?.phone ?? "",
@@ -25,27 +30,53 @@ export function CustomerForm({
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    onSubmit(form);
+    const clean = (value: string | undefined) => value?.trim() || undefined;
+    const a = form.address;
+    const parts = a ? [a.street, a.city, a.state, a.postal_code].map((v) => v.trim()) : [];
+    const filled = parts.filter(Boolean).length;
+    const [street = "", city = "", state = "", postalCode = ""] = parts;
+    // The server needs the whole address or none of it, and refuses an empty email, so blanks are left out.
+    if (filled > 0 && filled < 4) {
+      setFormError(t("cust.addressIncomplete"));
+      return;
+    }
+    setFormError(null);
+    onSubmit({
+      name: form.name.trim(),
+      phone: clean(form.phone),
+      email: clean(form.email),
+      gst_number: clean(form.gst_number),
+      address:
+        filled === 4 && a
+          ? {
+              street,
+              city,
+              state,
+              postal_code: postalCode,
+              country: currentBusiness?.business.currency === "INR" ? "IN" : a.country,
+            }
+          : undefined,
+    });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Customer name">
+      <FormField label={t("cust.name")}>
         <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Email">
+        <FormField label={t("common.email")}>
           <Input
             type="email"
             value={form.email ?? ""}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
         </FormField>
-        <FormField label="Phone">
+        <FormField label={t("common.phone")}>
           <Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
         </FormField>
       </div>
-      <FormField label="GST number">
+      <FormField label={t("cust.gst")}>
         <Input
           value={form.gst_number ?? ""}
           onChange={(e) => setForm({ ...form, gst_number: e.target.value })}
@@ -53,7 +84,7 @@ export function CustomerForm({
       </FormField>
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <FormField label="Street">
+          <FormField label={t("cust.street")}>
             <Input
               value={form.address?.street ?? ""}
               onChange={(e) =>
@@ -62,19 +93,19 @@ export function CustomerForm({
             />
           </FormField>
         </div>
-        <FormField label="City">
+        <FormField label={t("cust.city")}>
           <Input
             value={form.address?.city ?? ""}
             onChange={(e) => setForm({ ...form, address: { ...form.address!, city: e.target.value } })}
           />
         </FormField>
-        <FormField label="State">
+        <FormField label={t("cust.state")}>
           <Input
             value={form.address?.state ?? ""}
             onChange={(e) => setForm({ ...form, address: { ...form.address!, state: e.target.value } })}
           />
         </FormField>
-        <FormField label="Postal code">
+        <FormField label={t("cust.postal")}>
           <Input
             value={form.address?.postal_code ?? ""}
             onChange={(e) =>
@@ -83,8 +114,9 @@ export function CustomerForm({
           />
         </FormField>
       </div>
+      {formError && <p className="text-sm text-red-600">{formError}</p>}
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Saving…" : "Save customer"}
+        {isSubmitting ? t("common.saving") : t("cust.save")}
       </Button>
     </form>
   );

@@ -9,6 +9,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { deactivateCustomer, getCustomer, reactivateCustomer } from "@/lib/api/customers";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { CustomerResponse, CustomerStatus } from "@/types/customer";
 
 const STATUS_TONE: Record<CustomerStatus, "success" | "neutral"> = {
@@ -20,6 +22,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
+  const { t } = useT();
   const [customer, setCustomer] = useState<CustomerResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -30,8 +33,9 @@ export default function CustomerDetailPage() {
     try {
       setCustomer(await getCustomer(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load customer");
+      setError(err instanceof Error ? err.message : t("cust.loadOneFailed"));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken, id]);
 
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function CustomerDetailPage() {
       const token = getAccessToken();
       setCustomer(await deactivateCustomer(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to deactivate customer");
+      setError(err instanceof Error ? err.message : t("cust.deactivateFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -58,7 +62,7 @@ export default function CustomerDetailPage() {
       const token = getAccessToken();
       setCustomer(await reactivateCustomer(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reactivate customer");
+      setError(err instanceof Error ? err.message : t("cust.reactivateFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -77,22 +81,22 @@ export default function CustomerDetailPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{customer.name}</h1>
-        <Badge tone={STATUS_TONE[customer.status]}>{customer.status}</Badge>
+        <Badge tone={STATUS_TONE[customer.status]}>{t(`cust.status.${customer.status}` as MessageKey)}</Badge>
       </div>
 
       <Card className="max-w-lg space-y-3 text-sm">
         <div>
-          <span className="font-medium text-slate-500">Email:</span> {customer.email ?? "—"}
+          <span className="font-medium text-slate-500">{t("common.email")}:</span> {customer.email ?? "—"}
         </div>
         <div>
-          <span className="font-medium text-slate-500">Phone:</span> {customer.phone ?? "—"}
+          <span className="font-medium text-slate-500">{t("common.phone")}:</span> {customer.phone ?? "—"}
         </div>
         <div>
-          <span className="font-medium text-slate-500">GST number:</span> {customer.gst_number ?? "—"}
+          <span className="font-medium text-slate-500">{t("cust.gst")}:</span> {customer.gst_number ?? "—"}
         </div>
         {customer.address && (
           <div>
-            <span className="font-medium text-slate-500">Address:</span> {customer.address.street},{" "}
+            <span className="font-medium text-slate-500">{t("cust.address")}:</span> {customer.address.street},{" "}
             {customer.address.city}, {customer.address.state} {customer.address.postal_code}
           </div>
         )}
@@ -100,11 +104,11 @@ export default function CustomerDetailPage() {
         <div className="pt-2">
           {customer.status === "active" ? (
             <Button variant="danger" disabled={isUpdating} onClick={handleDeactivate}>
-              Deactivate
+              {t("cust.deactivate")}
             </Button>
           ) : (
             <Button disabled={isUpdating} onClick={handleReactivate}>
-              Reactivate
+              {t("cust.reactivate")}
             </Button>
           )}
         </div>

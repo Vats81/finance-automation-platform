@@ -1,3 +1,7 @@
+import { MessageKey } from "@/lib/i18n/messages";
+
+type T = (key: MessageKey, vars?: Record<string, string | number>) => string;
+
 /**
  * A phone number as WhatsApp's wa.me links want it: digits only, with the country code. A bare 10-digit
  * number gets the default country code (91, India), and a leading 0 (as people write local numbers) is
@@ -20,36 +24,45 @@ export function whatsappLink(phone: string, text: string): string {
   return `${base}?text=${encodeURIComponent(text)}`;
 }
 
-export function invoiceMessage(args: {
-  customerName?: string | null;
-  businessName: string;
-  invoiceNumber: string;
-  invoiceDate: string;
-  total: string;
-  balance: string;
-  url: string;
-}): string {
-  const greeting = args.customerName ? `Hello ${args.customerName},` : "Hello,";
-  const owing = args.balance !== args.total ? ` Balance due: ${args.balance}.` : "";
-  return (
-    `${greeting} here is your invoice ${args.invoiceNumber} from ${args.businessName} ` +
-    `dated ${args.invoiceDate}. Total: ${args.total}.${owing}\n\nView or download it here: ${args.url}`
-  );
+/** The message that goes with an invoice link, in the language of the person sending it. */
+export function invoiceMessage(
+  t: T,
+  args: {
+    customerName?: string | null;
+    businessName: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    total: string;
+    balance: string;
+    url: string;
+  }
+): string {
+  const greeting = args.customerName ? t("wa.hello", { name: args.customerName }) : t("wa.helloPlain");
+  const body = t("wa.invoiceBody", {
+    number: args.invoiceNumber,
+    business: args.businessName,
+    date: args.invoiceDate,
+    total: args.total,
+  });
+  const owing = args.balance !== args.total ? ` ${t("wa.balance", { balance: args.balance })}` : "";
+  return `${greeting} ${body}${owing}\n\n${t("wa.viewLink", { url: args.url })}`;
 }
 
 /** A polite payment reminder for what a customer owes (the udhaar list). */
-export function reminderMessage(args: {
-  customerName: string;
-  businessName: string;
-  amount: string;
-  invoiceNumbers: string[];
-  upiId?: string | null;
-}): string {
+export function reminderMessage(
+  t: T,
+  args: {
+    customerName: string;
+    businessName: string;
+    amount: string;
+    invoiceNumbers: string[];
+    upiId?: string | null;
+  }
+): string {
   const shown = args.invoiceNumbers.slice(0, 3).join(", ");
-  const more = args.invoiceNumbers.length > 3 ? ` and ${args.invoiceNumbers.length - 3} more` : "";
-  const pay = args.upiId ? ` You can pay by UPI to ${args.upiId}.` : "";
-  return (
-    `Hello ${args.customerName}, a gentle reminder from ${args.businessName}: ${args.amount} is pending ` +
-    `(${shown}${more}).${pay} Kindly pay when you can. Thank you!`
-  );
+  const invoices =
+    args.invoiceNumbers.length > 3 ? t("wa.reminderMore", { shown, n: args.invoiceNumbers.length - 3 }) : shown;
+  const body = t("wa.reminderBody", { business: args.businessName, amount: args.amount, invoices });
+  const pay = args.upiId ? ` ${t("wa.reminderUpi", { upi: args.upiId })}` : "";
+  return `${t("wa.hello", { name: args.customerName })} ${body}${pay} ${t("wa.reminderThanks")}`;
 }

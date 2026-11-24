@@ -9,11 +9,13 @@ import { ExpenseTable } from "@/components/expenses/ExpenseTable";
 import { listExpenses } from "@/lib/api/expenses";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { ExpenseResponse } from "@/types/expense";
 
 export default function ExpensesPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
+  const { t } = useT();
   const [expenses, setExpenses] = useState<ExpenseResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,15 +24,16 @@ export default function ExpensesPage() {
     const token = getAccessToken();
     listExpenses(token, currentBusinessId)
       .then((page) => setExpenses(page.items))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load expenses"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("exp.loadFailed")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Expenses</h1>
+        <h1 className="text-2xl font-semibold">{t("exp.title")}</h1>
         <Link href="/app/expenses/new">
-          <Button>New expense</Button>
+          <Button>{t("exp.new")}</Button>
         </Link>
       </div>
 

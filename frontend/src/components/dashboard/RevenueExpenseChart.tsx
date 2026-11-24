@@ -11,20 +11,23 @@ import {
   YAxis,
 } from "recharts";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { DashboardGranularity, DashboardTrendResponse } from "@/types/dashboard";
 
-function formatAxisLabel(periodStart: string, granularity: DashboardGranularity): string {
+function formatAxisLabel(periodStart: string, granularity: DashboardGranularity, locale: string): string {
   const d = new Date(`${periodStart}T00:00:00`);
-  if (granularity === "month") return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  if (granularity === "month") return d.toLocaleDateString(locale, { month: "short", year: "numeric" });
   // "day" and "week" both label by their start date — the dashboard chart
   // never actually requests "week" (auto-infer only ever picks day/month),
   // but the type is shared with the Reports page's explicit picker.
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 export function RevenueExpenseChart({ trend }: { trend: DashboardTrendResponse }) {
+  const { t, lang } = useT();
+  const locale = lang === "hi" ? "hi-IN" : "en-US";
   const data = trend.points.map((p) => ({
-    label: formatAxisLabel(p.period_start, trend.granularity),
+    label: formatAxisLabel(p.period_start, trend.granularity, locale),
     revenue: Number(p.revenue),
     expenses: Number(p.expenses),
   }));
@@ -41,11 +44,11 @@ export function RevenueExpenseChart({ trend }: { trend: DashboardTrendResponse }
         />
         <Tooltip formatter={(value: unknown) => formatCurrency(Number(Array.isArray(value) ? value[0] : value))} />
         <Legend />
-        <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#059669" strokeWidth={2} dot={false} />
+        <Line type="monotone" dataKey="revenue" name={t("dash.chartRevenue")} stroke="#059669" strokeWidth={2} dot={false} />
         <Line
           type="monotone"
           dataKey="expenses"
-          name="Expenses"
+          name={t("dash.chartExpenses")}
           stroke="#dc2626"
           strokeWidth={2}
           dot={false}

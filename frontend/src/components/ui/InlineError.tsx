@@ -1,4 +1,7 @@
+"use client";
+
 import { Button } from "@/components/ui/Button";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export function errorMessage(err: unknown, fallback = "Something went wrong."): string {
   return err instanceof Error ? err.message : fallback;
@@ -9,11 +12,12 @@ export function errorMessage(err: unknown, fallback = "Something went wrong."): 
 // spinner that never resolves (the apiFetch timeout makes the request fail
 // in bounded time; this is what the user then sees).
 export function InlineError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { t } = useT();
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-sm text-red-600">{message}</p>
       <Button variant="secondary" onClick={onRetry}>
-        Retry
+        {t("common.retry")}
       </Button>
     </div>
   );

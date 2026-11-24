@@ -13,6 +13,7 @@ from app.business.domain.events import (
 from app.business.domain.value_objects import (
     SUMMARY_FREQUENCIES,
     SUPPORTED_CURRENCIES,
+    SUPPORTED_LANGUAGES,
     BusinessKind,
     BusinessPlan,
     BusinessRole,
@@ -60,6 +61,7 @@ class Business(AggregateRoot):
         phone: str | None = None,
         upi_id: str | None = None,
         summary_frequency: str = "off",
+        language: str = "en",
         summary_last_sent_on: date | None = None,
         onboarding_completed: bool = False,
         status: BusinessStatus = BusinessStatus.ACTIVE,
@@ -96,6 +98,7 @@ class Business(AggregateRoot):
         self.phone = phone
         self.upi_id = upi_id
         self.summary_frequency = summary_frequency
+        self.language = language
         self.summary_last_sent_on = summary_last_sent_on
         self.onboarding_completed = onboarding_completed
         self.status = status
@@ -147,6 +150,7 @@ class Business(AggregateRoot):
         phone: str | None = None,
         upi_id: str | None = None,
         summary_frequency: str | None = None,
+        language: str | None = None,
     ) -> None:
         """Every field is optional and skippable per the spec ('Allow users
         to skip optional fields and complete them later') — only fields
@@ -179,6 +183,10 @@ class Business(AggregateRoot):
             if summary_frequency not in SUMMARY_FREQUENCIES:
                 raise ValidationException(f"The WhatsApp summary can be: {', '.join(SUMMARY_FREQUENCIES)}.")
             self.summary_frequency = summary_frequency
+        if language is not None:
+            if language not in SUPPORTED_LANGUAGES:
+                raise ValidationException(f"The language can be: {', '.join(SUPPORTED_LANGUAGES)}.")
+            self.language = language
         self._set_invoice_details(
             gstin=gstin,
             address_line=address_line,

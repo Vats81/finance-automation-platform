@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { MsalClientProvider } from "@/components/layout/MsalClientProvider";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
+import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <ServiceWorkerRegistration />
-        <MsalClientProvider>{children}</MsalClientProvider>
+        <LanguageProvider>
+          <MsalClientProvider>{children}</MsalClientProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

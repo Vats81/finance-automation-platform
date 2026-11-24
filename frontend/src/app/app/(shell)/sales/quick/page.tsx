@@ -13,15 +13,17 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
 import { GST_RATES, previewGst } from "@/lib/gst";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { CustomerResponse } from "@/types/customer";
 
 type Payment = "paid" | "part" | "udhaar";
 
-const PAYMENT_OPTIONS: { value: Payment; label: string }[] = [
-  { value: "paid", label: "Paid" },
-  { value: "part", label: "Part paid" },
-  { value: "udhaar", label: "Udhaar" },
+const PAYMENT_OPTIONS: { value: Payment; label: MessageKey }[] = [
+  { value: "paid", label: "quick.paid" },
+  { value: "part", label: "quick.partPaid" },
+  { value: "udhaar", label: "quick.udhaar" },
 ];
 
 const GST_KEY = "finverlo.quickSaleGst";
@@ -31,6 +33,7 @@ const NEW_CUSTOMER = "__new__";
 export default function QuickSalePage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
+  const { t } = useT();
   const router = useRouter();
   const saleKey = useSubmissionKey();
   const gstMode = Boolean(currentBusiness?.business.gst_registered);
@@ -72,8 +75,10 @@ export default function QuickSalePage() {
   const total = useMemo(() => {
     const value = Number(amount || 0);
     if (!gstMode) return value;
-    return previewGst([{ quantity: "1", unit_price: String(value), gst_rate: gstRate || undefined }], 0, false)
-      .totalCents / 100;
+    return (
+      previewGst([{ quantity: "1", unit_price: String(value), gst_rate: gstRate || undefined }], 0, false)
+        .totalCents / 100
+    );
   }, [amount, gstMode, gstRate]);
 
   const isNewCustomer = customerId === NEW_CUSTOMER;
@@ -82,11 +87,11 @@ export default function QuickSalePage() {
     event.preventDefault();
     if (!currentBusinessId) return;
     if (!(Number(amount) > 0)) {
-      setError("Enter the amount of the sale.");
+      setError(t("quick.errAmount"));
       return;
     }
     if (payment === "part" && !(Number(received) > 0 && Number(received) < total)) {
-      setError("For a part payment, enter how much was received (less than the total).");
+      setError(t("quick.errPart"));
       return;
     }
     setIsSaving(true);
@@ -95,7 +100,7 @@ export default function QuickSalePage() {
       const token = getAccessToken();
       let customer = customerId && !isNewCustomer ? customerId : undefined;
       if (isNewCustomer) {
-        if (!newName.trim()) throw new Error("Enter the customer's name.");
+        if (!newName.trim()) throw new Error(t("quick.errName"));
         if (!createdCustomerId.current) {
           const created = await createCustomer(token, currentBusinessId, {
             name: newName.trim(),
@@ -106,7 +111,7 @@ export default function QuickSalePage() {
         customer = createdCustomerId.current;
       }
       if (payment !== "paid" && !customer) {
-        throw new Error("To note who owes you, choose or add the customer.");
+        throw new Error(t("quick.errWho"));
       }
       const sale = await createSale(
         token,
@@ -118,7 +123,7 @@ export default function QuickSalePage() {
           line_items: [
             {
               line_number: 1,
-              description: item.trim() || "Sale",
+              description: item.trim() || t("quick.itemDefault"),
               quantity: "1",
               unit_price: amount,
               gst_rate: gstMode && gstRate ? gstRate : undefined,
@@ -135,34 +140,34 @@ export default function QuickSalePage() {
           await recordSalePayment(token, currentBusinessId, sale.id, received);
         }
       } catch (err) {
-        // The sale is saved; only the payment note failed. Say so and let them add it on the sale page.
-        router.push(`/app/sales/${sale.id}`);
+        // The sale is saved; only the payment note failed. Go to the sale, where it can be added.
         console.error("Payment note failed", err);
-        return;
       }
       router.push(`/app/sales/${sale.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "duplicate_invoice_number" && currentBusinessId) {
-        getNextInvoiceNumber(getAccessToken(), currentBusinessId).then(setInvoiceNumber).catch(() => undefined);
+        getNextInvoiceNumber(getAccessToken(), currentBusinessId)
+          .then(setInvoiceNumber)
+          .catch(() => undefined);
         saleKey.renew();
       }
-      setError(err instanceof Error ? err.message : "Could not save the sale");
+      setError(err instanceof Error ? err.message : t("quick.errSave"));
       setIsSaving(false);
     }
   }
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">Quick sale</h1>
+      <h1 className="mb-1 text-2xl font-semibold">{t("quick.title")}</h1>
       <p className="mb-6 text-sm text-slate-500">
-        {invoiceNumber ? `Invoice ${invoiceNumber}` : "Invoice number is made for you"}
+        {invoiceNumber ? t("quick.invoice", { number: invoiceNumber }) : t("quick.invoiceAuto")}
       </p>
       <Card className="max-w-md">
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">Amount</span>
+            <span className="mb-1 block text-sm font-medium">{t("quick.amount")}</span>
             <Input
               required
               autoFocus
@@ -178,13 +183,17 @@ export default function QuickSalePage() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">What was sold (optional)</span>
-            <Input placeholder="Sale" value={item} onChange={(e) => setItem(e.target.value)} />
+            <span className="mb-1 block text-sm font-medium">{t("quick.item")}</span>
+            <Input
+              placeholder={t("quick.itemDefault")}
+              value={item}
+              onChange={(e) => setItem(e.target.value)}
+            />
           </label>
 
           {gstMode && (
             <label className="block">
-              <span className="mb-1 block text-sm font-medium">GST (added on top of the amount)</span>
+              <span className="mb-1 block text-sm font-medium">{t("quick.gstOnTop")}</span>
               <Select
                 value={gstRate}
                 onChange={(e) => {
@@ -196,10 +205,10 @@ export default function QuickSalePage() {
                   }
                 }}
               >
-                <option value="">No GST</option>
+                <option value="">{t("saleForm.noGst")}</option>
                 {GST_RATES.map((rate) => (
                   <option key={rate} value={rate}>
-                    GST {rate}%
+                    {t("saleForm.gstRate", { rate })}
                   </option>
                 ))}
               </Select>
@@ -207,23 +216,27 @@ export default function QuickSalePage() {
           )}
 
           <label className="block">
-            <span className="mb-1 block text-sm font-medium">Customer</span>
+            <span className="mb-1 block text-sm font-medium">{t("quick.customer")}</span>
             <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-              <option value="">Walk-in (no name)</option>
+              <option value="">{t("quick.walkIn")}</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
-              <option value={NEW_CUSTOMER}>+ New customer</option>
+              <option value={NEW_CUSTOMER}>{t("quick.newCustomer")}</option>
             </Select>
           </label>
 
           {isNewCustomer && (
             <div className="grid grid-cols-2 gap-3">
-              <Input placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
               <Input
-                placeholder="Phone"
+                placeholder={t("quick.name")}
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+              <Input
+                placeholder={t("quick.phone")}
                 inputMode="tel"
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
@@ -232,8 +245,8 @@ export default function QuickSalePage() {
           )}
 
           <div>
-            <span className="mb-1 block text-sm font-medium">Payment</span>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Payment">
+            <span className="mb-1 block text-sm font-medium">{t("quick.payment")}</span>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("quick.payment")}>
               {PAYMENT_OPTIONS.map((option) => (
                 <button
                   key={option.value}
@@ -247,7 +260,7 @@ export default function QuickSalePage() {
                       : "border-slate-300 bg-white text-slate-700"
                   }`}
                 >
-                  {option.label}
+                  {t(option.label)}
                 </button>
               ))}
             </div>
@@ -255,7 +268,7 @@ export default function QuickSalePage() {
 
           {payment === "part" && (
             <label className="block">
-              <span className="mb-1 block text-sm font-medium">Received so far</span>
+              <span className="mb-1 block text-sm font-medium">{t("quick.received")}</span>
               <Input
                 inputMode="decimal"
                 type="number"
@@ -268,12 +281,14 @@ export default function QuickSalePage() {
           )}
 
           <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
-            <span className="font-medium">Total{gstMode && gstRate ? " (with GST)" : ""}</span>
+            <span className="font-medium">
+              {gstMode && gstRate ? t("quick.totalWithGst") : t("quick.total")}
+            </span>
             <span className="text-lg font-semibold">{formatCurrency(total)}</span>
           </div>
 
           <Button type="submit" disabled={isSaving} className="w-full py-3 text-base">
-            {isSaving ? "Saving…" : "Save sale"}
+            {isSaving ? t("common.saving") : t("quick.save")}
           </Button>
         </form>
       </Card>

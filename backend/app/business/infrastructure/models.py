@@ -34,6 +34,7 @@ class BusinessModel(Base):
     summary_frequency: Mapped[str] = mapped_column(
         String(10), nullable=False, default="off", server_default="off"
     )
+    language: Mapped[str] = mapped_column(String(5), nullable=False, default="en", server_default="en")
     summary_last_sent_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")

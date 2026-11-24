@@ -20,6 +20,8 @@ import {
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { InsightsResponse } from "@/types/aiAssistant";
 import {
   BusinessHealthScoreResponse,
@@ -30,6 +32,13 @@ import {
   DashboardTrendResponse,
 } from "@/types/dashboard";
 
+const PERIOD_KEYS: Record<DashboardPeriod, MessageKey> = {
+  this_month: "dash.period.this_month",
+  this_quarter: "dash.period.this_quarter",
+  this_year: "dash.period.this_year",
+  all_time: "dash.period.all_time",
+};
+
 const HEALTH_SCORE_TONE: Record<string, "success" | "warning" | "danger"> = {
   Excellent: "success",
   Good: "success",
@@ -38,11 +47,19 @@ const HEALTH_SCORE_TONE: Record<string, "success" | "warning" | "danger"> = {
   Critical: "danger",
 };
 
-const BREAKDOWN_LABELS: Record<string, string> = {
-  profitability: "Profitability",
-  revenue_trend: "Revenue trend",
-  receivables_health: "Receivables health",
-  inventory_health: "Inventory health",
+const BREAKDOWN_KEYS: Record<string, MessageKey> = {
+  profitability: "dash.breakdown.profitability",
+  revenue_trend: "dash.breakdown.revenue_trend",
+  receivables_health: "dash.breakdown.receivables_health",
+  inventory_health: "dash.breakdown.inventory_health",
+};
+
+const LABEL_KEYS: Record<string, MessageKey> = {
+  Excellent: "dash.label.Excellent",
+  Good: "dash.label.Good",
+  Fair: "dash.label.Fair",
+  "Needs attention": "dash.label.Needs attention",
+  Critical: "dash.label.Critical",
 };
 
 function toISODate(d: Date): string {
@@ -90,6 +107,11 @@ function getTrendRange(period: DashboardPeriod): { startDate: string; endDate: s
 function BusinessDashboard() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusiness, currentBusinessId } = useCurrentBusiness();
+  const { t, lang } = useT();
+  const known = (map: Record<string, MessageKey>, key: string) => {
+    const messageKey = map[key];
+    return messageKey ? t(messageKey) : key;
+  };
   const [period, setPeriod] = useState<DashboardPeriod>("this_month");
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [trend, setTrend] = useState<DashboardTrendResponse | null>(null);
@@ -118,7 +140,8 @@ function BusinessDashboard() {
         setSummary(summaryRes);
         setTrend(trendRes);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load dashboard"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("dash.loadFailed")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, period, getAccessToken]);
 
   useEffect(() => {
@@ -168,25 +191,25 @@ function BusinessDashboard() {
   const hasTrendActivity = trend?.points.some((p) => Number(p.revenue) !== 0 || Number(p.expenses) !== 0);
 
   const metrics = [
-    { label: "Total revenue", value: summary?.total_revenue, hint: "Connect Sales to see this" },
-    { label: "Total expenses", value: summary?.total_expenses, hint: "Connect Expenses to see this" },
-    { label: "Net profit", value: summary?.net_profit, hint: "Connect Sales & Expenses to see this" },
+    { label: t("dash.revenue"), value: summary?.total_revenue, hint: t("dash.revenueHint") },
+    { label: t("dash.expenses"), value: summary?.total_expenses, hint: t("dash.expensesHint") },
+    { label: t("dash.profit"), value: summary?.net_profit, hint: t("dash.profitHint") },
     {
-      label: "Outstanding receivables",
+      label: t("dash.receivables"),
       value: summary?.outstanding_receivables,
-      hint: "Connect Payments to see this",
+      hint: t("dash.receivablesHint"),
     },
     {
-      label: "Purchases",
+      label: t("dash.purchases"),
       value: summary?.total_purchases,
-      hint: "Record a purchase to see this",
-      note: "Bought from suppliers. Not part of net profit.",
+      hint: t("dash.purchasesHint"),
+      note: t("dash.purchasesNote"),
     },
     {
-      label: "Outstanding payables",
+      label: t("dash.payables"),
       value: summary?.outstanding_payables,
-      hint: "Record a purchase to see this",
-      note: "Still owed to suppliers.",
+      hint: t("dash.purchasesHint"),
+      note: t("dash.payablesNote"),
     },
   ];
 
@@ -195,19 +218,19 @@ function BusinessDashboard() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="mb-1 text-2xl font-semibold">
-            {currentBusiness ? currentBusiness.business.name : "Your business"}
+            {currentBusiness ? currentBusiness.business.name : t("dash.yourBusiness")}
           </h1>
           <p className="text-sm text-slate-500">
             {currentBusiness?.business.onboarding_completed
-              ? "Here's an overview of your business."
-              : "Finish setting up your business from Settings to unlock more insights."}
+              ? t("dash.overview")
+              : t("dash.finishSetup")}
           </p>
         </div>
         <div className="w-48">
           <Select value={period} onChange={(e) => setPeriod(e.target.value as DashboardPeriod)}>
             {DASHBOARD_PERIODS.map((p) => (
               <option key={p.value} value={p.value}>
-                {p.label}
+                {t(PERIOD_KEYS[p.value])}
               </option>
             ))}
           </Select>
@@ -232,27 +255,26 @@ function BusinessDashboard() {
       </div>
 
       <Card className="mt-6">
-        <h2 className="mb-4 text-sm font-semibold">Business Health Score</h2>
+        <h2 className="mb-4 text-sm font-semibold">{t("dash.health")}</h2>
         {healthScoreError ? (
           <InlineError message={healthScoreError} onRetry={() => setHealthScoreRetryToken((n) => n + 1)} />
         ) : healthScore ? (
           healthScore.overall_score === null ? (
             <p className="text-sm text-slate-500">
-              Not enough data yet — record at least a few weeks of sales and expenses to see a health
-              score.
+              {t("dash.healthNotEnough")}
             </p>
           ) : (
             <div className="flex flex-wrap items-center gap-6">
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl font-bold text-slate-900">{healthScore.overall_score}</span>
-                <Badge tone={HEALTH_SCORE_TONE[healthScore.label] ?? "neutral"}>{healthScore.label}</Badge>
+                <Badge tone={HEALTH_SCORE_TONE[healthScore.label] ?? "neutral"}>{known(LABEL_KEYS, healthScore.label)}</Badge>
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
                 {Object.entries(healthScore.breakdown).map(([key, value]) => (
                   <div key={key}>
-                    <span className="text-slate-500">{BREAKDOWN_LABELS[key] ?? key}: </span>
+                    <span className="text-slate-500">{known(BREAKDOWN_KEYS, key)}: </span>
                     {value === null ? (
-                      <span className="text-slate-400">Not enough data yet</span>
+                      <span className="text-slate-400">{t("dash.healthNoData")}</span>
                     ) : (
                       <span className="font-medium">{Math.round(value * 100)}%</span>
                     )}
@@ -262,19 +284,19 @@ function BusinessDashboard() {
             </div>
           )
         ) : (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm text-slate-500">{t("common.loading")}</p>
         )}
       </Card>
 
       <Card className="mt-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">AI Insights</h2>
+          <h2 className="text-sm font-semibold">{t("dash.insights")}</h2>
           <Button
             variant="secondary"
             onClick={handleRefreshInsights}
             disabled={isRefreshingInsights}
           >
-            {isRefreshingInsights ? "Refreshing..." : "Refresh"}
+            {isRefreshingInsights ? t("dash.refreshing") : t("dash.refresh")}
           </Button>
         </div>
         {insightsError ? (
@@ -282,58 +304,59 @@ function BusinessDashboard() {
         ) : insights ? (
           <MarkdownLite text={insights.insights} className="text-sm text-slate-700" />
         ) : (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm text-slate-500">{t("common.loading")}</p>
         )}
       </Card>
 
       <Card className="mt-6">
         <h2 className="mb-4 text-sm font-semibold">
-          Revenue vs Expenses{period === "all_time" ? " — Last 12 months" : ""}
+          {t("dash.trend")}
+          {period === "all_time" ? t("dash.trendLast12") : ""}
         </h2>
         {trend && hasTrendActivity ? (
           <RevenueExpenseChart trend={trend} />
         ) : (
           <p className="text-sm text-slate-500">
-            Not enough data yet — record a{" "}
+            {t("dash.noTrend")}{" "}
             <Link href="/app/sales/new" className="text-brand-600 underline">
-              sale
-            </Link>{" "}
-            or an{" "}
+              {t("dash.recordSale")}
+            </Link>
+            {" · "}
             <Link href="/app/expenses/new" className="text-brand-600 underline">
-              expense
-            </Link>{" "}
-            to see a trend here.
+              {t("dash.recordExpense")}
+            </Link>
           </p>
         )}
       </Card>
 
       <Card className="mt-6">
-        <h2 className="mb-1 text-sm font-semibold">Forecast</h2>
+        <h2 className="mb-1 text-sm font-semibold">{t("dash.forecast")}</h2>
         {forecastError ? (
           <InlineError message={forecastError} onRetry={() => setForecastRetryToken((n) => n + 1)} />
         ) : forecast ? (
           forecast.is_available ? (
             <>
               <p className="mb-3 text-xs text-slate-500">
-                Estimated from a trend across your last {forecast.history_months_used} months (
-                {forecast.months_with_activity} with recorded activity). These are estimates based on
-                past trends, not guarantees.
+                {t("dash.forecastNote", {
+                  months: forecast.history_months_used,
+                  active: forecast.months_with_activity,
+                })}
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-slate-500">
-                      <th className="py-2 pr-4 font-medium">Month</th>
-                      <th className="py-2 pr-4 font-medium">Projected revenue</th>
-                      <th className="py-2 pr-4 font-medium">Projected expenses</th>
-                      <th className="py-2 pr-4 font-medium">Projected net profit</th>
+                      <th className="py-2 pr-4 font-medium">{t("dash.month")}</th>
+                      <th className="py-2 pr-4 font-medium">{t("dash.projRevenue")}</th>
+                      <th className="py-2 pr-4 font-medium">{t("dash.projExpenses")}</th>
+                      <th className="py-2 pr-4 font-medium">{t("dash.projProfit")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {forecast.points.map((point) => (
                       <tr key={point.period_start} className="border-b border-slate-100">
                         <td className="py-2 pr-4">
-                          {new Date(point.period_start).toLocaleDateString("en-US", {
+                          {new Date(point.period_start).toLocaleDateString(lang === "hi" ? "hi-IN" : "en-US", {
                             month: "long",
                             year: "numeric",
                           })}
@@ -349,41 +372,47 @@ function BusinessDashboard() {
             </>
           ) : (
             <p className="text-sm text-slate-500">
-              Not enough sales and expense history yet to forecast — {forecast.months_with_activity} of
-              the last {forecast.history_months_used} months have recorded activity so far, and
-              forecasting needs at least 2.
+              {t("dash.forecastNone", {
+                months: forecast.history_months_used,
+                active: forecast.months_with_activity,
+              })}
             </p>
           )
         ) : (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm text-slate-500">{t("common.loading")}</p>
         )}
       </Card>
 
       <Card className="mt-6">
-        <h2 className="mb-2 text-sm font-semibold">Get started</h2>
-        <p className="text-sm text-slate-600">
-          Record your first{" "}
-          <Link href="/app/sales/new" className="text-brand-600 underline">
-            sale
-          </Link>{" "}
-          or{" "}
-          <Link href="/app/expenses/new" className="text-brand-600 underline">
-            expense
-          </Link>
-          , or bring in customers, vendors, products or expenses from a CSV file via the{" "}
-          <Link href="/app/data-upload" className="text-brand-600 underline">
-            Data Upload Centre
-          </Link>
-          , to see these numbers update — or head to{" "}
-          <Link href="/app/reports" className="text-brand-600 underline">
-            Reports
-          </Link>{" "}
-          or the{" "}
-          <Link href="/app/ai-assistant" className="text-brand-600 underline">
-            AI Assistant
-          </Link>{" "}
-          for a deeper look.
-        </p>
+        <h2 className="mb-2 text-sm font-semibold">{t("dash.getStarted")}</h2>
+        <p className="mb-2 text-sm text-slate-600">{t("dash.getStartedText")}</p>
+        <ul className="list-inside list-disc space-y-1 text-sm">
+          <li>
+            <Link href="/app/sales/quick" className="text-brand-600 underline">
+              {t("sales.quick")}
+            </Link>
+          </li>
+          <li>
+            <Link href="/app/expenses/new" className="text-brand-600 underline">
+              {t("dash.recordExpense")}
+            </Link>
+          </li>
+          <li>
+            <Link href="/app/data-upload" className="text-brand-600 underline">
+              {t("dash.dataUpload")}
+            </Link>
+          </li>
+          <li>
+            <Link href="/app/reports" className="text-brand-600 underline">
+              {t("nav.reports")}
+            </Link>
+          </li>
+          <li>
+            <Link href="/app/ai-assistant" className="text-brand-600 underline">
+              {t("nav.aiAssistant")}
+            </Link>
+          </li>
+        </ul>
       </Card>
     </div>
   );

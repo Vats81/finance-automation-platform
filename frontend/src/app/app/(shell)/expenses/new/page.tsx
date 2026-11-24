@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/client";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { CreateExpenseRequest } from "@/types/expense";
 import { VendorResponse } from "@/types/vendor";
 
@@ -17,6 +18,7 @@ export default function NewExpensePage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
+  const { t } = useT();
   const submission = useSubmissionKey();
   const [vendors, setVendors] = useState<VendorResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,14 +42,14 @@ export default function NewExpensePage() {
       router.push(`/app/expenses/${expense.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
-      setError(err instanceof Error ? err.message : "Failed to record expense");
+      setError(err instanceof Error ? err.message : t("exp.recordFailed"));
       setIsSubmitting(false);
     }
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">New expense</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("exp.new")}</h1>
       <Card className="max-w-lg">
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         <ExpenseForm

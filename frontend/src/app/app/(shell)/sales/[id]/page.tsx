@@ -17,6 +17,8 @@ import {
   revokeInvoiceShareLinks,
   voidSale,
 } from "@/lib/api/sales";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { invoiceMessage, whatsappLink, whatsappPhone } from "@/lib/whatsapp";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
@@ -35,6 +37,7 @@ export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
+  const { t } = useT();
   const paymentKey = useSubmissionKey();
   const [sale, setSale] = useState<SaleResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +53,9 @@ export default function SaleDetailPage() {
     try {
       setSale(await getSale(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sale");
+      setError(err instanceof Error ? err.message : t("sale.loadFailed"));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken, id]);
 
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function SaleDetailPage() {
       setPaymentAmount("");
       paymentKey.renew();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to record payment");
+      setError(err instanceof Error ? err.message : t("sale.paymentFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -82,7 +86,7 @@ export default function SaleDetailPage() {
     try {
       await downloadSaleInvoicePdf(getAccessToken(), currentBusinessId, id, sale.invoice_number);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not download the invoice");
+      setError(err instanceof Error ? err.message : t("sale.downloadFailed"));
     } finally {
       setIsDownloading(false);
     }
@@ -109,7 +113,7 @@ export default function SaleDetailPage() {
           // no customer details: the user picks the contact in WhatsApp
         }
       }
-      const text = invoiceMessage({
+      const text = invoiceMessage(t, {
         customerName,
         businessName: currentBusiness.business.name,
         invoiceNumber: sale.invoice_number,
@@ -123,7 +127,7 @@ export default function SaleDetailPage() {
       else window.location.href = target;
     } catch (err) {
       popup?.close();
-      setError(err instanceof Error ? err.message : "Could not make the invoice link");
+      setError(err instanceof Error ? err.message : t("sale.linkFailed"));
     } finally {
       setIsSharing(false);
     }
@@ -137,11 +141,11 @@ export default function SaleDetailPage() {
       const result = await revokeInvoiceShareLinks(getAccessToken(), currentBusinessId, id);
       setNotice(
         result.revoked > 0
-          ? "The invoice links you sent no longer work."
-          : "There were no active invoice links to stop."
+          ? t("sale.linksStopped")
+          : t("sale.noLinks")
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not stop sharing");
+      setError(err instanceof Error ? err.message : t("sale.stopFailed"));
     }
   }
 
@@ -153,7 +157,7 @@ export default function SaleDetailPage() {
       const token = getAccessToken();
       setSale(await voidSale(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to void sale");
+      setError(err instanceof Error ? err.message : t("sale.voidFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -178,19 +182,19 @@ export default function SaleDetailPage() {
           <p className="text-sm text-slate-500">{sale.invoice_date}</p>
         </div>
         <div className="flex items-center gap-2">
-          {sale.status === "void" && <Badge tone="neutral">void</Badge>}
-          <Badge tone={STATUS_TONE[sale.payment_status]}>{sale.payment_status.replace("_", " ")}</Badge>
+          {sale.status === "void" && <Badge tone="neutral">{t("sales.void")}</Badge>}
+          <Badge tone={STATUS_TONE[sale.payment_status]}>{t(`sales.status.${sale.payment_status}` as MessageKey)}</Badge>
           <Button variant="secondary" onClick={handleDownloadInvoice} disabled={isDownloading}>
-            {isDownloading ? "Preparing…" : "Download invoice"}
+            {isDownloading ? t("common.preparing") : t("sale.download")}
           </Button>
           {sale.status !== "void" && (
             <Button onClick={handleShareWhatsApp} disabled={isSharing}>
-              {isSharing ? "Preparing…" : "Send on WhatsApp"}
+              {isSharing ? t("common.preparing") : t("sale.sendWhatsApp")}
             </Button>
           )}
           {sale.status !== "void" && (
             <Link href={`/app/sales/${sale.id}/edit`}>
-              <Button variant="secondary">Edit</Button>
+              <Button variant="secondary">{t("common.edit")}</Button>
             </Link>
           )}
         </div>
@@ -204,7 +208,7 @@ export default function SaleDetailPage() {
           onClick={handleStopSharing}
           className="mb-4 text-xs text-slate-500 underline hover:text-slate-700"
         >
-          Stop the invoice links I have sent
+          {t("sale.stopLinks")}
         </button>
       )}
 
@@ -212,11 +216,11 @@ export default function SaleDetailPage() {
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <th className="py-2 pr-4">Description</th>
-              <th className="py-2 pr-4">Qty</th>
-              <th className="py-2 pr-4">Unit price</th>
-              {hasGst && <th className="py-2 pr-4">GST</th>}
-              <th className="py-2 pr-4">Line total</th>
+              <th className="py-2 pr-4">{t("common.description")}</th>
+              <th className="py-2 pr-4">{t("sale.qty")}</th>
+              <th className="py-2 pr-4">{t("sale.unitPrice")}</th>
+              {hasGst && <th className="py-2 pr-4">{t("sale.gst")}</th>}
+              <th className="py-2 pr-4">{t("sale.lineTotal")}</th>
             </tr>
           </thead>
           <tbody>
@@ -228,7 +232,7 @@ export default function SaleDetailPage() {
                 {hasGst && (
                   <td className="py-2 pr-4 text-slate-600">
                     {item.gst_rate !== null && item.gst_rate !== undefined ? `${normalizeRate(item.gst_rate)}%` : "—"}
-                    {item.hsn_code ? <span className="block text-xs text-slate-400">HSN {item.hsn_code}</span> : null}
+                    {item.hsn_code ? <span className="block text-xs text-slate-400">{t("sale.hsn")} {item.hsn_code}</span> : null}
                   </td>
                 )}
                 <td className="py-2 pr-4">{formatCurrency(item.line_total)}</td>
@@ -239,11 +243,11 @@ export default function SaleDetailPage() {
 
         <div className="mt-4 space-y-1 border-t border-slate-200 pt-4 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-500">Subtotal</span>
+            <span className="text-slate-500">{t("sale.subtotal")}</span>
             <span>{formatCurrency(sale.subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Discount</span>
+            <span className="text-slate-500">{t("sale.discount")}</span>
             <span>-{formatCurrency(sale.discount)}</span>
           </div>
           {hasGst ? (
@@ -253,7 +257,7 @@ export default function SaleDetailPage() {
                 .map((g) => (
                   <div key={g.rate} className="flex justify-between text-slate-600">
                     <span>
-                      GST {normalizeRate(g.rate)}% on {formatCurrency(g.taxable_value)}
+                      {t("sale.gstOn", { rate: normalizeRate(g.rate), amount: formatCurrency(g.taxable_value) })}
                     </span>
                     <span>
                       {interState
@@ -265,26 +269,26 @@ export default function SaleDetailPage() {
                   </div>
                 ))}
               <div className="flex justify-between">
-                <span className="text-slate-500">Total GST</span>
+                <span className="text-slate-500">{t("sale.totalGst")}</span>
                 <span>{formatCurrency(sale.tax)}</span>
               </div>
             </>
           ) : (
             <div className="flex justify-between">
-              <span className="text-slate-500">Tax</span>
+              <span className="text-slate-500">{t("sale.tax")}</span>
               <span>{formatCurrency(sale.tax)}</span>
             </div>
           )}
           <div className="flex justify-between font-semibold">
-            <span>Total</span>
+            <span>{t("common.total")}</span>
             <span>{formatCurrency(sale.total_amount)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Received</span>
+            <span className="text-slate-500">{t("sale.received")}</span>
             <span>{formatCurrency(sale.amount_received)}</span>
           </div>
           <div className="flex justify-between font-semibold">
-            <span>Outstanding</span>
+            <span>{t("sale.outstanding")}</span>
             <span>{formatCurrency(sale.outstanding_amount)}</span>
           </div>
         </div>
@@ -295,7 +299,7 @@ export default function SaleDetailPage() {
           {sale.payment_status !== "paid" && (
             <form onSubmit={handleRecordPayment} className="flex items-end gap-2">
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium">Record payment</label>
+                <label className="mb-1 block text-sm font-medium">{t("sale.recordPayment")}</label>
                 <Input
                   required
                   type="number"
@@ -305,12 +309,12 @@ export default function SaleDetailPage() {
                 />
               </div>
               <Button type="submit" disabled={isUpdating}>
-                Record
+                {t("sale.record")}
               </Button>
             </form>
           )}
           <Button variant="danger" disabled={isUpdating} onClick={handleVoid}>
-            Void sale
+            {t("sale.void")}
           </Button>
         </Card>
       )}

@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { registerUser } from "@/lib/api/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function SignupPage() {
+  const { t } = useT();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +29,7 @@ export default function SignupPage() {
       setAlreadyVerified(user.is_email_verified);
       setRegistered(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create your account");
+      setError(err instanceof Error ? err.message : t("auth.createFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -37,25 +40,24 @@ export default function SignupPage() {
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <Card className="w-full max-w-sm text-center">
           <h1 className="mb-2 text-xl font-semibold">
-            {alreadyVerified ? "Account created" : "Check your email"}
+            {alreadyVerified ? t("auth.created") : t("auth.checkEmail")}
           </h1>
           <p className="text-sm text-slate-600">
             {alreadyVerified ? (
               <>
-                Your account is ready.{" "}
+                {t("auth.ready")}{" "}
                 <Link href="/app/login" className="text-brand-600 underline">
-                  Sign in
+                  {t("auth.signIn")}
                 </Link>{" "}
-                to get started.
+                {t("auth.toGetStarted")}
               </>
             ) : (
               <>
-                We sent a verification link to <span className="font-medium">{email}</span>. Verify
-                your email to activate your account, then{" "}
+                {t("auth.sentLink", { email })}{" "}
                 <Link href="/app/login" className="text-brand-600 underline">
-                  sign in
+                  {t("auth.signInLower")}
                 </Link>
-                .
+                {t("auth.stop")}
               </>
             )}
           </p>
@@ -65,17 +67,20 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4">
+      <div className="mb-3 w-full max-w-sm text-right">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-sm">
-        <h1 className="mb-1 text-xl font-semibold">Create your account</h1>
-        <p className="mb-6 text-sm text-slate-500">Your AI Finance Manager for Business Growth</p>
+        <h1 className="mb-1 text-xl font-semibold">{t("auth.createTitle")}</h1>
+        <p className="mb-6 text-sm text-slate-500">{t("auth.tagline")}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <FormField label="Full name">
+          <FormField label={t("auth.fullName")}>
             <Input required value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
           </FormField>
-          <FormField label="Email">
+          <FormField label={t("auth.email")}>
             <Input
               required
               type="email"
@@ -83,7 +88,7 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </FormField>
-          <FormField label="Password">
+          <FormField label={t("auth.password")}>
             <Input
               required
               type="password"
@@ -93,26 +98,26 @@ export default function SignupPage() {
             />
           </FormField>
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Creating account…" : "Create account"}
+            {isSubmitting ? t("auth.creating") : t("auth.createAccount")}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-xs text-slate-400">
-          By creating an account, you agree to our{" "}
+          {t("auth.agree")}{" "}
           <Link href="/terms" className="underline hover:text-slate-600">
-            Terms of Service
+            {t("auth.terms")}
           </Link>{" "}
-          and{" "}
+          {t("auth.and")}{" "}
           <Link href="/privacy" className="underline hover:text-slate-600">
-            Privacy Policy
+            {t("auth.privacy")}
           </Link>
-          .
+          {t("auth.agreeTail")}
         </p>
 
         <p className="mt-4 text-center text-sm text-slate-500">
-          Already have an account?{" "}
+          {t("auth.haveAccount")}{" "}
           <Link href="/app/login" className="text-brand-600 underline">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
       </Card>

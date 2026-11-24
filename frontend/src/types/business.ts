@@ -35,6 +35,7 @@ export interface BusinessResponse {
   phone?: string | null;
   upi_id?: string | null;
   summary_frequency?: SummaryFrequency;
+  language?: "en" | "hi";
   onboarding_completed: boolean;
   status: BusinessStatus;
   plan: BusinessPlan;
@@ -74,6 +75,7 @@ export interface CompleteOnboardingRequest {
   pincode?: string;
   phone?: string;
   upi_id?: string;
+  language?: "en" | "hi";
   summary_frequency?: SummaryFrequency;
 }
 

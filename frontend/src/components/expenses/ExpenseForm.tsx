@@ -6,6 +6,8 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { scanReceipt } from "@/lib/api/expenses";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { CreateExpenseRequest, PaymentMethod } from "@/types/expense";
 import { VendorResponse } from "@/types/vendor";
@@ -24,6 +26,7 @@ export function ExpenseForm({
   businessId: string | null;
 }) {
   const { getAccessToken } = useLocalAuth();
+  const { t } = useT();
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10));
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -51,7 +54,7 @@ export function ExpenseForm({
       }
       if (result.description_guess || result.vendor_name) {
         setDescription(
-          result.description_guess ?? `Purchase from ${result.vendor_name}`
+          result.description_guess ?? t("exp.purchaseFrom", { vendor: result.vendor_name ?? "" })
         );
         sawAnyField = true;
       }
@@ -64,10 +67,10 @@ export function ExpenseForm({
         sawAnyField = true;
       }
       if (!sawAnyField) {
-        setScanHint(result.raw_text || "Couldn't read any details — please enter them manually.");
+        setScanHint(result.raw_text || t("exp.scanNothing"));
       }
     } catch (err) {
-      setScanHint(err instanceof Error ? err.message : "Failed to scan the receipt");
+      setScanHint(err instanceof Error ? err.message : t("exp.scanFailed"));
     } finally {
       setIsScanning(false);
     }
@@ -93,10 +96,10 @@ export function ExpenseForm({
         <div className="rounded-md border border-dashed border-slate-300 p-3">
           <label className="flex cursor-pointer items-center justify-between gap-3">
             <span className="text-sm text-slate-600">
-              {isScanning ? "Scanning receipt… this can take up to a minute" : "Scan a receipt or invoice (photo or PDF) to pre-fill this form"}
+              {isScanning ? t("exp.scanning") : t("exp.scanPrompt")}
             </span>
             <span className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-200">
-              Choose file
+              {t("exp.chooseFile")}
             </span>
             <input
               type="file"
@@ -111,7 +114,7 @@ export function ExpenseForm({
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Expense date">
+        <FormField label={t("exp.date")}>
           <Input
             required
             type="date"
@@ -119,17 +122,17 @@ export function ExpenseForm({
             onChange={(e) => setExpenseDate(e.target.value)}
           />
         </FormField>
-        <FormField label="Category">
+        <FormField label={t("exp.category")}>
           <Input
             required
-            placeholder="e.g. Utilities, Rent, Supplies"
+            placeholder={t("exp.categoryHint")}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           />
         </FormField>
       </div>
 
-      <FormField label="Description">
+      <FormField label={t("common.description")}>
         <Input
           required
           value={description}
@@ -137,9 +140,9 @@ export function ExpenseForm({
         />
       </FormField>
 
-      <FormField label="Vendor (optional)">
+      <FormField label={t("exp.vendorOptional")}>
         <Select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
-          <option value="">No vendor</option>
+          <option value="">{t("exp.noVendor")}</option>
           {vendors.map((vendor) => (
             <option key={vendor.id} value={vendor.id}>
               {vendor.legal_name}
@@ -149,19 +152,19 @@ export function ExpenseForm({
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Amount">
+        <FormField label={t("common.amount")}>
           <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </FormField>
-        <FormField label="Tax">
+        <FormField label={t("sale.tax")}>
           <Input type="number" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
         </FormField>
       </div>
 
-      <FormField label="Payment method">
+      <FormField label={t("exp.method")}>
         <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
           {PAYMENT_METHODS.map((method) => (
             <option key={method} value={method}>
-              {method.replace("_", " ")}
+              {t(`exp.method.${method}` as MessageKey)}
             </option>
           ))}
         </Select>
@@ -174,11 +177,11 @@ export function ExpenseForm({
           onChange={(e) => setIsRecurring(e.target.checked)}
           className="rounded border-slate-300"
         />
-        Recurring expense
+        {t("exp.recurring")}
       </label>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Saving…" : "Record expense"}
+        {isSubmitting ? t("common.saving") : t("exp.record")}
       </Button>
     </form>
   );

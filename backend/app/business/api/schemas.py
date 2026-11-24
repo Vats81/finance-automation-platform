@@ -40,6 +40,7 @@ class CompleteOnboardingRequest(BaseModel):
     phone: str | None = Field(default=None, max_length=32)
     upi_id: str | None = Field(default=None, max_length=100)
     summary_frequency: str | None = Field(default=None, max_length=10)
+    language: str | None = Field(default=None, max_length=5)
 
 
 class BusinessResponse(BaseModel):
@@ -64,6 +65,7 @@ class BusinessResponse(BaseModel):
     phone: str | None = None
     upi_id: str | None = None
     summary_frequency: str = "off"
+    language: str = "en"
     onboarding_completed: bool
     status: BusinessStatus
     plan: BusinessPlan
@@ -95,6 +97,7 @@ class BusinessResponse(BaseModel):
             phone=business.phone,
             upi_id=business.upi_id,
             summary_frequency=business.summary_frequency,
+            language=business.language,
             onboarding_completed=business.onboarding_completed,
             status=business.status,
             plan=business.plan,

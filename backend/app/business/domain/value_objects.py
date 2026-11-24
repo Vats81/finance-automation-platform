@@ -55,3 +55,6 @@ SUPPORTED_CURRENCIES = ("USD", "INR")
 
 # How often a business wants its WhatsApp summary of sales, expenses and what customers owe.
 SUMMARY_FREQUENCIES = ("off", "daily", "weekly")
+
+# The language of the messages Finverlo sends on the business's behalf (the WhatsApp summary).
+SUPPORTED_LANGUAGES = ("en", "hi")

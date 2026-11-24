@@ -9,23 +9,14 @@ import { getReceivables } from "@/lib/api/sales";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { reminderMessage, whatsappLink, whatsappPhone } from "@/lib/whatsapp";
 import { ReceivableCustomer, ReceivablesResponse } from "@/types/sale";
-
-function remind(row: ReceivableCustomer, businessName: string, upiId: string | null | undefined) {
-  const text = reminderMessage({
-    customerName: row.name,
-    businessName,
-    amount: formatCurrency(row.outstanding),
-    invoiceNumbers: row.invoices.map((i) => i.invoice_number),
-    upiId,
-  });
-  window.open(whatsappLink(whatsappPhone(row.phone), text), "_blank");
-}
 
 export default function UdhaarPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
+  const { t } = useT();
   const [data, setData] = useState<ReceivablesResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -34,20 +25,32 @@ export default function UdhaarPage() {
     if (!currentBusinessId) return;
     getReceivables(getAccessToken(), currentBusinessId)
       .then(setData)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("udhaar.loadFailed")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   const business = currentBusiness?.business;
+
+  function remind(row: ReceivableCustomer) {
+    const text = reminderMessage(t, {
+      customerName: row.name,
+      businessName: business?.name ?? "",
+      amount: formatCurrency(row.outstanding),
+      invoiceNumbers: row.invoices.map((i) => i.invoice_number),
+      upiId: business?.upi_id,
+    });
+    window.open(whatsappLink(whatsappPhone(row.phone), text), "_blank");
+  }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Udhaar</h1>
-          <p className="text-sm text-slate-500">Who owes you money, and a one-tap reminder on WhatsApp.</p>
+          <h1 className="text-2xl font-semibold">{t("udhaar.title")}</h1>
+          <p className="text-sm text-slate-500">{t("udhaar.subtitle")}</p>
         </div>
         <Link href="/app/sales/quick">
-          <Button>Quick sale</Button>
+          <Button>{t("sales.quick")}</Button>
         </Link>
       </div>
 
@@ -61,19 +64,20 @@ export default function UdhaarPage() {
       {data && (
         <>
           <Card className="mb-4 max-w-2xl">
-            <p className="text-sm text-slate-500">Total to collect</p>
+            <p className="text-sm text-slate-500">{t("udhaar.toCollect")}</p>
             <p className="text-3xl font-semibold">{formatCurrency(data.total_outstanding)}</p>
           </Card>
 
           {data.customers.length === 0 ? (
             <Card className="max-w-2xl">
-              <p className="text-sm text-slate-600">Nobody owes you anything right now.</p>
+              <p className="text-sm text-slate-600">{t("udhaar.nobody")}</p>
             </Card>
           ) : (
             <div className="max-w-2xl space-y-3">
               {data.customers.map((row) => {
                 const key = row.customer_id ?? "walk-in";
                 const isOpen = open === key;
+                const count = row.invoices.length;
                 return (
                   <Card key={key}>
                     <div className="flex items-center justify-between gap-3">
@@ -83,10 +87,12 @@ export default function UdhaarPage() {
                         onClick={() => setOpen(isOpen ? null : key)}
                         aria-expanded={isOpen}
                       >
-                        <p className="truncate font-medium">{row.name}</p>
+                        <p className="truncate font-medium">
+                          {row.customer_id ? row.name : t("udhaar.walkIn")}
+                        </p>
                         <p className="text-xs text-slate-500">
-                          {row.invoices.length} {row.invoices.length === 1 ? "invoice" : "invoices"}
-                          {row.days_overdue > 0 ? ` · ${row.days_overdue} days late` : ""}
+                          {count === 1 ? t("udhaar.invoice", { n: count }) : t("udhaar.invoices", { n: count })}
+                          {row.days_overdue > 0 ? ` · ${t("udhaar.late", { n: row.days_overdue })}` : ""}
                         </p>
                       </button>
                       <div className="text-right">
@@ -95,9 +101,9 @@ export default function UdhaarPage() {
                           <button
                             type="button"
                             className="mt-1 text-sm font-medium text-green-700 underline"
-                            onClick={() => remind(row, business?.name ?? "us", business?.upi_id)}
+                            onClick={() => remind(row)}
                           >
-                            Remind on WhatsApp
+                            {t("udhaar.remind")}
                           </button>
                         )}
                       </div>
@@ -114,9 +120,7 @@ export default function UdhaarPage() {
                           </li>
                         ))}
                         {!row.phone && row.customer_id && (
-                          <li className="pt-1 text-xs text-slate-500">
-                            No phone number saved for this customer, so you will pick the contact in WhatsApp.
-                          </li>
+                          <li className="pt-1 text-xs text-slate-500">{t("udhaar.noPhone")}</li>
                         )}
                       </ul>
                     )}

@@ -27,6 +27,7 @@ class CompleteOnboardingCommand:
     phone: str | None = None
     upi_id: str | None = None
     summary_frequency: str | None = None
+    language: str | None = None
 
 
 class CompleteOnboardingUseCase:
@@ -57,6 +58,7 @@ class CompleteOnboardingUseCase:
             phone=command.phone,
             upi_id=command.upi_id,
             summary_frequency=command.summary_frequency,
+            language=command.language,
         )
         await self._uow.businesses.update(business)
         await self._uow.commit()

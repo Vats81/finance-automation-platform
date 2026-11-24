@@ -9,6 +9,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { getExpense, voidExpense } from "@/lib/api/expenses";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { ExpenseResponse } from "@/types/expense";
 import { formatCurrency } from "@/lib/format";
 
@@ -16,6 +18,7 @@ export default function ExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
+  const { t } = useT();
   const [expense, setExpense] = useState<ExpenseResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -26,8 +29,9 @@ export default function ExpenseDetailPage() {
     try {
       setExpense(await getExpense(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load expense");
+      setError(err instanceof Error ? err.message : t("exp.loadOneFailed"));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken, id]);
 
   useEffect(() => {
@@ -42,7 +46,7 @@ export default function ExpenseDetailPage() {
       const token = getAccessToken();
       setExpense(await voidExpense(token, currentBusinessId, id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to void expense");
+      setError(err instanceof Error ? err.message : t("exp.voidFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -63,41 +67,41 @@ export default function ExpenseDetailPage() {
           <h1 className="text-2xl font-semibold">{expense.category}</h1>
           <p className="text-sm text-slate-500">{expense.expense_date}</p>
         </div>
-        {expense.status === "void" && <Badge tone="neutral">void</Badge>}
+        {expense.status === "void" && <Badge tone="neutral">{t("sales.void")}</Badge>}
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
 
       <Card className="mb-6 max-w-lg space-y-1 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-500">Description</span>
+          <span className="text-slate-500">{t("common.description")}</span>
           <span>{expense.description}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Amount</span>
+          <span className="text-slate-500">{t("common.amount")}</span>
           <span>{formatCurrency(expense.amount)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Tax</span>
+          <span className="text-slate-500">{t("sale.tax")}</span>
           <span>{formatCurrency(expense.tax)}</span>
         </div>
         <div className="flex justify-between font-semibold">
-          <span>Total</span>
+          <span>{t("common.total")}</span>
           <span>{formatCurrency(expense.total_amount)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Payment method</span>
-          <span>{expense.payment_method.replace("_", " ")}</span>
+          <span className="text-slate-500">{t("exp.method")}</span>
+          <span>{t(`exp.method.${expense.payment_method}` as MessageKey)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Recurring</span>
-          <span>{expense.is_recurring ? "Yes" : "No"}</span>
+          <span className="text-slate-500">{t("exp.recurringShort")}</span>
+          <span>{expense.is_recurring ? t("exp.yes") : t("exp.no")}</span>
         </div>
       </Card>
 
       {expense.status !== "void" && (
         <Button variant="danger" disabled={isUpdating} onClick={handleVoid}>
-          Void expense
+          {t("exp.void")}
         </Button>
       )}
     </div>

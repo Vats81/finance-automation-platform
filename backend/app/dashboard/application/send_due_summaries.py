@@ -6,6 +6,7 @@ from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.domain.entities import Business
 from app.dashboard.application.business_summary import (
     BuildBusinessSummaryUseCase,
+    SummaryLanguage,
     SummaryPeriod,
     business_today,
     format_summary_message,
@@ -57,14 +58,17 @@ class SendDueSummariesUseCase:
             today = business_today(business, now)
             period = summary_due(business, today)
             to = whatsapp_number(business.whatsapp_number, business.currency)
+            lang: SummaryLanguage = "hi" if business.language == "hi" else "en"
             if period is None or to is None:
                 skipped += 1
                 continue
             try:
                 summary = await BuildBusinessSummaryUseCase(self._uow).execute(
-                    business_id=business.id, period=period, today=today
+                    business_id=business.id, period=period, today=today, lang=lang
                 )
-                await self._sender.send(to=to, message=format_summary_message(summary, link=self._link))
+                await self._sender.send(
+                    to=to, message=format_summary_message(summary, link=self._link, lang=lang)
+                )
                 business.summary_last_sent_on = today
                 await self._uow.businesses.update(business)
                 await self._uow.commit()

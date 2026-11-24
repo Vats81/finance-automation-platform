@@ -9,6 +9,7 @@ import { getSale, updateSale } from "@/lib/api/sales";
 import { listCustomers } from "@/lib/api/customers";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { CustomerResponse } from "@/types/customer";
 import { CreateSaleRequest } from "@/types/sale";
 
@@ -17,6 +18,7 @@ export default function EditSalePage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const router = useRouter();
+  const { t } = useT();
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [initialValues, setInitialValues] = useState<CreateSaleRequest | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,14 +63,14 @@ export default function EditSalePage() {
       await updateSale(token, currentBusinessId, id, data);
       router.push(`/app/sales/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save changes");
+      setError(err instanceof Error ? err.message : t("sale.saveFailed"));
       setIsSubmitting(false);
     }
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Edit sale</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("sales.edit")}</h1>
       <Card className="max-w-2xl">
         {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         {initialValues ? (
@@ -77,7 +79,7 @@ export default function EditSalePage() {
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             initialValues={initialValues}
-            submitLabel="Save changes"
+            submitLabel={t("saleForm.saveChanges")}
           />
         ) : (
           !error && (

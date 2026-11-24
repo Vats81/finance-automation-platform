@@ -1,35 +1,21 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { MessageKey } from "@/lib/i18n/messages";
 
 const STORAGE_KEY = "fap.tour.completed";
 
 export interface TourStep {
-  title: string;
-  body: string;
+  title: MessageKey;
+  body: MessageKey;
 }
 
 export const TOUR_STEPS: TourStep[] = [
-  {
-    title: "Welcome to Finverlo",
-    body: "This is your business dashboard — revenue, expenses, and health score update automatically as you record activity.",
-  },
-  {
-    title: "Record a sale, purchase, or expense",
-    body: "Use the sidebar to record sales, purchases, and expenses. Each supports line items, an optional customer or vendor, and payment tracking.",
-  },
-  {
-    title: "Edit or void anytime",
-    body: "Made a mistake? Open any sale or purchase and click Edit to change it, or Void to close it out without deleting your records.",
-  },
-  {
-    title: "Reports & the AI Assistant",
-    body: "Reports gives you a Profit & Loss breakdown you can export or send by email/WhatsApp. The AI Assistant answers questions about your own numbers.",
-  },
-  {
-    title: "Need help later?",
-    body: "Visit Help in the sidebar anytime for a written walkthrough of every feature, or replay this tour from there.",
-  },
+  { title: "tour.1.title", body: "tour.1.body" },
+  { title: "tour.2.title", body: "tour.2.body" },
+  { title: "tour.3.title", body: "tour.3.body" },
+  { title: "tour.4.title", body: "tour.4.body" },
+  { title: "tour.5.title", body: "tour.5.body" },
 ];
 
 interface TourState {

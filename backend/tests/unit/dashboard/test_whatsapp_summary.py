@@ -182,7 +182,7 @@ async def test_the_summary_adds_up_a_day_and_lists_who_owes() -> None:
     assert summary.expenses_total == Decimal("300.00") and summary.profit == Decimal("1200.00")
     # Asha owes 1000, Ravi 500 + 300, and the 9999 sale has no customer
     assert [(d.name, d.amount) for d in summary.top_debtors] == [
-        ("Walk-in customers", Decimal("9999.00")),
+        (None, Decimal("9999.00")),
         ("Asha Stores", Decimal("1000.00")),
         ("Ravi", Decimal("800.00")),
     ]
@@ -306,3 +306,52 @@ async def test_the_scheduled_endpoint_needs_the_secret(cron_client) -> None:
 
     secret["value"] = ""  # not configured: the endpoint does not exist
     assert client.post(url, headers={"X-Cron-Secret": ""}).status_code == 404
+
+
+async def test_the_message_can_be_written_in_hindi() -> None:
+    uow = FakeUnitOfWork()
+    business = await _business(uow)
+    asha = _customer(uow, business, "Asha Stores")
+    await _sale(uow, business, "INV-1", "12500", on=YESTERDAY, customer=asha)
+    await _sale(uow, business, "INV-2", "100", on=date(2026, 11, 1))  # no customer
+    await _expense(uow, business, "3200", on=YESTERDAY)
+    summary = await BuildBusinessSummaryUseCase(uow).execute(
+        business_id=business.id, period="yesterday", today=TODAY, lang="hi"
+    )
+
+    text = format_summary_message(summary, link="https://finverlo.com/app/dashboard", lang="hi")
+
+    assert text.startswith("*Sharma Traders* - कल (सोम 23 नव)")
+    assert "बिक्री: ₹12,500.00 (1 बिक्री)" in text and "खर्च: ₹3,200.00" in text
+    assert "मुनाफ़ा: ₹9,300.00" in text
+    assert "वसूलना है (उधार): ₹12,600.00" in text
+    assert "- Asha Stores: ₹12,500.00" in text and "- बिना नाम के ग्राहक: ₹100.00" in text
+    assert text.endswith("Finverlo खोलें: https://finverlo.com/app/dashboard")
+
+
+def test_the_hindi_week_label_names_both_ends() -> None:
+    _, _, label = period_range("week", TODAY, "hi")
+
+    assert label == "पिछले 7 दिन (मंगल 17 नव से सोम 23 नव)"
+
+
+async def test_the_scheduled_send_uses_the_businesss_language() -> None:
+    uow, sender = FakeUnitOfWork(), FakeWhatsAppSender()
+    await _business(uow, whatsapp_number="9111111111", language="hi")
+    await _business(uow, whatsapp_number="9222222222")
+
+    await _run(uow, sender)
+
+    by_number = {m["to"]: m["message"] for m in sender.sent}
+    assert "खर्च:" in by_number["+919111111111"]
+    assert "Expenses:" in by_number["+919222222222"]
+
+
+def test_only_known_languages_are_accepted() -> None:
+    business = Business.register(owner_user_id=uuid.uuid4(), name="A")
+    assert business.language == "en"
+
+    business.complete_onboarding(language="hi")
+    assert business.language == "hi"
+    with pytest.raises(ValidationException):
+        business.complete_onboarding(language="fr")

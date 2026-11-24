@@ -9,11 +9,13 @@ import { CustomerTable } from "@/components/customers/CustomerTable";
 import { listCustomers } from "@/lib/api/customers";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { CustomerResponse } from "@/types/customer";
 
 export default function CustomersPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
+  const { t } = useT();
   const [customers, setCustomers] = useState<CustomerResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,15 +24,16 @@ export default function CustomersPage() {
     const token = getAccessToken();
     listCustomers(token, currentBusinessId)
       .then((page) => setCustomers(page.items))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load customers"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("cust.loadFailed")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Customers</h1>
+        <h1 className="text-2xl font-semibold">{t("cust.title")}</h1>
         <Link href="/app/customers/new">
-          <Button>New customer</Button>
+          <Button>{t("cust.new")}</Button>
         </Link>
       </div>
 

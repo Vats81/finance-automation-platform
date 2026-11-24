@@ -646,6 +646,16 @@ def test_the_whatsapp_summary_and_its_setting_work_through_the_api(world: tuple[
     assert Decimal(data["to_collect_total"]) == Decimal("1180.00")
     assert data["message"].startswith("*Biz A*") and "To collect (udhaar)" in data["message"]
     assert client.get(f"{base}/dashboard/whatsapp-summary?period=lastweek", headers=owner).status_code == 422
+    hindi = client.get(f"{base}/dashboard/whatsapp-summary?period=today&lang=hi", headers=owner)
+    assert hindi.status_code == 200 and "बिक्री:" in hindi.json()["message"]
+    assert (
+        client.get(f"{base}/dashboard/whatsapp-summary?period=today&lang=fr", headers=owner).status_code
+        == 422
+    )
+    assert client.get(base, headers=owner).json()["language"] == "en"
+    set_hindi = client.patch(f"{base}/onboarding", headers=owner, json={"language": "hi"})
+    assert set_hindi.status_code == 200 and set_hindi.json()["language"] == "hi"
+    assert client.patch(f"{base}/onboarding", headers=owner, json={"language": "fr"}).status_code == 422
 
     assert client.get(base, headers=owner).json()["summary_frequency"] == "off"
     on = client.patch(f"{base}/onboarding", headers=owner, json={"summary_frequency": "daily"})

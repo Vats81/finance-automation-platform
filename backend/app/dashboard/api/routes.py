@@ -21,6 +21,7 @@ from app.dashboard.api.schemas import (
 )
 from app.dashboard.application.business_summary import (
     BuildBusinessSummaryUseCase,
+    SummaryLanguage,
     SummaryPeriod,
     business_today,
     format_summary_message,
@@ -56,6 +57,7 @@ _can_write = CAN_WRITE
 async def get_whatsapp_summary(
     business_id: uuid.UUID,
     period: SummaryPeriod = "yesterday",
+    lang: SummaryLanguage = "en",
     _actor: User = Depends(require_business_role()),
     uow: AppUnitOfWork = Depends(get_uow),
     clock: IClock = Depends(get_clock),
@@ -67,12 +69,12 @@ async def get_whatsapp_summary(
     if business is None:
         raise BusinessNotFoundException(f"Business {business_id} not found")
     summary = await BuildBusinessSummaryUseCase(uow).execute(
-        business_id=business_id, period=period, today=business_today(business, clock.now())
+        business_id=business_id, period=period, today=business_today(business, clock.now()), lang=lang
     )
     link = f"{get_settings().frontend_base_url.rstrip('/')}/app/dashboard"
     return WhatsAppSummaryResponse(
         label=summary.label,
-        message=format_summary_message(summary, link=link),
+        message=format_summary_message(summary, link=link, lang=lang),
         sales_total=summary.sales_total,
         expenses_total=summary.expenses_total,
         profit=summary.profit,

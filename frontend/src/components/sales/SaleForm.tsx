@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { CreateSaleLineItemRequest, CreateSaleRequest } from "@/types/sale";
 import { CustomerResponse } from "@/types/customer";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { formatCurrency } from "@/lib/format";
 import { GST_RATES, GST_STATES, isInterState, normalizeRate, previewGst, stateCodeFromGstin } from "@/lib/gst";
 
@@ -29,6 +30,7 @@ export function SaleForm({
   submitLabel?: string;
 }) {
   const { currentBusiness } = useCurrentBusiness();
+  const { t } = useT();
   const business = currentBusiness?.business;
   // GST controls appear for a GST-registered business; everyone else keeps the plain tax amount.
   const gstMode = Boolean(business?.gst_registered);
@@ -97,10 +99,10 @@ export function SaleForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Invoice number">
+        <FormField label={t("saleForm.invoiceNumber")}>
           <Input required value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
         </FormField>
-        <FormField label="Invoice date">
+        <FormField label={t("saleForm.invoiceDate")}>
           <Input
             required
             type="date"
@@ -110,9 +112,9 @@ export function SaleForm({
         </FormField>
       </div>
 
-      <FormField label="Customer (optional)">
+      <FormField label={t("saleForm.customerOptional")}>
         <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
-          <option value="">Walk-in / no customer</option>
+          <option value="">{t("saleForm.walkIn")}</option>
           {customers.map((customer) => (
             <option key={customer.id} value={customer.id}>
               {customer.name}
@@ -122,7 +124,7 @@ export function SaleForm({
       </FormField>
 
       {gstMode && (
-        <FormField label="Place of supply (the state the goods or service go to)">
+        <FormField label={t("saleForm.placeOfSupply")}>
           <Select
             value={placeOfSupply}
             onChange={(e) => {
@@ -130,7 +132,7 @@ export function SaleForm({
               setPlaceOfSupply(e.target.value);
             }}
           >
-            <option value="">Same as my state</option>
+            <option value="">{t("saleForm.sameState")}</option>
             {GST_STATES.map((s) => (
               <option key={s.code} value={s.code}>
                 {s.name} ({s.code})
@@ -141,13 +143,13 @@ export function SaleForm({
       )}
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium">Line items</label>
+        <label className="block text-sm font-medium">{t("saleForm.lineItems")}</label>
         {lines.map((line, index) => (
           <div key={index} className="space-y-1 rounded-md border border-slate-100 p-2 sm:border-0 sm:p-0">
             <div className="grid grid-cols-12 gap-2">
               <Input
                 required
-                placeholder="Description"
+                placeholder={t("saleForm.description")}
                 className="col-span-6"
                 value={line.description}
                 onChange={(e) => updateLine(index, { description: e.target.value })}
@@ -156,7 +158,7 @@ export function SaleForm({
                 required
                 type="number"
                 step="any"
-                placeholder="Qty"
+                placeholder={t("saleForm.qty")}
                 className="col-span-2"
                 value={line.quantity}
                 onChange={(e) => updateLine(index, { quantity: e.target.value })}
@@ -165,7 +167,7 @@ export function SaleForm({
                 required
                 type="number"
                 step="0.01"
-                placeholder="Unit price"
+                placeholder={t("saleForm.unitPrice")}
                 className="col-span-3"
                 value={line.unit_price}
                 onChange={(e) => updateLine(index, { unit_price: e.target.value })}
@@ -175,7 +177,7 @@ export function SaleForm({
                 onClick={() => removeLine(index)}
                 disabled={lines.length === 1}
                 className="col-span-1 text-slate-400 hover:text-red-600 disabled:opacity-30"
-                aria-label="Remove line"
+                aria-label={t("saleForm.removeLine")}
               >
                 ✕
               </button>
@@ -183,23 +185,23 @@ export function SaleForm({
             {gstMode && (
               <div className="grid grid-cols-12 gap-2">
                 <Select
-                  aria-label={`GST rate for line ${index + 1}`}
+                  aria-label={t("saleForm.gstRateFor", { n: index + 1 })}
                   className="col-span-6"
                   value={line.gst_rate ?? ""}
                   onChange={(e) => updateLine(index, { gst_rate: e.target.value })}
                 >
-                  <option value="">No GST</option>
+                  <option value="">{t("saleForm.noGst")}</option>
                   {GST_RATES.map((rate) => (
                     <option key={rate} value={rate}>
-                      GST {rate}%
+                      {t("saleForm.gstRate", { rate })}
                     </option>
                   ))}
                 </Select>
                 <Input
-                  aria-label={`HSN or SAC code for line ${index + 1}`}
+                  aria-label={t("saleForm.hsnFor", { n: index + 1 })}
                   inputMode="numeric"
                   maxLength={8}
-                  placeholder="HSN / SAC (optional)"
+                  placeholder={t("saleForm.hsnPlaceholder")}
                   className="col-span-6"
                   value={line.hsn_code ?? ""}
                   onChange={(e) => updateLine(index, { hsn_code: e.target.value.replace(/\D/g, "") })}
@@ -209,16 +211,16 @@ export function SaleForm({
           </div>
         ))}
         <Button type="button" variant="secondary" onClick={addLine}>
-          Add line
+          {t("saleForm.addLine")}
         </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Discount">
+        <FormField label={t("saleForm.discount")}>
           <Input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
         </FormField>
         {!gstMode && (
-          <FormField label="Tax">
+          <FormField label={t("saleForm.tax")}>
             <Input type="number" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} />
           </FormField>
         )}
@@ -227,14 +229,14 @@ export function SaleForm({
       {gstMode && gst.groups.some((g) => g.rate > 0) && (
         <div className="rounded-md bg-slate-50 p-3 text-sm">
           <div className="mb-1 font-medium">
-            GST {interState ? "(other state: IGST)" : "(within your state: CGST + SGST)"}
+            {interState ? t("saleForm.gstInter") : t("saleForm.gstIntra")}
           </div>
           {gst.groups
             .filter((g) => g.rate > 0)
             .map((g) => (
               <div key={g.rate} className="flex justify-between text-slate-600">
                 <span>
-                  {g.rate}% on {formatCurrency(g.taxableCents / 100)}
+                  {t("saleForm.rateOn", { rate: g.rate, amount: formatCurrency(g.taxableCents / 100) })}
                 </span>
                 <span>
                   {interState
@@ -244,19 +246,19 @@ export function SaleForm({
               </div>
             ))}
           <div className="mt-1 flex justify-between border-t border-slate-200 pt-1">
-            <span>Total GST</span>
+            <span>{t("sale.totalGst")}</span>
             <span>{formatCurrency(gst.taxCents / 100)}</span>
           </div>
         </div>
       )}
 
       <div className="flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
-        <span className="font-medium">Total</span>
+        <span className="font-medium">{t("common.total")}</span>
         <span className="font-semibold">{formatCurrency(total)}</span>
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Saving…" : submitLabel ?? "Record sale"}
+        {isSubmitting ? t("common.saving") : (submitLabel ?? t("saleForm.recordSale"))}
       </Button>
     </form>
   );

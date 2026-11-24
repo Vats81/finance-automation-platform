@@ -9,11 +9,13 @@ import { SaleTable } from "@/components/sales/SaleTable";
 import { listSales } from "@/lib/api/sales";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
+import { useT } from "@/lib/i18n/LanguageProvider";
 import { SaleResponse } from "@/types/sale";
 
 export default function SalesPage() {
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
+  const { t } = useT();
   const [sales, setSales] = useState<SaleResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,19 +24,20 @@ export default function SalesPage() {
     const token = getAccessToken();
     listSales(token, currentBusinessId)
       .then((page) => setSales(page.items))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load sales"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("sales.loadFailed")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Sales</h1>
+        <h1 className="text-2xl font-semibold">{t("sales.title")}</h1>
         <div className="flex gap-2">
           <Link href="/app/sales/quick">
-            <Button variant="secondary">Quick sale</Button>
+            <Button variant="secondary">{t("sales.quick")}</Button>
           </Link>
           <Link href="/app/sales/new">
-            <Button>New sale</Button>
+            <Button>{t("sales.new")}</Button>
           </Link>
         </div>
       </div>

@@ -109,6 +109,7 @@ async def complete_onboarding(
             phone=body.phone,
             upi_id=body.upi_id,
             summary_frequency=body.summary_frequency,
+            language=body.language,
         )
     )
     return BusinessResponse.from_domain(business)
