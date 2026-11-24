@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from app.sales.domain.repository import ISaleRepository
+from app.sales.domain.repository import IInvoiceShareLinkRepository, ISaleRepository
 
 
 class SalesUnitOfWork(Protocol):
@@ -10,6 +10,9 @@ class SalesUnitOfWork(Protocol):
 
     @property
     def sales(self) -> ISaleRepository: ...
+
+    @property
+    def invoice_share_links(self) -> IInvoiceShareLinkRepository: ...
 
     async def commit(self) -> None: ...
 

@@ -126,3 +126,12 @@ class PagedSalesResponse(BaseModel):
     total: int
     offset: int
     limit: int
+
+
+class ShareLinkResponse(BaseModel):
+    url: str
+    expires_at: datetime
+
+
+class RevokeShareLinksResponse(BaseModel):
+    revoked: int

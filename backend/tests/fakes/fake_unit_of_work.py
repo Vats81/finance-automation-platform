@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from app.business.domain.entities import Business, BusinessMembership
 from app.business.domain.repository import IBusinessMembershipRepository, IBusinessRepository
@@ -17,7 +18,8 @@ from app.purchase_orders.domain.repository import IPurchaseOrderRepository
 from app.purchases.domain.entities import Purchase
 from app.purchases.domain.repository import IPurchaseRepository
 from app.sales.domain.entities import Sale
-from app.sales.domain.repository import ISaleRepository
+from app.sales.domain.repository import IInvoiceShareLinkRepository, ISaleRepository
+from app.sales.domain.share_link import InvoiceShareLink
 from app.sales.domain.value_objects import SaleStatus
 from app.shared.application.unit_of_work import IUnitOfWork
 from app.vendors.domain.entities import Vendor
@@ -67,9 +69,7 @@ class FakeBusinessRepository(IBusinessRepository):
         return sorted((b for b in self._store.values() if b.firm_id == firm_id), key=lambda b: b.created_at)
 
     async def get_by_stripe_subscription_id(self, subscription_id: str) -> Business | None:
-        return next(
-            (b for b in self._store.values() if b.stripe_subscription_id == subscription_id), None
-        )
+        return next((b for b in self._store.values() if b.stripe_subscription_id == subscription_id), None)
 
     def add(self, business: Business) -> None:
         self._store[business.id] = business
@@ -91,11 +91,7 @@ class FakeBusinessMembershipRepository(IBusinessMembershipRepository):
         self, *, user_id: uuid.UUID, business_id: uuid.UUID
     ) -> BusinessMembership | None:
         return next(
-            (
-                m
-                for m in self._store.values()
-                if m.user_id == user_id and m.business_id == business_id
-            ),
+            (m for m in self._store.values() if m.user_id == user_id and m.business_id == business_id),
             None,
         )
 
@@ -241,6 +237,27 @@ class FakeSaleRepository(ISaleRepository):
         sale.pull_domain_events()
 
 
+class FakeInvoiceShareLinkRepository(IInvoiceShareLinkRepository):
+    def __init__(self) -> None:
+        self._store: dict[uuid.UUID, InvoiceShareLink] = {}
+
+    def add(self, link: InvoiceShareLink) -> None:
+        self._store[link.id] = link
+
+    async def get_by_token_hash(self, token_hash: str) -> InvoiceShareLink | None:
+        return next((link for link in self._store.values() if link.token_hash == token_hash), None)
+
+    async def revoke_all_for_sale(self, sale_id: uuid.UUID, business_id: uuid.UUID, now: datetime) -> int:
+        live = [
+            link
+            for link in self._store.values()
+            if link.sale_id == sale_id and link.business_id == business_id and link.is_active(now)
+        ]
+        for link in live:
+            link.revoke(now)
+        return len(live)
+
+
 class FakeProductRepository(IProductRepository):
     def __init__(self) -> None:
         self._store: dict[uuid.UUID, Product] = {}
@@ -329,6 +346,7 @@ class FakeUnitOfWork(IUnitOfWork):
         self.personal = FakePersonalFinanceRepository()
         self.customers = FakeCustomerRepository()
         self.sales = FakeSaleRepository()
+        self.invoice_share_links = FakeInvoiceShareLinkRepository()
         self.products = FakeProductRepository()
         self.expenses = FakeExpenseRepository()
         self.purchases = FakePurchaseRepository()

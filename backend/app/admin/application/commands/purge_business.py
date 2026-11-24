@@ -13,7 +13,7 @@ from app.expenses.infrastructure.models import ExpenseModel
 from app.inventory.infrastructure.models import ProductModel
 from app.personal_finance.infrastructure.models import BudgetModel, IncomeModel
 from app.purchases.infrastructure.models import PurchaseModel
-from app.sales.infrastructure.models import SaleModel
+from app.sales.infrastructure.models import InvoiceShareLinkModel, SaleModel
 from app.shared.domain.exceptions import ValidationException
 from app.vendors.infrastructure.models import VendorModel
 
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # a purge can't silently leave a business's data behind.
 BUSINESS_SCOPED_MODELS: tuple[type, ...] = (
     SaleModel,
+    InvoiceShareLinkModel,
     PurchaseModel,
     ExpenseModel,
     ProductModel,

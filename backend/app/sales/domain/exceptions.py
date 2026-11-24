@@ -19,3 +19,9 @@ class DuplicateInvoiceNumberException(ConflictException):
 
 class SaleAlreadyVoidException(ConflictException):
     error_code = "sale_already_void"
+
+
+class InvoiceLinkNotFoundException(NotFoundException):
+    """Unknown, expired and revoked links all look the same from outside."""
+
+    error_code = "invoice_link_not_found"

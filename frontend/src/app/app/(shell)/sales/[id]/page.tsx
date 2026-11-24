@@ -8,7 +8,16 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
-import { downloadSaleInvoicePdf, getSale, recordSalePayment, voidSale } from "@/lib/api/sales";
+import { getCustomer } from "@/lib/api/customers";
+import {
+  createInvoiceShareLink,
+  downloadSaleInvoicePdf,
+  getSale,
+  recordSalePayment,
+  revokeInvoiceShareLinks,
+  voidSale,
+} from "@/lib/api/sales";
+import { invoiceMessage, whatsappLink, whatsappPhone } from "@/lib/whatsapp";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
@@ -32,6 +41,8 @@ export default function SaleDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!currentBusinessId) return;
@@ -77,6 +88,63 @@ export default function SaleDetailPage() {
     }
   }
 
+  async function handleShareWhatsApp() {
+    if (!currentBusinessId || !sale || !currentBusiness) return;
+    // Open the tab now, inside the tap, so a phone browser does not block it; it is pointed at WhatsApp below.
+    const popup = window.open("", "_blank");
+    setIsSharing(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const token = getAccessToken();
+      const link = await createInvoiceShareLink(token, currentBusinessId, id);
+      let customerName: string | null = null;
+      let phone = "";
+      if (sale.customer_id) {
+        try {
+          const customer = await getCustomer(token, currentBusinessId, sale.customer_id);
+          customerName = customer.name;
+          phone = whatsappPhone(customer.phone);
+        } catch {
+          // no customer details: the user picks the contact in WhatsApp
+        }
+      }
+      const text = invoiceMessage({
+        customerName,
+        businessName: currentBusiness.business.name,
+        invoiceNumber: sale.invoice_number,
+        invoiceDate: sale.invoice_date,
+        total: formatCurrency(sale.total_amount),
+        balance: formatCurrency(sale.outstanding_amount),
+        url: link.url,
+      });
+      const target = whatsappLink(phone, text);
+      if (popup) popup.location.href = target;
+      else window.location.href = target;
+    } catch (err) {
+      popup?.close();
+      setError(err instanceof Error ? err.message : "Could not make the invoice link");
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
+  async function handleStopSharing() {
+    if (!currentBusinessId) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await revokeInvoiceShareLinks(getAccessToken(), currentBusinessId, id);
+      setNotice(
+        result.revoked > 0
+          ? "The invoice links you sent no longer work."
+          : "There were no active invoice links to stop."
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not stop sharing");
+    }
+  }
+
   async function handleVoid() {
     if (!currentBusinessId) return;
     setIsUpdating(true);
@@ -116,6 +184,11 @@ export default function SaleDetailPage() {
             {isDownloading ? "Preparing…" : "Download invoice"}
           </Button>
           {sale.status !== "void" && (
+            <Button onClick={handleShareWhatsApp} disabled={isSharing}>
+              {isSharing ? "Preparing…" : "Send on WhatsApp"}
+            </Button>
+          )}
+          {sale.status !== "void" && (
             <Link href={`/app/sales/${sale.id}/edit`}>
               <Button variant="secondary">Edit</Button>
             </Link>
@@ -124,6 +197,16 @@ export default function SaleDetailPage() {
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {notice && <p className="mb-4 text-sm text-green-700">{notice}</p>}
+      {sale.status !== "void" && (
+        <button
+          type="button"
+          onClick={handleStopSharing}
+          className="mb-4 text-xs text-slate-500 underline hover:text-slate-700"
+        >
+          Stop the invoice links I have sent
+        </button>
+      )}
 
       <Card className="mb-6 max-w-2xl">
         <table className="w-full text-left text-sm">

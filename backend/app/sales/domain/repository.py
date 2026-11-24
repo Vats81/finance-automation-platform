@@ -1,7 +1,9 @@
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from app.sales.domain.entities import Sale
+from app.sales.domain.share_link import InvoiceShareLink
 
 
 class ISaleRepository(ABC):
@@ -25,3 +27,16 @@ class ISaleRepository(ABC):
 
     @abstractmethod
     async def update(self, sale: Sale) -> None: ...
+
+
+class IInvoiceShareLinkRepository(ABC):
+    @abstractmethod
+    def add(self, link: InvoiceShareLink) -> None: ...
+
+    @abstractmethod
+    async def get_by_token_hash(self, token_hash: str) -> InvoiceShareLink | None: ...
+
+    @abstractmethod
+    async def revoke_all_for_sale(self, sale_id: uuid.UUID, business_id: uuid.UUID, now: datetime) -> int:
+        """Revokes every live link to the sale; returns how many were live."""
+        ...

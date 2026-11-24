@@ -87,3 +87,30 @@ export async function downloadSaleInvoicePdf(
   link.remove();
   URL.revokeObjectURL(url);
 }
+
+export interface InvoiceShareLink {
+  url: string;
+  expires_at: string;
+}
+
+/** A private link to the invoice PDF, for sending to the customer. Each call makes a new link. */
+export function createInvoiceShareLink(
+  token: string | null,
+  businessId: string,
+  saleId: string
+): Promise<InvoiceShareLink> {
+  return apiFetch<InvoiceShareLink>(`/businesses/${businessId}/sales/${saleId}/share-link`, token, {
+    method: "POST",
+  });
+}
+
+/** Stops every link already sent for this invoice from working. */
+export function revokeInvoiceShareLinks(
+  token: string | null,
+  businessId: string,
+  saleId: string
+): Promise<{ revoked: number }> {
+  return apiFetch<{ revoked: number }>(`/businesses/${businessId}/sales/${saleId}/share-link/revoke`, token, {
+    method: "POST",
+  });
+}

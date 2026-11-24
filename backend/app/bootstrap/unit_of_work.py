@@ -16,7 +16,10 @@ from app.payments.infrastructure.repository_impl import SqlAlchemyPaymentReposit
 from app.personal_finance.infrastructure.repository_impl import SqlAlchemyPersonalFinanceRepository
 from app.purchase_orders.infrastructure.repository_impl import SqlAlchemyPurchaseOrderRepository
 from app.purchases.infrastructure.repository_impl import SqlAlchemyPurchaseRepository
-from app.sales.infrastructure.repository_impl import SqlAlchemySaleRepository
+from app.sales.infrastructure.repository_impl import (
+    SqlAlchemyInvoiceShareLinkRepository,
+    SqlAlchemySaleRepository,
+)
 from app.shared.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.vendors.infrastructure.repository_impl import SqlAlchemyVendorRepository
 
@@ -39,6 +42,7 @@ class AppUnitOfWork(SqlAlchemyUnitOfWork):
         self.personal = SqlAlchemyPersonalFinanceRepository(self)
         self.customers = SqlAlchemyCustomerRepository(self)
         self.sales = SqlAlchemySaleRepository(self)
+        self.invoice_share_links = SqlAlchemyInvoiceShareLinkRepository(self)
         self.products = SqlAlchemyProductRepository(self)
         self.expenses = SqlAlchemyExpenseRepository(self)
         self.purchases = SqlAlchemyPurchaseRepository(self)

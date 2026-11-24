@@ -238,6 +238,8 @@ _PROBES: list[tuple[str, str, Any, tuple[BusinessRole, ...]]] = [
     ("POST", "/businesses/{b}/customers", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/products", {}, CAN_WRITE),
     ("GET", "/businesses/{b}/sales/" + _ID + "/invoice-pdf", None, ANY_MEMBER),
+    ("POST", "/businesses/{b}/sales/" + _ID + "/share-link", None, CAN_WRITE),
+    ("POST", "/businesses/{b}/sales/" + _ID + "/share-link/revoke", None, CAN_WRITE),
     ("POST", "/businesses/{b}/sales/" + _ID + "/payments", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/sales/" + _ID + "/void", {}, CAN_WRITE),
     ("POST", "/businesses/{b}/expenses/" + _ID + "/void", {}, CAN_WRITE),
@@ -535,3 +537,64 @@ def test_the_invoice_pdf_downloads_for_any_member(world: tuple[World, TestClient
     assert response.headers["content-type"] == "application/pdf"
     assert response.content.startswith(b"%PDF-")
     assert 'filename="invoice-INV-GST-1.pdf"' in response.headers["content-disposition"]
+
+
+def _make_sale(client: TestClient, w: World) -> dict[str, Any]:
+    base = f"/api/v1/businesses/{w.business_a}/sales"
+    return client.post(base, headers={"x-test-user": "owner_a"}, json=_gst_sale_body()).json()
+
+
+def _share(client: TestClient, w: World, sale_id: str, user: str = "owner_a") -> Any:
+    url = f"/api/v1/businesses/{w.business_a}/sales/{sale_id}/share-link"
+    return client.post(url, headers={"x-test-user": user})
+
+
+def test_a_shared_invoice_opens_without_signing_in_until_revoked(world: tuple[World, TestClient]) -> None:
+    w, client = world
+    sale = _make_sale(client, w)
+
+    created = _share(client, w, sale["id"])
+
+    assert created.status_code == 201, created.text
+    link = created.json()["url"]
+    assert "/i/" in link
+    token = link.rsplit("/", 1)[1]
+    opened = client.get(f"/api/v1/public/invoices/{token}")  # no user header: the customer is not signed in
+    assert opened.status_code == 200 and opened.content.startswith(b"%PDF-")
+    assert opened.headers["content-disposition"].startswith("inline")
+    assert opened.headers["cache-control"] == "private, no-store"
+    assert "noindex" in opened.headers["x-robots-tag"]
+
+    revoke_url = f"/api/v1/businesses/{w.business_a}/sales/{sale['id']}/share-link/revoke"
+    assert client.post(revoke_url, headers={"x-test-user": "viewer"}).status_code == 403
+    revoked = client.post(revoke_url, headers={"x-test-user": "owner_a"})
+    assert revoked.status_code == 200 and revoked.json() == {"revoked": 1}
+    assert client.get(f"/api/v1/public/invoices/{token}").status_code == 404
+
+
+def test_a_guessed_or_garbled_invoice_link_is_not_found(world: tuple[World, TestClient]) -> None:
+    _, client = world
+
+    for token in ("nope", "A" * 32, "../etc/passwd"):
+        assert client.get(f"/api/v1/public/invoices/{token}").status_code == 404
+
+
+def test_only_people_who_can_write_make_links_and_never_across_businesses(
+    world: tuple[World, TestClient],
+) -> None:
+    w, client = world
+    sale = _make_sale(client, w)
+
+    assert _share(client, w, sale["id"], user="viewer").status_code == 403
+    # Business B's owner asks for business A's sale through business B's own path: not found
+    other = f"/api/v1/businesses/{w.business_b}/sales/{sale['id']}/share-link"
+    assert client.post(other, headers={"x-test-user": "owner_b"}).status_code == 404
+
+
+def test_a_voided_invoice_cannot_be_shared(world: tuple[World, TestClient]) -> None:
+    w, client = world
+    sale = _make_sale(client, w)
+    void_url = f"/api/v1/businesses/{w.business_a}/sales/{sale['id']}/void"
+    assert client.post(void_url, headers={"x-test-user": "owner_a"}).status_code == 200
+
+    assert _share(client, w, sale["id"]).status_code == 422

@@ -7,14 +7,16 @@ from app.bootstrap.container import get_uow
 from app.bootstrap.unit_of_work import AppUnitOfWork
 from app.business.api.dependencies import require_business_role
 from app.business.api.permissions import CAN_WRITE
-from app.business.domain.exceptions import BusinessNotFoundException
 from app.config.settings import get_settings
 from app.identity.domain.entities import User
+from app.sales.api.invoice_rendering import render_invoice_response
 from app.sales.api.schemas import (
     CreateSaleRequest,
     PagedSalesResponse,
     RecordSalePaymentRequest,
+    RevokeShareLinksResponse,
     SaleResponse,
+    ShareLinkResponse,
     UpdateSaleRequest,
 )
 from app.sales.application.commands.create_sale import (
@@ -23,13 +25,18 @@ from app.sales.application.commands.create_sale import (
     CreateSaleUseCase,
 )
 from app.sales.application.commands.record_payment import RecordSalePaymentCommand, RecordSalePaymentUseCase
+from app.sales.application.commands.share_invoice import (
+    CreateInvoiceShareLinkCommand,
+    CreateInvoiceShareLinkUseCase,
+    RevokeInvoiceShareLinksCommand,
+    RevokeInvoiceShareLinksUseCase,
+)
 from app.sales.application.commands.update_sale import (
     UpdateSaleCommand,
     UpdateSaleLineItemInput,
     UpdateSaleUseCase,
 )
 from app.sales.application.commands.void_sale import VoidSaleCommand, VoidSaleUseCase
-from app.sales.application.invoice_pdf import generate_invoice_pdf
 from app.sales.application.queries.get_sale import GetSaleQuery, GetSaleUseCase
 from app.sales.application.queries.list_outstanding_sales import (
     ListOutstandingSalesQuery,
@@ -137,20 +144,40 @@ async def get_sale_invoice_pdf(
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> Response:
     """The printable invoice (a GST tax invoice when the lines carry GST rates)."""
-    business = await uow.businesses.get_by_id(business_id)
-    if business is None:
-        raise BusinessNotFoundException(f"Business {business_id} not found")
     sale = await GetSaleUseCase(uow).execute(GetSaleQuery(business_id=business_id, sale_id=sale_id))
-    customer = None
-    if sale.customer_id:
-        customer = await uow.customers.get_by_id_for_business(sale.customer_id, business_id)
-    pdf_bytes = generate_invoice_pdf(business=business, sale=sale, customer=customer)
-    safe_number = "".join(c if c.isalnum() or c in "-_" else "-" for c in sale.invoice_number)
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="invoice-{safe_number}.pdf"'},
+    return await render_invoice_response(uow, business_id, sale)
+
+
+@router.post("/{sale_id}/share-link", response_model=ShareLinkResponse, status_code=201)
+@limiter.limit(settings.rate_limit_write)
+async def create_invoice_share_link(
+    request: Request,
+    business_id: uuid.UUID,
+    sale_id: uuid.UUID,
+    _actor: User = Depends(require_business_role(*_can_write)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> ShareLinkResponse:
+    """A private link to the invoice's PDF, for sending to the customer (for example on WhatsApp)."""
+    link, token = await CreateInvoiceShareLinkUseCase(uow).execute(
+        CreateInvoiceShareLinkCommand(business_id=business_id, sale_id=sale_id)
     )
+    base = settings.frontend_base_url.rstrip("/")
+    return ShareLinkResponse(url=f"{base}/i/{token}", expires_at=link.expires_at)
+
+
+@router.post("/{sale_id}/share-link/revoke", response_model=RevokeShareLinksResponse)
+@limiter.limit(settings.rate_limit_write)
+async def revoke_invoice_share_links(
+    request: Request,
+    business_id: uuid.UUID,
+    sale_id: uuid.UUID,
+    _actor: User = Depends(require_business_role(*_can_write)),
+    uow: AppUnitOfWork = Depends(get_uow),
+) -> RevokeShareLinksResponse:
+    revoked = await RevokeInvoiceShareLinksUseCase(uow).execute(
+        RevokeInvoiceShareLinksCommand(business_id=business_id, sale_id=sale_id)
+    )
+    return RevokeShareLinksResponse(revoked=revoked)
 
 
 @router.patch("/{sale_id}", response_model=SaleResponse)

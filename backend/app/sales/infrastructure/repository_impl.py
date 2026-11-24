@@ -1,18 +1,20 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.sales.domain.entities import Sale
 from app.sales.domain.exceptions import SaleNotFoundException
-from app.sales.domain.repository import ISaleRepository
+from app.sales.domain.repository import IInvoiceShareLinkRepository, ISaleRepository
+from app.sales.domain.share_link import InvoiceShareLink
 from app.sales.domain.value_objects import SaleStatus
 from app.sales.infrastructure.mappers import (
     apply_domain_to_existing_model,
     domain_to_model,
     model_to_domain,
 )
-from app.sales.infrastructure.models import SaleModel
+from app.sales.infrastructure.models import InvoiceShareLinkModel, SaleModel
 from app.shared.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 
 
@@ -75,3 +77,57 @@ class SqlAlchemySaleRepository(ISaleRepository):
             raise SaleNotFoundException(f"Sale {sale.id} not found")
         apply_domain_to_existing_model(sale, model)
         self._uow.collect_events(sale)
+
+
+def _link_to_domain(model: InvoiceShareLinkModel) -> InvoiceShareLink:
+    return InvoiceShareLink(
+        entity_id=model.id,
+        business_id=model.business_id,
+        sale_id=model.sale_id,
+        token_hash=model.token_hash,
+        created_at=model.created_at,
+        expires_at=model.expires_at,
+        revoked_at=model.revoked_at,
+    )
+
+
+class SqlAlchemyInvoiceShareLinkRepository(IInvoiceShareLinkRepository):
+    def __init__(self, uow: SqlAlchemyUnitOfWork) -> None:
+        self._uow = uow
+
+    @property
+    def _session(self) -> AsyncSession:
+        return self._uow.session
+
+    def add(self, link: InvoiceShareLink) -> None:
+        self._session.add(
+            InvoiceShareLinkModel(
+                id=link.id,
+                business_id=link.business_id,
+                sale_id=link.sale_id,
+                token_hash=link.token_hash,
+                created_at=link.created_at,
+                expires_at=link.expires_at,
+                revoked_at=link.revoked_at,
+            )
+        )
+
+    async def get_by_token_hash(self, token_hash: str) -> InvoiceShareLink | None:
+        result = await self._session.execute(
+            select(InvoiceShareLinkModel).where(InvoiceShareLinkModel.token_hash == token_hash)
+        )
+        model = result.scalar_one_or_none()
+        return _link_to_domain(model) if model else None
+
+    async def revoke_all_for_sale(self, sale_id: uuid.UUID, business_id: uuid.UUID, now: datetime) -> int:
+        result = await self._session.execute(
+            update(InvoiceShareLinkModel)
+            .where(
+                InvoiceShareLinkModel.sale_id == sale_id,
+                InvoiceShareLinkModel.business_id == business_id,
+                InvoiceShareLinkModel.revoked_at.is_(None),
+                InvoiceShareLinkModel.expires_at > now,
+            )
+            .values(revoked_at=now)
+        )
+        return int(result.rowcount or 0)  # type: ignore[attr-defined]
