@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
@@ -11,7 +12,47 @@ from app.sales.domain.exceptions import (
 from app.sales.domain.value_objects import SaleLineItem, SalePaymentStatus, SaleStatus
 from app.shared.domain.aggregate_root import AggregateRoot
 from app.shared.domain.exceptions import ValidationException
+from app.shared.domain.gst import clean_state_code
 from app.shared.domain.value_objects import Money
+
+
+@dataclass(frozen=True)
+class GstGroup:
+    """One GST rate on an invoice: the value it is charged on, and the tax."""
+
+    rate: Decimal
+    taxable_value: Money
+    tax: Money
+
+
+def compute_gst(line_items: list[SaleLineItem], discount: Money) -> list[GstGroup]:
+    """GST per rate. The discount is shared out over the lines in proportion to their value, then the tax is
+    worked out once per rate on the group's total (as a GST invoice's tax summary does).
+    """
+    subtotal = sum((i.line_total.amount for i in line_items), Decimal("0"))
+    taxable_by_rate: dict[Decimal, Decimal] = {}
+    for item in line_items:
+        share = discount.amount * item.line_total.amount / subtotal if subtotal > 0 else Decimal("0")
+        rate = item.gst_rate if item.gst_rate is not None else Decimal("0")
+        taxable_by_rate[rate] = taxable_by_rate.get(rate, Decimal("0")) + item.line_total.amount - share
+    groups = []
+    for rate in sorted(taxable_by_rate):
+        taxable = Money(amount=taxable_by_rate[rate])
+        groups.append(
+            GstGroup(rate=rate, taxable_value=taxable, tax=Money(amount=taxable.amount * rate / 100))
+        )
+    return groups
+
+
+def _gst_tax(line_items: list[SaleLineItem], discount: Money, entered_tax: Money | None) -> Money | None:
+    """The tax to store when the lines carry GST rates, or the entered tax when they do not."""
+    if not any(item.gst_rate is not None for item in line_items):
+        return entered_tax
+    if entered_tax is not None and entered_tax.amount != 0:
+        raise ValidationException(
+            "GST is worked out from the rates on the lines, so do not also enter a tax amount."
+        )
+    return sum((g.tax for g in compute_gst(line_items, discount)), Money(amount=Decimal("0")))
 
 
 def _check_adjustments(subtotal: Money, discount: Money, tax: Money) -> None:
@@ -51,6 +92,7 @@ class Sale(AggregateRoot):
         tax: Money | None = None,
         amount_received: Money | None = None,
         notes: str | None = None,
+        place_of_supply: str | None = None,
         status: SaleStatus = SaleStatus.RECORDED,
         created_at: datetime | None = None,
     ) -> None:
@@ -65,6 +107,8 @@ class Sale(AggregateRoot):
         self.tax = tax or Money(amount=Decimal("0"))
         self.amount_received = amount_received or Money(amount=Decimal("0"))
         self.notes = notes
+        # The state (GST code) the goods or services are supplied to; it decides CGST+SGST or IGST.
+        self.place_of_supply = place_of_supply
         self.status = status
         self.created_at = created_at or datetime.now(timezone.utc)
 
@@ -81,9 +125,13 @@ class Sale(AggregateRoot):
         discount: Money | None = None,
         tax: Money | None = None,
         notes: str | None = None,
+        place_of_supply: str | None = None,
     ) -> "Sale":
         if not line_items:
             raise EmptySaleException("A sale requires at least one line item")
+        tax = _gst_tax(line_items, discount or Money(amount=Decimal("0")), tax)
+        if place_of_supply is not None:
+            place_of_supply = clean_state_code(place_of_supply)
         _check_adjustments(
             sum((i.line_total for i in line_items), Money(amount=Decimal("0"))),
             discount or Money(amount=Decimal("0")),
@@ -100,6 +148,7 @@ class Sale(AggregateRoot):
             discount=discount,
             tax=tax,
             notes=notes,
+            place_of_supply=place_of_supply,
         )
         sale._record_event(
             SaleRecorded(
@@ -117,6 +166,13 @@ class Sale(AggregateRoot):
         for item in self.line_items:
             total = total + item.line_total
         return total
+
+    @property
+    def gst_groups(self) -> list[GstGroup]:
+        """Empty unless the lines carry GST rates."""
+        if not any(item.gst_rate is not None for item in self.line_items):
+            return []
+        return compute_gst(self.line_items, self.discount)
 
     @property
     def total_amount(self) -> Money:
@@ -171,6 +227,7 @@ class Sale(AggregateRoot):
         discount: Money,
         tax: Money,
         notes: str | None,
+        place_of_supply: str | None = None,
     ) -> None:
         """Full-replacement edit — the frontend edit form always resends the
         complete new state rather than a sparse patch, so there's no
@@ -184,6 +241,9 @@ class Sale(AggregateRoot):
         if not line_items:
             raise EmptySaleException("A sale requires at least one line item")
 
+        tax = _gst_tax(line_items, discount, tax) or Money(amount=Decimal("0"))
+        if place_of_supply is not None:
+            place_of_supply = clean_state_code(place_of_supply)
         new_subtotal = Money(amount=Decimal("0"))
         for item in line_items:
             new_subtotal = new_subtotal + item.line_total
@@ -220,6 +280,9 @@ class Sale(AggregateRoot):
         if notes != self.notes:
             self.notes = notes
             changed.append("notes")
+        if place_of_supply != self.place_of_supply:
+            self.place_of_supply = place_of_supply
+            changed.append("place_of_supply")
 
         if changed:
             self._record_event(SaleDetailsUpdated(aggregate_id=self.id, changed_fields=changed))

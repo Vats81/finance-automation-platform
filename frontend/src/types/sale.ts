@@ -7,6 +7,14 @@ export interface SaleLineItem {
   quantity: string;
   unit_price: string;
   line_total: string;
+  gst_rate?: string | null;
+  hsn_code?: string | null;
+}
+
+export interface GstGroup {
+  rate: string;
+  taxable_value: string;
+  tax: string;
 }
 
 export interface SaleResponse {
@@ -27,6 +35,8 @@ export interface SaleResponse {
   notes: string | null;
   status: SaleStatus;
   created_at: string;
+  place_of_supply?: string | null;
+  gst_breakdown?: GstGroup[];
 }
 
 export interface PagedSalesResponse {
@@ -41,6 +51,8 @@ export interface CreateSaleLineItemRequest {
   description: string;
   quantity: string;
   unit_price: string;
+  gst_rate?: string;
+  hsn_code?: string;
 }
 
 export interface CreateSaleRequest {
@@ -52,6 +64,7 @@ export interface CreateSaleRequest {
   discount?: string;
   tax?: string;
   notes?: string;
+  place_of_supply?: string;
 }
 
 // Same shape as CreateSaleRequest — the edit form always resends the full

@@ -10,7 +10,6 @@ from app.business.domain.events import (
     MembershipRemoved,
     MembershipRoleChanged,
 )
-from app.business.domain.gst import clean_gstin, clean_pincode, clean_state_code, clean_upi_id
 from app.business.domain.value_objects import (
     SUPPORTED_CURRENCIES,
     BusinessKind,
@@ -21,6 +20,7 @@ from app.business.domain.value_objects import (
 )
 from app.shared.domain.aggregate_root import AggregateRoot
 from app.shared.domain.exceptions import ValidationException
+from app.shared.domain.gst import clean_gstin, clean_pincode, clean_state_code, clean_upi_id
 
 
 class Business(AggregateRoot):

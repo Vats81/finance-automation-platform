@@ -12,7 +12,8 @@ from app.business.application.commands.register_business import (
     RegisterBusinessCommand,
     RegisterBusinessUseCase,
 )
-from app.business.domain.gst import (
+from app.shared.domain.exceptions import ValidationException
+from app.shared.domain.gst import (
     GST_STATES,
     clean_gstin,
     clean_pincode,
@@ -20,7 +21,6 @@ from app.business.domain.gst import (
     clean_upi_id,
     gstin_check_character,
 )
-from app.shared.domain.exceptions import ValidationException
 from tests.fakes.fake_unit_of_work import FakeUnitOfWork
 
 VALID = ["27AAPFU0939F1ZV", "07AAGFF2194N1Z1", "29AAACH7409R1ZX"]

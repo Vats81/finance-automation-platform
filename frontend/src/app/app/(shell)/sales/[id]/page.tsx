@@ -14,6 +14,7 @@ import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { SalePaymentStatus, SaleResponse } from "@/types/sale";
 import { formatCurrency } from "@/lib/format";
+import { isInterState, normalizeRate, splitTaxCents } from "@/lib/gst";
 
 const STATUS_TONE: Record<SalePaymentStatus, "success" | "warning" | "neutral"> = {
   paid: "success",
@@ -24,7 +25,7 @@ const STATUS_TONE: Record<SalePaymentStatus, "success" | "warning" | "neutral"> 
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
-  const { currentBusinessId } = useCurrentBusiness();
+  const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   const paymentKey = useSubmissionKey();
   const [sale, setSale] = useState<SaleResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +85,9 @@ export default function SaleDetailPage() {
     );
   }
 
+  const hasGst = (sale.gst_breakdown ?? []).length > 0;
+  const interState = isInterState(currentBusiness?.business.state_code, sale.place_of_supply);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -111,6 +115,7 @@ export default function SaleDetailPage() {
               <th className="py-2 pr-4">Description</th>
               <th className="py-2 pr-4">Qty</th>
               <th className="py-2 pr-4">Unit price</th>
+              {hasGst && <th className="py-2 pr-4">GST</th>}
               <th className="py-2 pr-4">Line total</th>
             </tr>
           </thead>
@@ -120,6 +125,12 @@ export default function SaleDetailPage() {
                 <td className="py-2 pr-4">{item.description}</td>
                 <td className="py-2 pr-4">{item.quantity}</td>
                 <td className="py-2 pr-4">{formatCurrency(item.unit_price)}</td>
+                {hasGst && (
+                  <td className="py-2 pr-4 text-slate-600">
+                    {item.gst_rate !== null && item.gst_rate !== undefined ? `${normalizeRate(item.gst_rate)}%` : "—"}
+                    {item.hsn_code ? <span className="block text-xs text-slate-400">HSN {item.hsn_code}</span> : null}
+                  </td>
+                )}
                 <td className="py-2 pr-4">{formatCurrency(item.line_total)}</td>
               </tr>
             ))}
@@ -135,10 +146,35 @@ export default function SaleDetailPage() {
             <span className="text-slate-500">Discount</span>
             <span>-{formatCurrency(sale.discount)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-slate-500">Tax</span>
-            <span>{formatCurrency(sale.tax)}</span>
-          </div>
+          {hasGst ? (
+            <>
+              {(sale.gst_breakdown ?? [])
+                .filter((g) => Number(g.rate) > 0)
+                .map((g) => (
+                  <div key={g.rate} className="flex justify-between text-slate-600">
+                    <span>
+                      GST {normalizeRate(g.rate)}% on {formatCurrency(g.taxable_value)}
+                    </span>
+                    <span>
+                      {interState
+                        ? `IGST ${formatCurrency(g.tax)}`
+                        : `CGST ${formatCurrency(splitTaxCents(Math.round(Number(g.tax) * 100), false).cgst / 100)} + SGST ${formatCurrency(
+                            splitTaxCents(Math.round(Number(g.tax) * 100), false).sgst / 100
+                          )}`}
+                    </span>
+                  </div>
+                ))}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total GST</span>
+                <span>{formatCurrency(sale.tax)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span className="text-slate-500">Tax</span>
+              <span>{formatCurrency(sale.tax)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-semibold">
             <span>Total</span>
             <span>{formatCurrency(sale.total_amount)}</span>

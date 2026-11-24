@@ -14,6 +14,14 @@ class SaleLineItemSchema(BaseModel):
     quantity: Decimal
     unit_price: Decimal
     line_total: Decimal
+    gst_rate: Decimal | None = None
+    hsn_code: str | None = None
+
+
+class GstGroupSchema(BaseModel):
+    rate: Decimal
+    taxable_value: Decimal
+    tax: Decimal
 
 
 class CreateSaleLineItemRequest(BaseModel):
@@ -21,6 +29,8 @@ class CreateSaleLineItemRequest(BaseModel):
     description: str = Field(min_length=1)
     quantity: Decimal = Field(gt=0)
     unit_price: Decimal
+    gst_rate: Decimal | None = None
+    hsn_code: str | None = Field(default=None, max_length=8)
 
 
 class CreateSaleRequest(BaseModel):
@@ -32,6 +42,7 @@ class CreateSaleRequest(BaseModel):
     discount: Decimal | None = None
     tax: Decimal | None = None
     notes: str | None = None
+    place_of_supply: str | None = Field(default=None, max_length=2)
 
 
 class UpdateSaleRequest(BaseModel):
@@ -43,6 +54,7 @@ class UpdateSaleRequest(BaseModel):
     discount: Decimal | None = None
     tax: Decimal | None = None
     notes: str | None = None
+    place_of_supply: str | None = Field(default=None, max_length=2)
 
 
 class RecordSalePaymentRequest(BaseModel):
@@ -67,6 +79,8 @@ class SaleResponse(BaseModel):
     notes: str | None
     status: SaleStatus
     created_at: datetime
+    place_of_supply: str | None = None
+    gst_breakdown: list[GstGroupSchema] = []
 
     @classmethod
     def from_domain(cls, sale: Sale) -> "SaleResponse":
@@ -84,6 +98,8 @@ class SaleResponse(BaseModel):
                     quantity=item.quantity,
                     unit_price=item.unit_price.amount,
                     line_total=item.line_total.amount,
+                    gst_rate=item.gst_rate,
+                    hsn_code=item.hsn_code,
                 )
                 for item in sale.line_items
             ],
@@ -97,6 +113,11 @@ class SaleResponse(BaseModel):
             notes=sale.notes,
             status=sale.status,
             created_at=sale.created_at,
+            place_of_supply=sale.place_of_supply,
+            gst_breakdown=[
+                GstGroupSchema(rate=g.rate, taxable_value=g.taxable_value.amount, tax=g.tax.amount)
+                for g in sale.gst_groups
+            ],
         )
 
 

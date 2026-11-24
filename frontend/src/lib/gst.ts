@@ -50,3 +50,67 @@ export function stateCodeFromGstin(gstin: string): string {
   const code = gstin.trim().slice(0, 2);
   return GST_STATES.some((s) => s.code === code) ? code : "";
 }
+
+// ---------------------------------------------------------------------------------------------
+// GST rates and the tax preview on the sale form. The server works the real figures out when the
+// sale is saved (backend app/sales/domain/entities.py compute_gst); this mirrors it for display.
+
+export const GST_RATES = ["0", "0.25", "3", "5", "12", "18", "28"];
+
+/** "18.00" and "18" are the same rate: the form's rate list uses the plain form. */
+export function normalizeRate(rate: string | null | undefined): string {
+  if (rate === null || rate === undefined || rate === "") return "";
+  const n = Number(rate);
+  return Number.isFinite(n) ? String(n) : "";
+}
+
+export interface PreviewLine {
+  quantity: string;
+  unit_price: string;
+  gst_rate?: string;
+}
+
+export interface GstPreviewGroup {
+  rate: number;
+  taxableCents: number;
+  taxCents: number;
+  cgstCents: number;
+  sgstCents: number;
+  igstCents: number;
+}
+
+/** Within one state tax is split into CGST and SGST halves (the odd paisa goes to SGST); between states it is IGST. */
+export function splitTaxCents(taxCents: number, interState: boolean): { cgst: number; sgst: number; igst: number } {
+  if (interState) return { cgst: 0, sgst: 0, igst: taxCents };
+  let cgst = Math.round(taxCents / 2);
+  if (cgst * 2 > taxCents) cgst -= 1;
+  return { cgst, sgst: taxCents - cgst, igst: 0 };
+}
+
+export function previewGst(lines: PreviewLine[], discount: number, interState: boolean) {
+  const lineCents = lines.map((l) => Math.round(Number(l.quantity || 0) * Number(l.unit_price || 0) * 100));
+  const subtotalCents = lineCents.reduce((a, b) => a + b, 0);
+  const discountCents = Math.round(discount * 100);
+  const taxableByRate = new Map<number, number>();
+  lines.forEach((l, i) => {
+    const lineCentsValue = lineCents[i] ?? 0;
+    const share = subtotalCents > 0 ? (discountCents * lineCentsValue) / subtotalCents : 0;
+    const rate = l.gst_rate ? Number(l.gst_rate) : 0;
+    taxableByRate.set(rate, (taxableByRate.get(rate) ?? 0) + lineCentsValue - share);
+  });
+  const groups: GstPreviewGroup[] = [...taxableByRate.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([rate, taxable]) => {
+      const taxableCents = Math.round(taxable);
+      const taxCents = Math.round((taxable * rate) / 100);
+      const { cgst, sgst, igst } = splitTaxCents(taxCents, interState);
+      return { rate, taxableCents, taxCents, cgstCents: cgst, sgstCents: sgst, igstCents: igst };
+    });
+  const taxCents = groups.reduce((sum, g) => sum + g.taxCents, 0);
+  return { subtotalCents, discountCents, groups, taxCents, totalCents: subtotalCents - discountCents + taxCents };
+}
+
+/** Whether a sale is between two different states (IGST). Unknown on either side counts as within the state. */
+export function isInterState(sellerState: string | null | undefined, placeOfSupply: string | null | undefined): boolean {
+  return Boolean(sellerState && placeOfSupply && sellerState !== placeOfSupply);
+}

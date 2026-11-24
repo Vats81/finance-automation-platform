@@ -40,10 +40,13 @@ export default function EditSalePage() {
             description: item.description,
             quantity: item.quantity,
             unit_price: item.unit_price,
+            gst_rate: item.gst_rate ?? undefined,
+            hsn_code: item.hsn_code ?? undefined,
           })),
           discount: sale.discount,
           tax: sale.tax,
           notes: sale.notes ?? undefined,
+          place_of_supply: sale.place_of_supply ?? undefined,
         })
       )
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load sale"));

@@ -16,6 +16,8 @@ class CreateSaleLineItemInput:
     description: str
     quantity: Decimal
     unit_price: Decimal
+    gst_rate: Decimal | None = None
+    hsn_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,7 @@ class CreateSaleCommand:
     discount: Decimal | None = None
     tax: Decimal | None = None
     notes: str | None = None
+    place_of_supply: str | None = None
 
 
 class CreateSaleUseCase:
@@ -46,6 +49,8 @@ class CreateSaleUseCase:
                 description=item.description,
                 quantity=item.quantity,
                 unit_price=Money(amount=item.unit_price),
+                gst_rate=item.gst_rate,
+                hsn_code=item.hsn_code,
             )
             for item in command.line_items
         ]
@@ -59,6 +64,7 @@ class CreateSaleUseCase:
             discount=Money(amount=command.discount) if command.discount is not None else None,
             tax=Money(amount=command.tax) if command.tax is not None else None,
             notes=command.notes,
+            place_of_supply=command.place_of_supply,
         )
         self._uow.sales.add(sale)
         await self._uow.commit()

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from app.shared.domain.base_value_object import ValueObject
 from app.shared.domain.exceptions import ValidationException
+from app.shared.domain.gst import clean_gst_rate, clean_hsn
 from app.shared.domain.value_objects import Money
 
 
@@ -37,8 +38,15 @@ class SaleLineItem(ValueObject):
     description: str
     quantity: Decimal
     unit_price: Money
+    # GST on this line, in percent (None = the sale carries no GST), and its HSN or SAC code.
+    gst_rate: Decimal | None = None
+    hsn_code: str | None = None
 
     def __post_init__(self) -> None:
+        if self.gst_rate is not None:
+            clean_gst_rate(self.gst_rate)
+        if self.hsn_code is not None:
+            clean_hsn(self.hsn_code)
         if self.quantity <= 0:
             raise ValidationException("Line item quantity must be positive")
         if self.quantity > MAX_LINE_QUANTITY:

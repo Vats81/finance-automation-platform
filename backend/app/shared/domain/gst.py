@@ -6,6 +6,7 @@ a mistyped digit is caught when it is entered, not when a customer's accountant 
 """
 
 import re
+from decimal import ROUND_HALF_UP, Decimal
 
 from app.shared.domain.exceptions import ValidationException
 
@@ -96,3 +97,34 @@ def clean_upi_id(value: str) -> str:
     if not _UPI_RE.match(upi):
         raise ValidationException("A UPI ID looks like name@bank.")
     return upi
+
+
+# The GST rates in use on goods and services, in percent.
+GST_RATES: tuple[Decimal, ...] = tuple(Decimal(r) for r in ("0", "0.25", "3", "5", "12", "18", "28"))
+_HSN_RE = re.compile(r"^[0-9]{4,8}$")
+_CENT = Decimal("0.01")
+
+
+def clean_gst_rate(value: Decimal) -> Decimal:
+    if value not in GST_RATES:
+        raise ValidationException("GST rate must be one of 0, 0.25, 3, 5, 12, 18 or 28 percent.")
+    return value
+
+
+def clean_hsn(value: str) -> str:
+    hsn = value.strip()
+    if not _HSN_RE.match(hsn):
+        raise ValidationException("An HSN or SAC code has 4 to 8 digits.")
+    return hsn
+
+
+def split_tax(tax: Decimal, *, inter_state: bool) -> tuple[Decimal, Decimal, Decimal]:
+    """(CGST, SGST, IGST) for one tax amount. Within a state the tax is split in two equal halves (the
+    odd paisa goes to SGST); between states it is all IGST.
+    """
+    if inter_state:
+        return Decimal("0.00"), Decimal("0.00"), tax
+    cgst = (tax / 2).quantize(_CENT, rounding=ROUND_HALF_UP)
+    if cgst * 2 > tax:
+        cgst -= _CENT
+    return cgst, tax - cgst, Decimal("0.00")

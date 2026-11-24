@@ -16,6 +16,8 @@ class UpdateSaleLineItemInput:
     description: str
     quantity: Decimal
     unit_price: Decimal
+    gst_rate: Decimal | None = None
+    hsn_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,7 @@ class UpdateSaleCommand:
     discount: Decimal | None = None
     tax: Decimal | None = None
     notes: str | None = None
+    place_of_supply: str | None = None
 
 
 class UpdateSaleUseCase:
@@ -53,6 +56,8 @@ class UpdateSaleUseCase:
                 description=item.description,
                 quantity=item.quantity,
                 unit_price=Money(amount=item.unit_price),
+                gst_rate=item.gst_rate,
+                hsn_code=item.hsn_code,
             )
             for item in command.line_items
         ]
@@ -68,6 +73,7 @@ class UpdateSaleUseCase:
             discount=discount,
             tax=tax,
             notes=command.notes,
+            place_of_supply=command.place_of_supply,
         )
         await self._uow.sales.update(sale)
         await self._uow.commit()

@@ -12,6 +12,8 @@ def _line_item_to_dict(item: SaleLineItem) -> dict:
         "description": item.description,
         "quantity": str(item.quantity),
         "unit_price_cents": item.unit_price.cents,
+        "gst_rate": str(item.gst_rate) if item.gst_rate is not None else None,
+        "hsn_code": item.hsn_code,
     }
 
 
@@ -21,6 +23,8 @@ def _dict_to_line_item(data: dict) -> SaleLineItem:
         description=data["description"],
         quantity=Decimal(data["quantity"]),
         unit_price=Money.from_cents(data["unit_price_cents"]),
+        gst_rate=Decimal(data["gst_rate"]) if data.get("gst_rate") is not None else None,
+        hsn_code=data.get("hsn_code"),
     )
 
 
@@ -37,6 +41,7 @@ def model_to_domain(model: SaleModel) -> Sale:
         tax=Money.from_cents(model.tax_cents),
         amount_received=Money.from_cents(model.amount_received_cents),
         notes=model.notes,
+        place_of_supply=model.place_of_supply,
         status=SaleStatus(model.status),
         created_at=model.created_at,
     )
@@ -55,6 +60,7 @@ def domain_to_model(sale: Sale) -> SaleModel:
         tax_cents=sale.tax.cents,
         amount_received_cents=sale.amount_received.cents,
         notes=sale.notes,
+        place_of_supply=sale.place_of_supply,
         status=sale.status.value,
         created_at=sale.created_at,
     )
@@ -70,4 +76,5 @@ def apply_domain_to_existing_model(sale: Sale, model: SaleModel) -> None:
     model.tax_cents = sale.tax.cents
     model.amount_received_cents = sale.amount_received.cents
     model.notes = sale.notes
+    model.place_of_supply = sale.place_of_supply
     model.status = sale.status.value
