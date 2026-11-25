@@ -77,7 +77,7 @@ export default function PurchaseDetailPage() {
     if (!currentBusinessId) return;
     if (
       purchase?.stock_added &&
-      !window.confirm("This purchase added items to your stock. Voiding it will take those counts back out. Continue?")
+      !window.confirm(t("x.voidPurchaseStock"))
     ) {
       return;
     }

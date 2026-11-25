@@ -13,10 +13,12 @@ import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
 import { BudgetResponse } from "@/types/personal";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 const FREE_BUDGETS = 5; // mirrors backend personal_finance/domain/rules.py
 
 export default function BudgetsPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   const canWrite = currentBusiness?.role !== "viewer";
@@ -32,7 +34,8 @@ export default function BudgetsPage() {
     setLoadError(null);
     listBudgets(getAccessToken(), currentBusinessId)
       .then(setBudgets)
-      .catch((err) => setLoadError(errorMessage(err, "Failed to load budgets")));
+      .catch((err) => setLoadError(errorMessage(err, t("s.failed_to_load_budgets"))));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   useEffect(load, [load]);
@@ -48,55 +51,54 @@ export default function BudgetsPage() {
       setLimit("");
       load();
     } catch (err) {
-      setFormError(errorMessage(err, "Failed to save budget"));
+      setFormError(errorMessage(err, t("s.failed_to_save_budget")));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleRemove(id: string) {
-    if (!currentBusinessId || !window.confirm("Remove this budget?")) return;
+    if (!currentBusinessId || !window.confirm(t("x.removeBudget"))) return;
     try {
       await removeBudget(getAccessToken(), currentBusinessId, id);
       load();
     } catch (err) {
-      setLoadError(errorMessage(err, "Failed to remove budget"));
+      setLoadError(errorMessage(err, t("s.failed_to_remove_budget")));
     }
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Budgets</h1>
+      <h1 className="text-2xl font-semibold">{t("nav.budgets")}</h1>
       {currentBusiness?.business.plan === "free" && (
         <p className="text-sm text-slate-500">
-          Free plan: {budgets ? budgets.length : "…"} of {FREE_BUDGETS} budgets used.{" "}
+          {t("x.freeBudgets", { n: budgets ? budgets.length : "…", max: FREE_BUDGETS })}{" "}
           <Link href="/app/settings" className="text-brand-700 hover:underline">
-            Upgrade to Plus
+            {t("s.upgrade_to_plus")}
           </Link>{" "}
-          for unlimited.
+          {t("s.for_unlimited")}
         </p>
       )}
       <p className="max-w-2xl text-sm text-slate-600">
-        A budget is a monthly limit for one spending category. It matches the category you use when you record
-        spending (ignoring capital letters), and your Overview shows how each one is doing.
+        {t("s.a_budget_is_a_monthly_limit_for_on")}
       </p>
 
       {canWrite && (
         <Card className="max-w-2xl">
-          <h2 className="mb-3 text-lg font-semibold">Set a budget</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t("s.set_a_budget")}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             {formError && <p className="text-sm text-red-600">{formError}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Category">
+              <FormField label={t("exp.category")}>
                 <Input
                   required
                   maxLength={100}
-                  placeholder="e.g. Groceries"
+                  placeholder={t("s.e_g_groceries")}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 />
               </FormField>
-              <FormField label="Monthly limit">
+              <FormField label={t("s.monthly_limit")}>
                 <Input
                   type="number"
                   required
@@ -108,9 +110,9 @@ export default function BudgetsPage() {
                 />
               </FormField>
             </div>
-            <p className="text-xs text-slate-500">Setting a category that already has a budget updates its limit.</p>
+            <p className="text-xs text-slate-500">{t("s.setting_a_category_that_already_ha")}</p>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving…" : "Save budget"}
+              {isSubmitting ? t("common.saving") : t("s.save_budget")}
             </Button>
           </form>
         </Card>
@@ -123,7 +125,7 @@ export default function BudgetsPage() {
             <Spinner />
           </div>
         )}
-        {budgets && budgets.length === 0 && <p className="text-sm text-slate-500">No budgets yet.</p>}
+        {budgets && budgets.length === 0 && <p className="text-sm text-slate-500">{t("s.no_budgets_yet")}</p>}
         {budgets && budgets.length > 0 && (
           <ul className="divide-y divide-slate-100">
             {budgets.map((b) => (
@@ -134,7 +136,7 @@ export default function BudgetsPage() {
                 </div>
                 {canWrite && (
                   <Button variant="ghost" onClick={() => void handleRemove(b.id)}>
-                    Remove
+                    {t("set.team.remove")}
                   </Button>
                 )}
               </li>

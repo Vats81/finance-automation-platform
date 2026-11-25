@@ -11,12 +11,20 @@ import { downloadProfitLossPdf, getDashboardTrend, sendReportEmail, sendReportWh
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
-import { DASHBOARD_PERIODS, DashboardGranularity, DashboardPeriod, DashboardTrendPoint } from "@/types/dashboard";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
+import {
+  DASHBOARD_PERIODS,
+  DashboardGranularity,
+  DashboardPeriod,
+  DashboardTrendPoint,
+  PERIOD_KEYS,
+} from "@/types/dashboard";
 
-const GRANULARITIES: { value: DashboardGranularity; label: string }[] = [
-  { value: "day", label: "Daily" },
-  { value: "week", label: "Weekly" },
-  { value: "month", label: "Monthly" },
+const GRANULARITIES: { value: DashboardGranularity; label: MessageKey }[] = [
+  { value: "day", label: "rep.daily" },
+  { value: "week", label: "rep.weekly" },
+  { value: "month", label: "rep.monthly" },
 ];
 
 function toISODate(d: Date): string {
@@ -49,20 +57,24 @@ function getPeriodRange(period: DashboardPeriod): { startDate: string; endDate: 
   return { startDate: toISODate(start), endDate: toISODate(now) };
 }
 
-function formatPeriodLabel(periodStart: string, granularity: DashboardGranularity): string {
+function formatPeriodLabel(
+  periodStart: string,
+  granularity: DashboardGranularity,
+  locale = "en-US"
+): string {
   const start = new Date(`${periodStart}T00:00:00`);
 
   if (granularity === "day") {
-    return start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return start.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
   }
   if (granularity === "month") {
-    return start.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    return start.toLocaleDateString(locale, { month: "long", year: "numeric" });
   }
 
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-  const startLabel = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const endLabel = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const startLabel = start.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  const endLabel = end.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
   return `${startLabel} – ${endLabel}`;
 }
 
@@ -89,6 +101,7 @@ function downloadCsv(rows: DashboardTrendPoint[], granularity: DashboardGranular
 }
 
 export default function ReportsPage() {
+  const { t, lang } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   // Viewers are read-only in the beta: they can see the numbers but not export or send them.
@@ -119,7 +132,8 @@ export default function ReportsPage() {
     const range = getPeriodRange(period);
     getDashboardTrend(getAccessToken(), currentBusinessId, { ...range, granularity })
       .then((res) => setPoints(res.points))
-      .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load report"));
+      .catch((err) => setLoadError(err instanceof Error ? err.message : t("s.failed_to_load_report")));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, period, granularity, getAccessToken, retryToken]);
 
   const hasActivity = points?.some((p) => Number(p.revenue) !== 0 || Number(p.expenses) !== 0);
@@ -133,7 +147,7 @@ export default function ReportsPage() {
       const range = getPeriodRange(period);
       await downloadProfitLossPdf(getAccessToken(), currentBusinessId, { ...range, granularity });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to download PDF");
+      setError(err instanceof Error ? err.message : t("s.failed_to_download_pdf"));
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -150,9 +164,9 @@ export default function ReportsPage() {
         ...range,
         granularity,
       });
-      setEmailStatus("Sent!");
+      setEmailStatus(t("x.sent"));
     } catch (err) {
-      setEmailStatus(err instanceof Error ? err.message : "Failed to send email");
+      setEmailStatus(err instanceof Error ? err.message : t("s.failed_to_send_email"));
     } finally {
       setIsSendingEmail(false);
     }
@@ -169,9 +183,9 @@ export default function ReportsPage() {
         ...range,
         granularity,
       });
-      setWhatsAppStatus("Sent!");
+      setWhatsAppStatus(t("x.sent"));
     } catch (err) {
-      setWhatsAppStatus(err instanceof Error ? err.message : "Failed to send WhatsApp message");
+      setWhatsAppStatus(err instanceof Error ? err.message : t("s.failed_to_send_whatsapp_message"));
     } finally {
       setIsSendingWhatsApp(false);
     }
@@ -181,15 +195,15 @@ export default function ReportsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="mb-1 text-2xl font-semibold">Reports</h1>
-          <p className="text-sm text-slate-500">Profit &amp; Loss, broken down by the period you choose.</p>
+          <h1 className="mb-1 text-2xl font-semibold">{t("nav.reports")}</h1>
+          <p className="text-sm text-slate-500">{t("s.profit_loss_broken_down_by_the_per")}</p>
         </div>
         <div className="flex gap-3">
           <div className="w-40">
             <Select value={period} onChange={(e) => setPeriod(e.target.value as DashboardPeriod)}>
               {DASHBOARD_PERIODS.map((p) => (
                 <option key={p.value} value={p.value}>
-                  {p.label}
+                  {t(PERIOD_KEYS[p.value])}
                 </option>
               ))}
             </Select>
@@ -201,7 +215,7 @@ export default function ReportsPage() {
             >
               {GRANULARITIES.map((g) => (
                 <option key={g.value} value={g.value}>
-                  {g.label}
+                  {t(g.label)}
                 </option>
               ))}
             </Select>
@@ -216,35 +230,35 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-red-600">{loadError}</p>
             <Button variant="secondary" onClick={() => setRetryToken((n) => n + 1)}>
-              Retry
+              {t("common.retry")}
             </Button>
           </div>
         ) : !points ? (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm text-slate-500">{t("s.loading")}</p>
         ) : hasActivity ? (
           <>
             {canExport ? (
               <div className="mb-4 flex justify-end gap-3">
                 <Button variant="secondary" onClick={() => downloadCsv(points, granularity)}>
-                  Download CSV
+                  {t("s.download_csv")}
                 </Button>
                 <Button variant="secondary" onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
-                  {isDownloadingPdf ? "Downloading..." : "Download PDF"}
+                  {isDownloadingPdf ? t("s.downloading") : t("s.download_pdf")}
                 </Button>
               </div>
             ) : (
               <p className="mb-4 text-right text-xs text-slate-500">
-                Your role is view-only. Owners, admins and accountants can export and send reports.
+                {t("s.your_role_is_view_only_owners_admi")}
               </p>
             )}
             <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-white">
                   <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                    <th className="py-2 pr-4">Period</th>
-                    <th className="py-2 pr-4">Revenue</th>
-                    <th className="py-2 pr-4">Expenses</th>
-                    <th className="py-2 pr-4">Net profit</th>
+                    <th className="py-2 pr-4">{t("s.period")}</th>
+                    <th className="py-2 pr-4">{t("dash.chartRevenue")}</th>
+                    <th className="py-2 pr-4">{t("nav.expenses")}</th>
+                    <th className="py-2 pr-4">{t("dash.profit")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -252,7 +266,7 @@ export default function ReportsPage() {
                     const netProfit = Number(point.revenue) - Number(point.expenses);
                     return (
                       <tr key={point.period_start} className="border-b border-slate-100 last:border-0">
-                        <td className="py-2 pr-4">{formatPeriodLabel(point.period_start, granularity)}</td>
+                        <td className="py-2 pr-4">{formatPeriodLabel(point.period_start, granularity, lang === "hi" ? "hi-IN" : "en-US")}</td>
                         <td className="py-2 pr-4 text-slate-600">{formatCurrency(point.revenue)}</td>
                         <td className="py-2 pr-4 text-slate-600">{formatCurrency(point.expenses)}</td>
                         <td className="py-2 pr-4 text-slate-600">{formatCurrency(netProfit)}</td>
@@ -262,7 +276,7 @@ export default function ReportsPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-slate-300 font-semibold">
-                    <td className="py-2 pr-4">Total</td>
+                    <td className="py-2 pr-4">{t("common.total")}</td>
                     <td className="py-2 pr-4">{formatCurrency(totalRevenue)}</td>
                     <td className="py-2 pr-4">{formatCurrency(totalExpenses)}</td>
                     <td className="py-2 pr-4">{formatCurrency(totalRevenue - totalExpenses)}</td>
@@ -273,28 +287,27 @@ export default function ReportsPage() {
           </>
         ) : (
           <p className="text-sm text-slate-500">
-            Not enough data yet — record a{" "}
+            {t("rep.noData")}{" "}
             <Link href="/app/sales/new" className="text-brand-600 underline">
-              sale
-            </Link>{" "}
-            or an{" "}
+              {t("dash.recordSale")}
+            </Link>
+            {" · "}
             <Link href="/app/expenses/new" className="text-brand-600 underline">
-              expense
-            </Link>{" "}
-            to see a report here.
+              {t("dash.recordExpense")}
+            </Link>
           </p>
         )}
       </Card>
 
       {points && hasActivity && canExport && (
         <Card className="mt-6">
-          <h2 className="mb-4 text-sm font-semibold">Send report</h2>
+          <h2 className="mb-4 text-sm font-semibold">{t("s.send_report")}</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <div className="flex gap-2">
                 <Input
                   type="email"
-                  placeholder="owner@example.com"
+                  placeholder={t("s.owner_example_com")}
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
                 />
@@ -303,7 +316,7 @@ export default function ReportsPage() {
                   onClick={handleSendEmail}
                   disabled={isSendingEmail || !recipientEmail}
                 >
-                  {isSendingEmail ? "Sending..." : "Email report"}
+                  {isSendingEmail ? t("s.sending") : t("s.email_report")}
                 </Button>
               </div>
               {emailStatus && <p className="mt-1 text-xs text-slate-500">{emailStatus}</p>}
@@ -312,7 +325,7 @@ export default function ReportsPage() {
               <div className="flex gap-2">
                 <Input
                   type="tel"
-                  placeholder="+1 555 000 0000"
+                  placeholder="+91 98765 43210"
                   value={recipientPhone}
                   onChange={(e) => setRecipientPhone(e.target.value)}
                 />
@@ -321,7 +334,7 @@ export default function ReportsPage() {
                   onClick={handleSendWhatsApp}
                   disabled={isSendingWhatsApp || !recipientPhone}
                 >
-                  {isSendingWhatsApp ? "Sending..." : "Send via WhatsApp"}
+                  {isSendingWhatsApp ? t("s.sending") : t("s.send_via_whatsapp")}
                 </Button>
               </div>
               {whatsAppStatus && <p className="mt-1 text-xs text-slate-500">{whatsAppStatus}</p>}

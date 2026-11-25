@@ -15,6 +15,7 @@ import { PurchaseResponse } from "@/types/purchase";
 import { SaleResponse } from "@/types/sale";
 import { formatCurrency } from "@/lib/format";
 import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 
 type DueBucket = "overdue" | "due_today" | "due_this_week" | "later" | "no_due_date";
 
@@ -28,12 +29,12 @@ interface PaymentRow {
   href: string;
 }
 
-const BUCKET_LABEL: Record<DueBucket, string> = {
-  overdue: "Overdue",
-  due_today: "Due today",
-  due_this_week: "Due this week",
-  later: "Later",
-  no_due_date: "No due date",
+const BUCKET_LABEL: Record<DueBucket, MessageKey> = {
+  overdue: "bucket.overdue",
+  due_today: "bucket.due_today",
+  due_this_week: "bucket.due_this_week",
+  later: "bucket.later",
+  no_due_date: "bucket.no_due_date",
 };
 
 const BUCKET_TONE: Record<DueBucket, "danger" | "warning" | "neutral"> = {
@@ -120,7 +121,7 @@ function PaymentsTable({ rows }: { rows: PaymentRow[] }) {
               <td className="py-2 pr-4 text-slate-600">{row.counterparty}</td>
               <td className="py-2 pr-4 text-slate-600">{row.dueDate ?? "—"}</td>
               <td className="py-2 pr-4">
-                <Badge tone={BUCKET_TONE[bucket]}>{BUCKET_LABEL[bucket]}</Badge>
+                <Badge tone={BUCKET_TONE[bucket]}>{t(BUCKET_LABEL[bucket])}</Badge>
               </td>
               <td className="py-2 pr-4 text-slate-600">{formatCurrency(row.outstandingAmount)}</td>
               <td className="py-2 pr-4">

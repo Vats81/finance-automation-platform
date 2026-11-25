@@ -8,6 +8,7 @@ import { FormField } from "@/components/ui/FormField";
 import { Select } from "@/components/ui/Select";
 import { getImportJob, previewImport, startImportJob } from "@/lib/api/dataImport";
 import { ColumnMapping, ImportDataType, ImportSummaryResponse, PreviewResponse } from "@/types/dataImport";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 type Step = "pick" | "mapping" | "running" | "result";
 
@@ -37,6 +38,7 @@ export function ImportWizard({
   businessId: string;
   dataType: ImportDataType;
 }) {
+  const { t } = useT();
   const [step, setStep] = useState<Step>("pick");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
@@ -76,7 +78,7 @@ export function ImportWizard({
       setMapping(bestEffortMapping(result.canonical_fields, result.headers));
       setStep("mapping");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to preview file");
+      setError(err instanceof Error ? err.message : t("s.failed_to_preview_file"));
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +108,7 @@ export function ImportWizard({
             return;
           }
           if (job.status === "failed") {
-            setError(job.error ?? "The import stopped unexpectedly.");
+            setError(job.error ?? t("import.stopped"));
             setStep("mapping");
             return;
           }
@@ -116,13 +118,13 @@ export function ImportWizard({
           failures += 1;
           if (failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
             throw new Error(
-              "Lost contact with the server while importing. Rows already imported are kept; upload the file again to finish (duplicates are skipped)."
+              t("import.lostContact")
             );
           }
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to import file");
+      setError(err instanceof Error ? err.message : t("s.failed_to_import_file"));
       setStep("mapping");
     } finally {
       setIsLoading(false);
@@ -133,7 +135,7 @@ export function ImportWizard({
     return (
       <div className="space-y-4">
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <FormField label="CSV file">
+        <FormField label={t("s.csv_file")}>
           <input
             type="file"
             accept=".csv,text/csv"
@@ -142,7 +144,7 @@ export function ImportWizard({
           />
         </FormField>
         <Button onClick={handlePreview} disabled={!file || isLoading}>
-          {isLoading ? "Reading file..." : "Preview"}
+          {isLoading ? t("s.reading_file") : t("s.preview")}
         </Button>
       </div>
     );
@@ -153,8 +155,7 @@ export function ImportWizard({
       <div className="space-y-6">
         {error && <p className="text-sm text-red-600">{error}</p>}
         <p className="text-sm text-slate-600">
-          Found <span className="font-medium">{preview.row_count}</span> row(s). Map each field below to a
-          column from your file.
+          {t("import.found", { n: preview.row_count })}
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -168,7 +169,7 @@ export function ImportWizard({
                     setMapping((prev) => ({ ...prev, [field]: e.target.value }))
                   }
                 >
-                  <option value="">— Not mapped —</option>
+                  <option value="">{t("s.not_mapped")}</option>
                   {preview.headers.map((header) => (
                     <option key={header} value={header}>
                       {header}
@@ -181,7 +182,7 @@ export function ImportWizard({
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">Sample rows</p>
+          <p className="mb-2 text-sm font-medium text-slate-700">{t("s.sample_rows")}</p>
           <div className="overflow-x-auto rounded-md border border-slate-200">
             <table className="w-full text-left text-xs">
               <thead>
@@ -210,10 +211,10 @@ export function ImportWizard({
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={reset} disabled={isLoading}>
-            Start over
+            {t("s.start_over")}
           </Button>
           <Button onClick={handleImport} disabled={isLoading}>
-            {isLoading ? "Importing..." : "Import"}
+            {isLoading ? t("s.importing") : t("s.import")}
           </Button>
         </div>
       </div>
@@ -226,21 +227,23 @@ export function ImportWizard({
     return (
       <div className="space-y-3" aria-live="polite">
         <p className="text-sm text-slate-700">
-          Importing <span className="font-medium">{progress.processed.toLocaleString()}</span> of{" "}
-          <span className="font-medium">{progress.total.toLocaleString()}</span> rows...
+          {t("import.running", {
+            done: progress.processed.toLocaleString(),
+            total: progress.total.toLocaleString(),
+          })}
         </p>
         <div
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
-          aria-label="Import progress"
+          aria-label={t("s.import_progress")}
           className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
         >
           <div className="h-full bg-brand-600 transition-all" style={{ width: `${percent}%` }} />
         </div>
         <p className="text-xs text-slate-500">
-          Large files can take a minute or two. Keep this page open until it finishes.
+          {t("s.large_files_can_take_a_minute_or_t")}
         </p>
       </div>
     );
@@ -250,10 +253,10 @@ export function ImportWizard({
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap gap-3">
-          <Badge tone="success">{summary.created} created</Badge>
-          <Badge tone="neutral">{summary.skipped_duplicates} skipped (duplicate)</Badge>
-          <Badge tone={summary.errors.length > 0 ? "danger" : "neutral"}>{summary.errors.length} errors</Badge>
-          <Badge tone="neutral">{summary.total_rows} total rows</Badge>
+          <Badge tone="success">{t("import.created", { n: summary.created })}</Badge>
+          <Badge tone="neutral">{t("import.skipped", { n: summary.skipped_duplicates })}</Badge>
+          <Badge tone={summary.errors.length > 0 ? "danger" : "neutral"}>{t("import.errors", { n: summary.errors.length })}</Badge>
+          <Badge tone="neutral">{t("import.totalRows", { n: summary.total_rows })}</Badge>
         </div>
 
         {summary.errors.length > 0 && (
@@ -261,8 +264,8 @@ export function ImportWizard({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-3 py-2">Row</th>
-                  <th className="px-3 py-2">Error</th>
+                  <th className="px-3 py-2">{t("s.row")}</th>
+                  <th className="px-3 py-2">{t("s.error")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -278,7 +281,7 @@ export function ImportWizard({
         )}
 
         <Button variant="secondary" onClick={reset}>
-          Import another file
+          {t("s.import_another_file")}
         </Button>
       </div>
     );

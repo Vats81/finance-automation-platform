@@ -10,8 +10,10 @@ import { downloadImportTemplate } from "@/lib/api/dataImport";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { IMPORT_DATA_TYPES, ImportDataType } from "@/types/dataImport";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function DataUploadPage() {
+  const { t, label } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   const canImport = currentBusiness?.role !== "viewer";
@@ -30,26 +32,26 @@ export default function DataUploadPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Data Upload Centre</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("dash.dataUpload")}</h1>
 
       <Card className="mb-6">
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-56">
-            <FormField label="Data type">
+            <FormField label={t("s.data_type")}>
               <Select
                 value={dataType}
                 onChange={(e) => setDataType(e.target.value as ImportDataType)}
               >
-                {IMPORT_DATA_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {IMPORT_DATA_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {label("import.type", type.value)}
                   </option>
                 ))}
               </Select>
             </FormField>
           </div>
           <Button variant="secondary" onClick={handleDownloadTemplate} disabled={isDownloading}>
-            {isDownloading ? "Downloading..." : "Download template"}
+            {isDownloading ? t("s.downloading") : t("s.download_template")}
           </Button>
         </div>
       </Card>
@@ -57,7 +59,7 @@ export default function DataUploadPage() {
       <Card>
         {currentBusinessId && !canImport ? (
           <p className="text-sm text-slate-500">
-            Your role is view-only. Owners, admins and accountants can import data.
+            {t("import.viewOnly")}
           </p>
         ) : currentBusinessId ? (
           <ImportWizard
@@ -67,7 +69,7 @@ export default function DataUploadPage() {
             dataType={dataType}
           />
         ) : (
-          <p className="text-sm text-slate-500">Select a business to import data.</p>
+          <p className="text-sm text-slate-500">{t("import.selectBusiness")}</p>
         )}
       </Card>
     </div>

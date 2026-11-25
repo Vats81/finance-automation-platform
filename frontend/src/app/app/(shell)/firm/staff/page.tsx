@@ -17,25 +17,21 @@ import {
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ASSIGNABLE_FIRM_ROLES, FirmAuditEvent, FirmRole, FirmStaffResponse } from "@/types/firm";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 
-const ROLE_HELP: Record<FirmRole, string> = {
-  owner: "Everything. Created the firm; cannot be changed or removed.",
-  admin: "Manages staff and clients. Works in client businesses as an admin.",
-  accountant: "Records and edits data in client businesses, imports and exports.",
-  viewer: "Looks only: no editing, importing or exporting.",
-};
-
-function describeAction(action: string): string {
-  if (action === "POST /firms") return "created the firm";
-  if (action.endsWith("/staff/{membership_id}/remove")) return "removed a staff member";
-  if (action.endsWith("/staff/{membership_id}")) return "changed a staff member's role";
-  if (action.endsWith("/staff")) return "invited a staff member";
-  if (action.endsWith("/release")) return "released a client";
-  if (action.endsWith("/clients")) return "added a client";
-  return action;
+function describeAction(action: string): MessageKey | null {
+  if (action === "POST /firms") return "firm.action.created";
+  if (action.endsWith("/staff/{membership_id}/remove")) return "firm.action.removed";
+  if (action.endsWith("/staff/{membership_id}")) return "firm.action.roleChanged";
+  if (action.endsWith("/staff")) return "firm.action.invited";
+  if (action.endsWith("/release")) return "firm.action.released";
+  if (action.endsWith("/clients")) return "firm.action.addedClient";
+  return null;
 }
 
 export default function FirmStaffPage() {
+  const { t, label, lang } = useT();
   const { getAccessToken, user } = useLocalAuth();
   const { currentFirm } = useCurrentBusiness();
   const [staff, setStaff] = useState<FirmStaffResponse[] | null>(null);
@@ -78,7 +74,7 @@ export default function FirmStaffPage() {
       setEmail("");
       load();
     } catch (err) {
-      setActionError(errorMessage(err, "The invitation couldn't be saved."));
+      setActionError(errorMessage(err, t("s.the_invitation_couldn_t_be_saved")));
     } finally {
       setIsInviting(false);
     }
@@ -91,13 +87,13 @@ export default function FirmStaffPage() {
       await changeFirmStaffRole(getAccessToken(), currentFirm.id, member.membership_id, newRole);
       load();
     } catch (err) {
-      setActionError(errorMessage(err, "The role couldn't be changed."));
+      setActionError(errorMessage(err, t("s.the_role_couldn_t_be_changed")));
     }
   }
 
   async function handleRemove(member: FirmStaffResponse) {
     if (!currentFirm) return;
-    if (!window.confirm(`Remove ${member.display_name}? They lose access to the firm and all its clients straight away.`)) {
+    if (!window.confirm(t("x.removeStaff", { name: member.display_name }))) {
       return;
     }
     setActionError(null);
@@ -105,22 +101,21 @@ export default function FirmStaffPage() {
       await removeFirmStaff(getAccessToken(), currentFirm.id, member.membership_id);
       load();
     } catch (err) {
-      setActionError(errorMessage(err, "The person couldn't be removed."));
+      setActionError(errorMessage(err, t("s.the_person_couldn_t_be_removed")));
     }
   }
 
   if (!currentFirm) {
-    return <p className="text-sm text-slate-500">You are not part of an accounting firm yet.</p>;
+    return <p className="text-sm text-slate-500">{t("s.you_are_not_part_of_an_accounting")}</p>;
   }
 
   const active = staff?.filter((s) => s.status === "active") ?? [];
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">Firm staff</h1>
+      <h1 className="mb-1 text-2xl font-semibold">{t("s.firm_staff")}</h1>
       <p className="mb-6 text-sm text-slate-500">
-        People who work at {currentFirm.name}. Their role here decides what they can do in every client
-        business.
+        {t("firm.staffIntro", { name: currentFirm.name })}
       </p>
 
       {actionError && <p className="mb-3 text-sm text-red-600">{actionError}</p>}
@@ -129,30 +124,30 @@ export default function FirmStaffPage() {
         <Card className="mb-6">
           <form onSubmit={handleInvite} className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">Add a colleague by email</span>
+              <span className="mb-1 block font-medium">{t("s.add_a_colleague_by_email")}</span>
               <Input
                 required
                 type="email"
-                placeholder="They must already have an account"
+                placeholder={t("s.they_must_already_have_an_account")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">Role</span>
+              <span className="mb-1 block font-medium">{t("set.team.role")}</span>
               <Select value={role} onChange={(e) => setRole(e.target.value as FirmRole)}>
                 {ASSIGNABLE_FIRM_ROLES.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {label("set.role", r)}
                   </option>
                 ))}
               </Select>
             </label>
             <Button type="submit" disabled={isInviting}>
-              {isInviting ? "Adding…" : "Add"}
+              {isInviting ? t("s.adding") : t("s.add")}
             </Button>
           </form>
-          <p className="mt-2 text-xs text-slate-500">{ROLE_HELP[role]}</p>
+          <p className="mt-2 text-xs text-slate-500">{t(`firm.roleHelp.${role}` as MessageKey)}</p>
         </Card>
       )}
 
@@ -160,16 +155,16 @@ export default function FirmStaffPage() {
         {loadError ? (
           <InlineError message={loadError} onRetry={load} />
         ) : !staff ? (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-slate-500">{t("common.loading")}</p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Role</th>
+                <th className="py-2 pr-4">{t("common.name")}</th>
+                <th className="py-2 pr-4">{t("common.email")}</th>
+                <th className="py-2 pr-4">{t("set.team.role")}</th>
                 <th className="py-2 pr-4">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("set.team.actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -184,25 +179,25 @@ export default function FirmStaffPage() {
                     <td className="py-2 pr-4">
                       {canManage && !isOwner && !isSelf ? (
                         <Select
-                          aria-label={`Role for ${member.display_name}`}
+                          aria-label={t("firm.roleFor", { name: member.display_name })}
                           value={member.role}
                           onChange={(e) => handleRole(member, e.target.value as FirmRole)}
                           className="max-w-[10rem]"
                         >
                           {ASSIGNABLE_FIRM_ROLES.map((r) => (
                             <option key={r} value={r}>
-                              {r}
+                              {label("set.role", r)}
                             </option>
                           ))}
                         </Select>
                       ) : (
-                        <Badge tone={isOwner ? "success" : "neutral"}>{member.role}</Badge>
+                        <Badge tone={isOwner ? "success" : "neutral"}>{label("set.role", member.role)}</Badge>
                       )}
                     </td>
                     <td className="py-2 pr-4">
                       {canManage && !isOwner && (
                         <Button variant="ghost" onClick={() => handleRemove(member)}>
-                          Remove
+                          {t("set.team.remove")}
                         </Button>
                       )}
                     </td>
@@ -216,15 +211,14 @@ export default function FirmStaffPage() {
 
       {canManage && (
         <Card className="mt-6">
-          <h2 className="mb-1 text-lg font-semibold">Recent activity</h2>
+          <h2 className="mb-1 text-lg font-semibold">{t("s.recent_activity")}</h2>
           <p className="mb-4 text-sm text-slate-500">
-            Who changed the firm&apos;s staff and clients. Work inside a client&apos;s books is in that
-            client&apos;s own activity log.
+            {t("s.who_changed_the_firm_s_staff_and_c")}
           </p>
           {!activity ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500">{t("common.loading")}</p>
           ) : activity.length === 0 ? (
-            <p className="text-sm text-slate-500">Nothing yet.</p>
+            <p className="text-sm text-slate-500">{t("s.nothing_yet")}</p>
           ) : (
             <ul className="divide-y divide-slate-100 text-sm">
               {activity.map((event) => {
@@ -232,10 +226,14 @@ export default function FirmStaffPage() {
                 return (
                   <li key={event.id} className="flex flex-wrap justify-between gap-2 py-2">
                     <span>
-                      <span className="font-medium">{who?.display_name ?? "Someone"}</span>{" "}
-                      <span className="text-slate-500">({event.actor_role})</span> · {describeAction(event.action)}
+                      <span className="font-medium">{who?.display_name ?? t("s.someone")}</span>{" "}
+                      <span className="text-slate-500">({label("set.role", event.actor_role)})</span> ·{" "}
+                      {(() => {
+                        const key = describeAction(event.action);
+                        return key ? t(key) : event.action;
+                      })()}
                     </span>
-                    <span className="text-slate-400">{new Date(event.occurred_at).toLocaleString()}</span>
+                    <span className="text-slate-400">{new Date(event.occurred_at).toLocaleString(lang === "hi" ? "hi-IN" : undefined)}</span>
                   </li>
                 );
               })}

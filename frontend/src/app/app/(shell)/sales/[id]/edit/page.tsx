@@ -51,7 +51,8 @@ export default function EditSalePage() {
           place_of_supply: sale.place_of_supply ?? undefined,
         })
       )
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load sale"));
+      .catch((err) => setError(err instanceof Error ? err.message : t("sale.loadFailed")));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken, id]);
 
   async function handleSubmit(data: CreateSaleRequest) {

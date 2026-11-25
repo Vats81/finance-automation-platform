@@ -15,6 +15,7 @@ import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { formatCurrency } from "@/lib/format";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { IncomeResponse } from "@/types/personal";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 function today(): string {
   const d = new Date();
@@ -22,6 +23,7 @@ function today(): string {
 }
 
 export default function IncomePage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId, currentBusiness } = useCurrentBusiness();
   const canWrite = currentBusiness?.role !== "viewer";
@@ -40,7 +42,8 @@ export default function IncomePage() {
     setLoadError(null);
     listIncome(getAccessToken(), currentBusinessId)
       .then((page) => setItems(page.items))
-      .catch((err) => setLoadError(errorMessage(err, "Failed to load income")));
+      .catch((err) => setLoadError(errorMessage(err, t("s.failed_to_load_income"))));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBusinessId, getAccessToken]);
 
   useEffect(load, [load]);
@@ -63,38 +66,38 @@ export default function IncomePage() {
       load();
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
-      setFormError(errorMessage(err, "Failed to add income"));
+      setFormError(errorMessage(err, t("s.failed_to_add_income")));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleVoid(id: string) {
-    if (!currentBusinessId || !window.confirm("Remove this income entry? It will stop counting in your totals.")) {
+    if (!currentBusinessId || !window.confirm(t("x.removeIncome"))) {
       return;
     }
     try {
       await voidIncome(getAccessToken(), currentBusinessId, id);
       load();
     } catch (err) {
-      setLoadError(errorMessage(err, "Failed to remove income"));
+      setLoadError(errorMessage(err, t("s.failed_to_remove_income")));
     }
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Income</h1>
+      <h1 className="text-2xl font-semibold">{t("nav.income")}</h1>
 
       {canWrite && (
         <Card className="max-w-2xl">
-          <h2 className="mb-3 text-lg font-semibold">Add income</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t("s.add_income")}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             {formError && <p className="text-sm text-red-600">{formError}</p>}
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Date">
+              <FormField label={t("common.date")}>
                 <Input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
               </FormField>
-              <FormField label="Amount">
+              <FormField label={t("common.amount")}>
                 <Input
                   type="number"
                   required
@@ -105,27 +108,27 @@ export default function IncomePage() {
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </FormField>
-              <FormField label="From">
+              <FormField label={t("s.from")}>
                 <Input
                   required
                   maxLength={200}
-                  placeholder="e.g. Acme Ltd, side project"
+                  placeholder={t("s.e_g_acme_ltd_side_project")}
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
                 />
               </FormField>
-              <FormField label="Type">
+              <FormField label={t("s.type")}>
                 <Input
                   required
                   maxLength={100}
-                  placeholder="e.g. Salary, Freelance, Gift"
+                  placeholder={t("s.e_g_salary_freelance_gift")}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 />
               </FormField>
             </div>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding…" : "Add income"}
+              {isSubmitting ? t("s.adding") : t("s.add_income")}
             </Button>
           </form>
         </Card>
@@ -138,16 +141,16 @@ export default function IncomePage() {
             <Spinner />
           </div>
         )}
-        {items && items.length === 0 && <p className="text-sm text-slate-500">No income recorded yet.</p>}
+        {items && items.length === 0 && <p className="text-sm text-slate-500">{t("s.no_income_recorded_yet")}</p>}
         {items && items.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="py-2 pr-4">Date</th>
-                  <th className="py-2 pr-4">From</th>
-                  <th className="py-2 pr-4">Type</th>
-                  <th className="py-2 pr-4">Amount</th>
+                  <th className="py-2 pr-4">{t("common.date")}</th>
+                  <th className="py-2 pr-4">{t("s.from")}</th>
+                  <th className="py-2 pr-4">{t("s.type")}</th>
+                  <th className="py-2 pr-4">{t("common.amount")}</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -166,11 +169,11 @@ export default function IncomePage() {
                     </td>
                     <td className="py-2 text-right">
                       {i.status === "void" ? (
-                        <Badge tone="neutral">Removed</Badge>
+                        <Badge tone="neutral">{t("s.removed")}</Badge>
                       ) : (
                         canWrite && (
                           <Button variant="ghost" onClick={() => void handleVoid(i.id)}>
-                            Remove
+                            {t("set.team.remove")}
                           </Button>
                         )
                       )}

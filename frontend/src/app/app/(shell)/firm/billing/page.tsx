@@ -9,10 +9,12 @@ import { changeFirmPlan, getFirmBilling, openFirmBillingPortal, startFirmCheckou
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { FIRM_PLANS, FirmBillingResponse, FirmPlan } from "@/types/firm";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 const PLAN_ORDER: FirmPlan[] = ["free", "growth", "practice"];
 
 function Usage({ label, used, max }: { label: string; used: number; max: number }) {
+  const { t } = useT();
   const percent = Math.min(100, (used / max) * 100);
   const full = used >= max;
   return (
@@ -20,7 +22,7 @@ function Usage({ label, used, max }: { label: string; used: number; max: number 
       <div className="flex justify-between text-sm">
         <span className="font-medium">{label}</span>
         <span className={full ? "text-amber-700" : "text-slate-600"}>
-          {used} of {max}
+          {t("firm.usage", { used, max })}
         </span>
       </div>
       <div className="mt-1 h-2 rounded-full bg-slate-100">
@@ -31,6 +33,7 @@ function Usage({ label, used, max }: { label: string; used: number; max: number 
 }
 
 export default function FirmBillingPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentFirm, refresh } = useCurrentBusiness();
   const [billing, setBilling] = useState<FirmBillingResponse | null>(null);
@@ -58,7 +61,7 @@ export default function FirmBillingPage() {
     try {
       await action();
     } catch (err) {
-      setActionError(errorMessage(err, "That didn't work."));
+      setActionError(errorMessage(err, t("s.that_didn_t_work")));
       setBusy(false);
     }
   }
@@ -90,7 +93,7 @@ export default function FirmBillingPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Plan &amp; billing</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("nav.planBilling")}</h1>
 
       {loadError && <InlineError message={loadError} onRetry={load} />}
       {actionError && <p className="mb-3 text-sm text-red-600">{actionError}</p>}
@@ -100,15 +103,15 @@ export default function FirmBillingPage() {
           <Card>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">{currentFirm.name}</h2>
-              <Badge tone="success">{FIRM_PLANS[billing.plan].label} plan</Badge>
+              <Badge tone="success">{t("firm.planBadge", { plan: FIRM_PLANS[billing.plan].label })}</Badge>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Usage label="Client businesses" used={billing.clients} max={billing.max_clients} />
-              <Usage label="Staff" used={billing.staff} max={billing.max_staff} />
+              <Usage label={t("s.client_businesses")} used={billing.clients} max={billing.max_clients} />
+              <Usage label={t("nav.staff")} used={billing.staff} max={billing.max_staff} />
             </div>
             {(billing.clients >= billing.max_clients || billing.staff >= billing.max_staff) && (
               <p className="mt-4 text-sm text-amber-700">
-                You&apos;ve reached a limit of this plan. Everything you have stays available; upgrade to add more.
+                {t("firm.limitReached")}
               </p>
             )}
           </Card>
@@ -121,21 +124,21 @@ export default function FirmBillingPage() {
                 <Card key={plan} className={current ? "border-brand-500" : ""}>
                   <div className="font-semibold">{spec.label}</div>
                   <ul className="mt-2 space-y-1 text-sm text-slate-600">
-                    <li>Up to {spec.maxClients} client businesses</li>
-                    <li>Up to {spec.maxStaff} staff</li>
+                    <li>{t("firm.upToClients", { n: spec.maxClients })}</li>
+                    <li>{t("firm.upToStaff", { n: spec.maxStaff })}</li>
                   </ul>
                   <div className="mt-4">
                     {current ? (
-                      <span className="text-sm text-slate-500">Your plan</span>
+                      <span className="text-sm text-slate-500">{t("s.your_plan")}</span>
                     ) : !isOwner ? null : billing.billing_connected ? (
                       plan !== "free" && !billing.has_subscription ? (
                         <Button disabled={busy} onClick={() => upgrade(plan)}>
-                          {busy ? "Redirecting…" : `Choose ${spec.label}`}
+                          {busy ? t("set.plan.redirecting") : t("firm.choose", { plan: spec.label })}
                         </Button>
                       ) : null
                     ) : (
                       <Button variant="secondary" disabled={busy} onClick={() => chooseDirectly(plan)}>
-                        Switch to {spec.label}
+                        {t("firm.switch", { plan: spec.label })}
                       </Button>
                     )}
                   </div>
@@ -146,14 +149,13 @@ export default function FirmBillingPage() {
 
           {isOwner && billing.billing_connected && billing.has_subscription && (
             <Button disabled={busy} onClick={manage}>
-              {busy ? "Redirecting…" : "Manage billing"}
+              {busy ? t("set.plan.redirecting") : t("set.plan.manageBilling")}
             </Button>
           )}
-          {!isOwner && <p className="text-xs text-slate-400">Only the firm&apos;s owner can change the plan.</p>}
+          {!isOwner && <p className="text-xs text-slate-400">{t("s.only_the_firm_s_owner_can_change_t")}</p>}
           {!billing.billing_connected && (
             <p className="text-xs text-slate-400">
-              Private beta: every plan is free and no payment is taken. Plans only set how many clients and staff
-              the firm can have.
+              {t("s.private_beta_every_plan_is_free_an")}
             </p>
           )}
         </div>

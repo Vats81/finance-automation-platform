@@ -6,10 +6,12 @@ import { Suspense, useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { verifyEmail } from "@/lib/api/auth";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 type Status = "verifying" | "success" | "error";
 
 function VerifyEmailContent() {
+  const { t } = useT();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>("verifying");
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ function VerifyEmailContent() {
     const token = searchParams.get("token");
     if (!userId || !token) {
       setStatus("error");
-      setError("This verification link is missing required information.");
+      setError(t("x.verifyLinkMissing"));
       return;
     }
 
@@ -27,8 +29,9 @@ function VerifyEmailContent() {
       .then(() => setStatus("success"))
       .catch((err) => {
         setStatus("error");
-        setError(err instanceof Error ? err.message : "This verification link is invalid or has expired.");
+        setError(err instanceof Error ? err.message : t("s.this_verification_link_is_invalid"));
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   return (
@@ -38,21 +41,21 @@ function VerifyEmailContent() {
           <div className="mb-4 flex justify-center">
             <Spinner />
           </div>
-          <p className="text-sm text-slate-600">Verifying your email…</p>
+          <p className="text-sm text-slate-600">{t("s.verifying_your_email")}</p>
         </>
       )}
       {status === "success" && (
         <>
-          <h1 className="mb-2 text-xl font-semibold">Email verified</h1>
-          <p className="mb-4 text-sm text-slate-600">Your account is now active.</p>
+          <h1 className="mb-2 text-xl font-semibold">{t("s.email_verified")}</h1>
+          <p className="mb-4 text-sm text-slate-600">{t("s.your_account_is_now_active")}</p>
           <Link href="/app/login" className="text-brand-600 underline">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </>
       )}
       {status === "error" && (
         <>
-          <h1 className="mb-2 text-xl font-semibold">Verification failed</h1>
+          <h1 className="mb-2 text-xl font-semibold">{t("s.verification_failed")}</h1>
           <p className="text-sm text-red-600">{error}</p>
         </>
       )}

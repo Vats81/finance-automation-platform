@@ -474,11 +474,12 @@ GST seller "Sales" includes the GST collected.
 ### Hindi (and other languages)
 
 The app can be switched between English and हिन्दी from the top bar (and on the sign-in and sign-up pages).
-The choice is remembered on that device; a phone set to Hindi starts in Hindi. It covers the daily screens: the
-sidebar, Overview, sales (list, detail, form, quick sale), udhaar, the WhatsApp summary, customers, expenses,
-sign-in, Settings (with Hindi names for the GST states) and the first-visit tour. Screens not yet translated
-(Reports, Purchases, Inventory, Vendors, Payments, Data Upload, the Help page, the AI Assistant, the accounting-firm
-pages and the landing page) stay in English.
+The choice is remembered on that device; a phone set to Hindi starts in Hindi. It covers the signed-in app
+(business, personal and accounting-firm screens, including reports, purchases and bill scanning, inventory,
+vendors, payments, data upload, Help and Settings), sign-in, sign-up, password and email verification,
+onboarding, the first-visit tour and the page behind a customer's invoice link. Still in English: the landing page,
+the beta request page, terms and privacy, the platform admin pages, CSV export headings, and product and plan
+names.
 
 - All texts live in one file, `frontend/src/lib/i18n/messages.ts`, as `[English, Hindi]` pairs side by side. A
   text with no Hindi is a compile error, so nothing can ship half-translated. To translate a screen, replace its
@@ -489,6 +490,6 @@ pages and the landing page) stay in English.
   reminder, summary preview) use the language you are viewing the app in, and the automatic summary uses the
   business's own setting (WhatsApp summary page → language of the automatic message; migration `0037`).
 - Not translated: the invoice PDF (the built-in PDF fonts have no Devanagari, and invoices are normally in
-  English anyway), AI Insights and AI Assistant answers, error messages that come from the server, and the
-  customer-facing invoice page.
+  English anyway), AI Insights and AI Assistant answers, and text that comes from the server (error messages,
+  notification messages, the details on the Integrations page, import row errors).
 

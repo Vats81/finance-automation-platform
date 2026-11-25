@@ -9,8 +9,10 @@ import { askAssistant } from "@/lib/api/aiAssistant";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { ChatMessage } from "@/types/aiAssistant";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function AiAssistantPage() {
+  const { t } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -34,7 +36,7 @@ export default function AiAssistantPage() {
       setMessages((prev) => [...prev, { role: "assistant", text: res.answer }]);
       setHistory(res.history);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reach the assistant");
+      setError(err instanceof Error ? err.message : t("s.failed_to_reach_the_assistant"));
     } finally {
       setIsLoading(false);
     }
@@ -42,17 +44,16 @@ export default function AiAssistantPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">AI Assistant</h1>
+      <h1 className="mb-1 text-2xl font-semibold">{t("nav.aiAssistant")}</h1>
       <p className="mb-6 text-sm text-slate-500">
-        Ask questions about your business data and get answers backed by your own numbers.
+        {t("s.ask_questions_about_your_business")}
       </p>
 
       <Card className="flex h-[60vh] flex-col">
         <div className="flex-1 space-y-3 overflow-y-auto pr-1">
           {messages.length === 0 && (
             <p className="text-sm text-slate-500">
-              Try asking &ldquo;What was my revenue this month?&rdquo; or &ldquo;Who owes me
-              money?&rdquo;
+              {t("x.aiHint")}
             </p>
           )}
           {messages.map((message, i) => (
@@ -75,7 +76,7 @@ export default function AiAssistantPage() {
               </div>
             </div>
           ))}
-          {isLoading && <p className="text-sm text-slate-400">Thinking...</p>}
+          {isLoading && <p className="text-sm text-slate-400">{t("s.thinking")}</p>}
         </div>
 
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
@@ -90,11 +91,11 @@ export default function AiAssistantPage() {
                 void handleSend();
               }
             }}
-            placeholder="Ask a question about your business..."
+            placeholder={t("s.ask_a_question_about_your_business")}
             disabled={isLoading}
           />
           <Button onClick={handleSend} disabled={isLoading || !question.trim()}>
-            Send
+            {t("s.send")}
           </Button>
         </div>
       </Card>

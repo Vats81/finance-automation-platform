@@ -24,6 +24,16 @@ export interface DashboardTrendResponse {
 
 export type DashboardPeriod = "this_month" | "this_quarter" | "this_year" | "all_time";
 
+import type { MessageKey } from "@/lib/i18n/messages";
+
+/** The text for each period in the period pickers. */
+export const PERIOD_KEYS: Record<DashboardPeriod, MessageKey> = {
+  this_month: "dash.period.this_month",
+  this_quarter: "dash.period.this_quarter",
+  this_year: "dash.period.this_year",
+  all_time: "dash.period.all_time",
+};
+
 export const DASHBOARD_PERIODS: { value: DashboardPeriod; label: string }[] = [
   { value: "this_month", label: "This month" },
   { value: "this_quarter", label: "This quarter" },

@@ -9,6 +9,7 @@ import { getNotifications } from "@/lib/api/notifications";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
 import { NotificationsResponse } from "@/types/notifications";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 const SEVERITY_TONE: Record<string, "danger" | "warning"> = {
   critical: "danger",
@@ -16,6 +17,7 @@ const SEVERITY_TONE: Record<string, "danger" | "warning"> = {
 };
 
 export default function AutomationsPage() {
+  const { t, label } = useT();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
   const [notifications, setNotifications] = useState<NotificationsResponse | null>(null);
@@ -33,26 +35,25 @@ export default function AutomationsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">Notifications & Alerts</h1>
+      <h1 className="mb-1 text-2xl font-semibold">{t("top.notificationsTitle")}</h1>
       <p className="mb-6 text-sm text-slate-500">
-        Overdue payments and stock levels that need your attention, computed from your current data.
-        Recurring, scheduled automation rules are coming in a later phase of this build.
+        {t("s.overdue_payments_and_stock_levels")}
       </p>
 
       <Card>
         {loadError ? (
           <InlineError message={loadError} onRetry={() => setRetryToken((n) => n + 1)} />
         ) : !notifications ? (
-          <p className="text-sm text-slate-500">Loading...</p>
+          <p className="text-sm text-slate-500">{t("s.loading")}</p>
         ) : notifications.count === 0 ? (
-          <p className="text-sm text-slate-500">You&apos;re all caught up — no alerts right now.</p>
+          <p className="text-sm text-slate-500">{t("s.you_re_all_caught_up_no_alerts_rig")}</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {notifications.items.map((item) => (
               <li key={item.id} className="py-3 first:pt-0 last:pb-0">
                 <Link href={item.link} className="flex items-center justify-between gap-3 hover:underline">
                   <span className="text-sm text-slate-800">{item.message}</span>
-                  <Badge tone={SEVERITY_TONE[item.severity] ?? "neutral"}>{item.severity}</Badge>
+                  <Badge tone={SEVERITY_TONE[item.severity] ?? "neutral"}>{label("severity", item.severity)}</Badge>
                 </Link>
               </li>
             ))}

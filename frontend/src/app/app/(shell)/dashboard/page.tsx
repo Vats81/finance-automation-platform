@@ -26,18 +26,12 @@ import { InsightsResponse } from "@/types/aiAssistant";
 import {
   BusinessHealthScoreResponse,
   DASHBOARD_PERIODS,
+  PERIOD_KEYS,
   DashboardForecastResponse,
   DashboardPeriod,
   DashboardSummaryResponse,
   DashboardTrendResponse,
 } from "@/types/dashboard";
-
-const PERIOD_KEYS: Record<DashboardPeriod, MessageKey> = {
-  this_month: "dash.period.this_month",
-  this_quarter: "dash.period.this_quarter",
-  this_year: "dash.period.this_year",
-  all_time: "dash.period.all_time",
-};
 
 const HEALTH_SCORE_TONE: Record<string, "success" | "warning" | "danger"> = {
   Excellent: "success",

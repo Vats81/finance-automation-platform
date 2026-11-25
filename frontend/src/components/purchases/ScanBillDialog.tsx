@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/format";
 import { ProductResponse } from "@/types/product";
 import { PurchaseResponse } from "@/types/purchase";
 import { VendorResponse } from "@/types/vendor";
+import { useT } from "@/lib/i18n/LanguageProvider";
 
 interface Row {
   key: number;
@@ -69,6 +70,7 @@ export function ScanBillDialog({
   onClose: () => void;
   onCreated: (purchase: PurchaseResponse) => void;
 }) {
+  const { t } = useT();
   const [step, setStep] = useState<Step>("pick");
   const [error, setError] = useState<string | null>(null);
   const [vendors, setVendors] = useState<VendorResponse[]>([]);
@@ -151,7 +153,7 @@ export function ScanBillDialog({
       setScannedTotal(scan.amount);
       setScannedVendor(scan.vendor_name);
       setNotFoundTotals(scan.totals_match === false);
-      setNotes(`Scanned from ${file.name}`);
+      setNotes(t("scan.from", { file: file.name }));
       const newRows: Row[] =
         found.length > 0
           ? found.map((item) => ({
@@ -165,7 +167,7 @@ export function ScanBillDialog({
             ? [
                 {
                   key: nextKey.current++,
-                  description: scan.description_guess ?? "Bill total",
+                  description: scan.description_guess ?? t("scan.billTotal"),
                   quantity: "1",
                   unitCost: String(Math.max(0, Number(scan.amount) - Number(taxValue || 0)).toFixed(2)),
                   ...blankStock,
@@ -175,7 +177,7 @@ export function ScanBillDialog({
       setRows(newRows);
       setStep("review");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not read that file.");
+      setError(err instanceof Error ? err.message : t("s.could_not_read_that_file"));
       setStep("pick");
     }
   }
@@ -265,7 +267,7 @@ export function ScanBillDialog({
       onCreated(purchase);
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "idempotency_key_reused") submission.renew();
-      setError(err instanceof Error ? err.message : "Could not save the purchase.");
+      setError(err instanceof Error ? err.message : t("s.could_not_save_the_purchase"));
       setStep("review");
     }
   }
@@ -283,13 +285,13 @@ export function ScanBillDialog({
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 id="scan-bill-title" className="text-lg font-semibold">
-              Scan a bill
+              {t("s.scan_a_bill")}
             </h2>
             <p className="text-sm text-slate-500">
-              Check the items and counts below. Nothing is saved until you confirm.
+              {t("s.check_the_items_and_counts_below_n")}
             </p>
           </div>
-          <Button variant="ghost" onClick={onClose} disabled={busy} aria-label="Close">
+          <Button variant="ghost" onClick={onClose} disabled={busy} aria-label={t("s.close")}>
             ✕
           </Button>
         </div>
@@ -304,11 +306,11 @@ export function ScanBillDialog({
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-md border border-dashed border-slate-300 p-8 text-center">
             <span className="text-sm text-slate-600">
               {step === "scanning"
-                ? "Reading your bill… this can take up to a minute"
-                : "Choose a photo (JPG, PNG, WebP) or a PDF of the bill. Large photos are shrunk automatically"}
+                ? t("scan.reading")
+                : t("scan.choose")}
             </span>
             <span className="rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700">
-              {step === "scanning" ? "Please wait" : "Choose file"}
+              {step === "scanning" ? t("s.please_wait") : t("exp.chooseFile")}
             </span>
             <input
               type="file"
@@ -324,12 +326,12 @@ export function ScanBillDialog({
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1 block font-medium">Vendor name</span>
+                <span className="mb-1 block font-medium">{t("s.vendor_name")}</span>
                 <Input
                   required
                   list="scan-bill-vendors"
                   maxLength={200}
-                  placeholder="Type who this bill is from"
+                  placeholder={t("s.type_who_this_bill_is_from")}
                   value={vendorText}
                   onChange={(e) => setVendorText(e.target.value)}
                 />
@@ -344,31 +346,30 @@ export function ScanBillDialog({
                     className="mt-1 text-xs text-brand-700 underline"
                     onClick={() => setVendorText(scannedVendor)}
                   >
-                    The bill seems to say &ldquo;{scannedVendor}&rdquo; — use this
+                    {t("scan.seemsToSay", { name: scannedVendor })}
                   </button>
                 )}
                 {savedVendor && (
-                  <span className="mt-1 block text-xs text-slate-500">Linked to your saved vendor.</span>
+                  <span className="mt-1 block text-xs text-slate-500">{t("s.linked_to_your_saved_vendor")}</span>
                 )}
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block font-medium">Bill / invoice number</span>
+                <span className="mb-1 block font-medium">{t("s.bill_invoice_number")}</span>
                 <Input value={billNumber} maxLength={100} onChange={(e) => setBillNumber(e.target.value)} />
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block font-medium">Bill date</span>
+                <span className="mb-1 block font-medium">{t("s.bill_date")}</span>
                 <Input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} />
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block font-medium">Tax (optional)</span>
+                <span className="mb-1 block font-medium">{t("s.tax_optional")}</span>
                 <Input inputMode="decimal" value={tax} onChange={(e) => setTax(e.target.value)} />
               </label>
             </div>
 
             {!itemsFound && (
               <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-                No individual items could be read from this bill, so it is shown as one line with the bill
-                total. You can edit or split it.
+                {t("s.no_individual_items_could_be_read")}
               </p>
             )}
 
@@ -376,13 +377,13 @@ export function ScanBillDialog({
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2">Item</th>
-                    <th className="w-24 px-3 py-2">Count</th>
-                    <th className="w-32 px-3 py-2">Unit cost</th>
-                    <th className="w-28 px-3 py-2 text-right">Line total</th>
-                    {addToStock && <th className="w-56 px-3 py-2">Add count to stock</th>}
+                    <th className="px-3 py-2">{t("s.item")}</th>
+                    <th className="w-24 px-3 py-2">{t("s.count")}</th>
+                    <th className="w-32 px-3 py-2">{t("s.unit_cost")}</th>
+                    <th className="w-28 px-3 py-2 text-right">{t("sale.lineTotal")}</th>
+                    {addToStock && <th className="w-56 px-3 py-2">{t("s.add_count_to_stock")}</th>}
                     <th className="w-10 px-3 py-2">
-                      <span className="sr-only">Remove</span>
+                      <span className="sr-only">{t("set.team.remove")}</span>
                     </th>
                   </tr>
                 </thead>
@@ -393,14 +394,14 @@ export function ScanBillDialog({
                       <tr key={row.key} className="border-b border-slate-100 last:border-0">
                         <td className="px-3 py-2">
                           <Input
-                            aria-label="Item description"
+                            aria-label={t("s.item_description")}
                             value={row.description}
                             onChange={(e) => updateRow(row.key, { description: e.target.value })}
                           />
                         </td>
                         <td className="px-3 py-2">
                           <Input
-                            aria-label="Count"
+                            aria-label={t("s.count")}
                             inputMode="decimal"
                             value={row.quantity}
                             onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
@@ -408,7 +409,7 @@ export function ScanBillDialog({
                         </td>
                         <td className="px-3 py-2">
                           <Input
-                            aria-label="Unit cost"
+                            aria-label={t("s.unit_cost")}
                             inputMode="decimal"
                             value={row.unitCost}
                             onChange={(e) => updateRow(row.key, { unitCost: e.target.value })}
@@ -417,7 +418,7 @@ export function ScanBillDialog({
                         {addToStock && (
                           <td className="space-y-1 px-3 py-2">
                             <select
-                              aria-label={`Stock for ${row.description || "item"}`}
+                              aria-label={t("scan.stockFor", { item: row.description || t("scan.item") })}
                               value={row.stock}
                               onChange={(e) =>
                                 updateRow(row.key, {
@@ -427,25 +428,25 @@ export function ScanBillDialog({
                               }
                               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
                             >
-                              <option value="">Don&apos;t add to stock</option>
+                              <option value="">{t("s.don_t_add_to_stock")}</option>
                               {products.map((p) => (
                                 <option key={p.id} value={p.id}>
                                   {p.name} ({p.sku}) — {Number(p.current_quantity)} in stock
                                 </option>
                               ))}
-                              <option value={NEW_PRODUCT}>+ New product</option>
+                              <option value={NEW_PRODUCT}>{t("s.new_product_2")}</option>
                             </select>
                             {row.stock === NEW_PRODUCT && (
                               <div className="grid grid-cols-2 gap-1">
                                 <Input
-                                  aria-label="New product SKU"
-                                  placeholder="SKU"
+                                  aria-label={t("s.new_product_sku")}
+                                  placeholder={t("s.sku")}
                                   value={row.newSku}
                                   onChange={(e) => updateRow(row.key, { newSku: e.target.value })}
                                 />
                                 <Input
-                                  aria-label="New product selling price"
-                                  placeholder="Selling price"
+                                  aria-label={t("s.new_product_selling_price")}
+                                  placeholder={t("s.selling_price")}
                                   inputMode="decimal"
                                   value={row.newPrice}
                                   onChange={(e) => updateRow(row.key, { newPrice: e.target.value })}
@@ -453,17 +454,17 @@ export function ScanBillDialog({
                               </div>
                             )}
                             {row.stock && decimalPlaces(row.quantity) > 4 && (
-                              <span className="block text-xs text-red-600">Stock counts allow up to 4 decimals.</span>
+                              <span className="block text-xs text-red-600">{t("s.stock_counts_allow_up_to_4_decimal")}</span>
                             )}
                           </td>
                         )}
                         <td className="px-3 py-2 text-right">
-                          {total === null ? <span className="text-red-600">check</span> : formatCurrency(total / 100)}
+                          {total === null ? <span className="text-red-600">{t("s.check")}</span> : formatCurrency(total / 100)}
                         </td>
                         <td className="px-3 py-2">
                           <Button
                             variant="ghost"
-                            aria-label={`Remove ${row.description || "item"}`}
+                            aria-label={t("scan.removeItem", { item: row.description || t("scan.item") })}
                             onClick={() => setRows((current) => current.filter((r) => r.key !== row.key))}
                           >
                             ✕
@@ -484,7 +485,7 @@ export function ScanBillDialog({
                 ])
               }
             >
-              Add an item
+              {t("s.add_an_item")}
             </Button>
 
             <label className="flex items-start gap-2 text-sm">
@@ -495,20 +496,16 @@ export function ScanBillDialog({
                 onChange={(e) => toggleStock(e.target.checked)}
               />
               <span>
-                Also add these counts to my stock
+                {t("s.also_add_these_counts_to_my_stock")}
                 <span className="block text-xs text-slate-500">
-                  Each item gets a product: an existing one if the name matches, otherwise a new product you can
-                  rename. Set any item to &ldquo;Don&apos;t add to stock&rdquo; if it isn&apos;t something you keep
-                  (a delivery fee, say). Voiding this purchase later takes the stock back out, and the items
-                  can&apos;t be edited afterwards.
+                  {t("scan.stockHelp")}
                 </span>
               </span>
             </label>
 
             {nothingToStock && (
               <p role="alert" className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-                You ticked &ldquo;add these counts to my stock&rdquo;, but every item is set to &ldquo;Don&apos;t add to
-                stock&rdquo;. Choose a product (or &ldquo;+ New product&rdquo;) for at least one item, or untick the box.
+                {t("s.you_ticked_add_these_counts_to_my")}
               </p>
             )}
 
@@ -518,40 +515,46 @@ export function ScanBillDialog({
                 <span>{formatCurrency(subtotal / 100)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Tax</span>
+                <span>{t("sale.tax")}</span>
                 <span>{formatCurrency(taxCents / 100)}</span>
               </div>
               <div className="flex justify-between font-semibold">
-                <span>Purchase total</span>
+                <span>{t("s.purchase_total")}</span>
                 <span>{formatCurrency(totalCents / 100)}</span>
               </div>
               {scannedTotal !== null && (
                 <div className="flex justify-between text-slate-500">
-                  <span>Total printed on the bill</span>
+                  <span>{t("s.total_printed_on_the_bill")}</span>
                   <span>{formatCurrency(scannedTotal)}</span>
                 </div>
               )}
             </div>
             {(mismatch || notFoundTotals) && scannedTotal !== null && (
               <p role="status" className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-                The items don&apos;t add up to the total printed on the bill. A line may have been misread or
-                missed — please compare with the original before confirming.
+                {t("s.the_items_don_t_add_up_to_the_tota")}
               </p>
             )}
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">Notes</span>
+              <span className="mb-1 block font-medium">{t("s.notes")}</span>
               <Input value={notes} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />
             </label>
 
             <div className="flex flex-wrap justify-end gap-3">
               <Button variant="secondary" onClick={onClose} disabled={isSaving}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button onClick={handleConfirm} disabled={!canConfirm || isSaving}>
                 {isSaving
-                  ? "Saving…"
-                  : `Confirm — add ${validRows.length} item${validRows.length === 1 ? "" : "s"} (${formatCurrency(totalCents / 100)})${stockRows.length > 0 ? ` + stock for ${stockRows.length}` : ""}`}
+                  ? t("common.saving")
+                  : [
+                      validRows.length === 1
+                        ? t("scan.confirmOne", { total: formatCurrency(totalCents / 100) })
+                        : t("scan.confirm", { n: validRows.length, total: formatCurrency(totalCents / 100) }),
+                      stockRows.length > 0 ? t("scan.plusStock", { n: stockRows.length }) : "",
+                    ]
+                      .join(" ")
+                      .trim()}
               </Button>
             </div>
           </div>

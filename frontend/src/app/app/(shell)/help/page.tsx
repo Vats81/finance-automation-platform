@@ -3,101 +3,51 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useT } from "@/lib/i18n/LanguageProvider";
+import { MessageKey } from "@/lib/i18n/messages";
 import { useTour } from "@/lib/tour/useTour";
 
 interface HelpTopic {
-  title: string;
-  points: string[];
+  id: string;
+  title: MessageKey;
+  points: MessageKey[];
 }
 
 const TOPICS: HelpTopic[] = [
-  {
-    title: "Getting started",
-    points: [
-      "After signing up, complete your business profile from the onboarding screen — every field is optional and can be filled in later from Settings.",
-      "Use the business switcher in the top bar if your account belongs to more than one business.",
-    ],
-  },
-  {
-    title: "Sales",
-    points: [
-      "Sales → New sale to record a sale, with one or more line items and an optional customer.",
-      "Open any sale and click Edit to change its details, line items, or totals — you can't edit a voided sale.",
-      "Record a partial or full payment from the sale's detail page; the payment status updates automatically.",
-      "Void a sale instead of deleting it — voided sales stay visible for your records but can no longer be edited or paid.",
-    ],
-  },
-  {
-    title: "Purchases",
-    points: [
-      "Purchases → New purchase to record a purchase from a vendor, optionally linking each line item to a product.",
-      "Same as Sales: open a purchase and click Edit to change it, or Void to close it out. Editing is blocked once a purchase is void.",
-    ],
-  },
-  {
-    title: "Expenses",
-    points: [
-      "Expenses → New expense to log a business expense, with an optional vendor link and receipt scan (if AI is configured).",
-    ],
-  },
-  {
-    title: "Inventory",
-    points: [
-      "Inventory → New product to add a product, then use Adjust stock on its detail page to record stock in/out with a reason.",
-      "Products below their minimum stock level are flagged automatically on the dashboard and notifications.",
-    ],
-  },
-  {
-    title: "Customers & Vendors",
-    points: ["Manage your customer and vendor directory — both support search, editing, and deactivation."],
-  },
-  {
-    title: "Payments",
-    points: [
-      "The Payments page shows every outstanding receivable and payable in one place, bucketed by how overdue they are.",
-    ],
-  },
-  {
-    title: "Reports & data",
-    points: [
-      "Reports gives you a Profit & Loss breakdown by day, week, or month, exportable as CSV or PDF, or sent by email/WhatsApp.",
-      "Data Upload lets you bulk-import customers, vendors, products, or expenses from a CSV file.",
-    ],
-  },
-  {
-    title: "AI Assistant",
-    points: [
-      "Ask questions about your business in plain language from the AI Assistant page — it answers using your real data.",
-    ],
-  },
-  {
-    title: "Team & billing",
-    points: [
-      "Settings → Team members to invite teammates (they need an existing account) and manage their roles.",
-      "Settings → Plan shows your current plan and its team-size limit. Paid billing isn't active during the private beta — no payment is taken.",
-    ],
-  },
+  { id: "start", title: "help.start.title", points: ["help.start.1", "help.start.2", "help.start.3"] },
+  { id: "sales", title: "help.sales.title", points: ["help.sales.1", "help.sales.2", "help.sales.3", "help.sales.4"] },
+  { id: "gst", title: "help.gst.title", points: ["help.gst.1", "help.gst.2", "help.gst.3", "help.gst.4"] },
+  { id: "udhaar", title: "help.udhaar.title", points: ["help.udhaar.1", "help.udhaar.2"] },
+  { id: "purch", title: "help.purch.title", points: ["help.purch.1", "help.purch.2"] },
+  { id: "exp", title: "help.exp.title", points: ["help.exp.1"] },
+  { id: "inv", title: "help.inv.title", points: ["help.inv.1", "help.inv.2"] },
+  { id: "cust", title: "help.cust.title", points: ["help.cust.1"] },
+  { id: "pay", title: "help.pay.title", points: ["help.pay.1"] },
+  { id: "rep", title: "help.rep.title", points: ["help.rep.1", "help.rep.2"] },
+  { id: "ai", title: "help.ai.title", points: ["help.ai.1"] },
+  { id: "team", title: "help.team.title", points: ["help.team.1", "help.team.2"] },
 ];
 
 export default function HelpPage() {
   const { restart } = useTour();
+  const { t } = useT();
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Help</h1>
+        <h1 className="text-2xl font-semibold">{t("help.title")}</h1>
         <Button variant="secondary" onClick={restart}>
-          Take the tour
+          {t("help.tour")}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {TOPICS.map((topic) => (
-          <Card key={topic.title}>
-            <h2 className="mb-2 text-sm font-semibold text-slate-900">{topic.title}</h2>
+          <Card key={topic.id}>
+            <h2 className="mb-2 text-sm font-semibold text-slate-900">{t(topic.title)}</h2>
             <ul className="list-inside list-disc space-y-1 text-sm text-slate-600">
-              {topic.points.map((point, i) => (
-                <li key={i}>{point}</li>
+              {topic.points.map((point) => (
+                <li key={point}>{t(point)}</li>
               ))}
             </ul>
           </Card>
@@ -105,11 +55,10 @@ export default function HelpPage() {
       </div>
 
       <p className="mt-6 text-sm text-slate-500">
-        Something not covered here? Check{" "}
+        {t("help.more")}{" "}
         <Link href="/app/integrations" className="text-brand-600 underline">
-          Integrations
-        </Link>{" "}
-        to see which optional features (email, WhatsApp, AI, billing) are connected.
+          {t("help.integrationsLink")}
+        </Link>
       </p>
     </div>
   );

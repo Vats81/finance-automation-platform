@@ -85,7 +85,7 @@ export default function EditPurchasePage() {
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             initialValues={initialValues}
-            submitLabel="Save changes"
+            submitLabel={t("saleForm.saveChanges")}
           />
         ) : (
           !error && (
