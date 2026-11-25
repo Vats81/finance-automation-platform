@@ -8,17 +8,11 @@ import { Spinner } from "@/components/ui/Spinner";
 import { getBusinessVendor } from "@/lib/api/businessVendors";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
-import { VendorResponse, VendorStatus } from "@/types/vendor";
+import { VendorResponse } from "@/types/vendor";
 import { useT } from "@/lib/i18n/LanguageProvider";
 
-const STATUS_TONE: Record<VendorStatus, "neutral" | "success" | "warning"> = {
-  pending_review: "warning",
-  active: "success",
-  inactive: "neutral",
-};
-
 export default function VendorDetailPage() {
-  const { t, label } = useT();
+  const { t } = useT();
   const { id } = useParams<{ id: string }>();
   const { getAccessToken } = useLocalAuth();
   const { currentBusinessId } = useCurrentBusiness();
@@ -43,16 +37,16 @@ export default function VendorDetailPage() {
     );
   }
 
-  const nameOnly = vendor.contact_email === "";
+  const nameOnly = !vendor.contact_email && !vendor.tax_id_masked && !vendor.address.street;
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{vendor.legal_name}</h1>
-        {nameOnly ? (
-          <Badge tone="neutral">{t("s.from_a_purchase")}</Badge>
+        {vendor.status === "inactive" ? (
+          <Badge tone="neutral">{t("vendor.status.inactive")}</Badge>
         ) : (
-          <Badge tone={STATUS_TONE[vendor.status]}>{label("vendor.status", vendor.status)}</Badge>
+          <Badge tone="success">{t("vendor.status.active")}</Badge>
         )}
       </div>
 
@@ -71,11 +65,9 @@ export default function VendorDetailPage() {
         </div>
         {nameOnly && (
           <div className="text-xs text-slate-500">
-            {t("s.added_automatically_from_a_purchas")}
+            {t("vendor.nameOnly")}
           </div>
         )}
-        <div>
-        </div>
       </Card>
     </div>
   );

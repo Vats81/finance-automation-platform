@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.vendors.domain.entities import Vendor
 from app.vendors.domain.value_objects import VendorStatus
@@ -20,6 +20,20 @@ class CreateVendorRequest(BaseModel):
     contact_email: EmailStr
     tax_id: str = Field(description="EIN, format ##-#######")
     address: AddressSchema
+
+
+class CreateBusinessVendorRequest(BaseModel):
+    """A small business's supplier: only the name is required."""
+
+    legal_name: str = Field(min_length=1, max_length=255)
+    contact_email: EmailStr | None = None
+    tax_id: str | None = Field(default=None, max_length=20, description="GSTIN, PAN or US EIN")
+    address: AddressSchema | None = None
+
+    @field_validator("contact_email", "tax_id", mode="before")
+    @classmethod
+    def _blank_means_not_given(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
 
 
 class UpdateVendorRequest(BaseModel):

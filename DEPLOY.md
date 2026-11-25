@@ -447,6 +447,9 @@ All of these work for any business; they matter most for a rupee business with a
 - **Quick sale** (`/app/sales/quick`) and **Udhaar** (`/app/udhaar`): a phone-friendly sale entry with the next
   invoice number filled in (GST invoices need a consecutive series), and a list of who owes what with a
   one-tap WhatsApp reminder.
+- **Suppliers**: only a name is required (on the New vendor page, in the CSV import, or by naming one on a
+  purchase). Email, tax ID and address are optional; a tax ID may be a GSTIN (check character verified), a PAN
+  or a US EIN, and an address is all four parts or none. The supplier page cannot be edited after creation yet.
 - **WhatsApp summary** (`/app/summary`): sales, expenses, profit and who owes you, for yesterday, today or the
   last 7 days. The *Send on WhatsApp* button works for everyone today: it opens WhatsApp with the text, no
   Twilio needed. Migration `0036` adds the per-business setting (off, daily, weekly).

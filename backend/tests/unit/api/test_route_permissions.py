@@ -670,3 +670,17 @@ def test_the_whatsapp_summary_and_its_setting_work_through_the_api(world: tuple[
         ).status_code
         == 403
     )
+
+
+def test_a_supplier_can_be_added_with_only_a_name(world: tuple[World, TestClient]) -> None:
+    w, client = world
+    vendors = f"/api/v1/businesses/{w.business_a}/vendors"
+    owner = {"x-test-user": "owner_a"}
+
+    created = client.post(vendors, headers=owner, json={"legal_name": "Gupta Wholesale"})
+
+    assert created.status_code == 201, created.text
+    assert created.json()["contact_email"] == "" and created.json()["tax_id_masked"] == ""
+    assert client.get(f"{vendors}/{created.json()['id']}", headers=owner).status_code == 200
+    bad = client.post(vendors, headers=owner, json={"legal_name": "B", "tax_id": "nonsense"})
+    assert bad.status_code == 422

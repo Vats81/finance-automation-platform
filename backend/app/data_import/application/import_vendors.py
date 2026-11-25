@@ -19,7 +19,7 @@ CANONICAL_FIELDS = [
     "postal_code",
     "country",
 ]
-REQUIRED_FIELDS = ["legal_name", "contact_email", "tax_id", "street", "city", "state", "postal_code"]
+REQUIRED_FIELDS = ["legal_name"]
 _MAX_LENGTHS = {
     "legal_name": 255,
     "contact_email": 320,
@@ -59,7 +59,11 @@ class ImportVendorsUseCase:
         for row_number, raw_row in enumerate(rows, start=1):
             if on_progress:
                 on_progress(row_number - 1, len(rows))
-            values = {field: mapped_value(raw_row, column_mapping, field) for field in REQUIRED_FIELDS}
+            values = {
+                field: mapped_value(raw_row, column_mapping, field)
+                for field in CANONICAL_FIELDS
+                if field != "country"
+            }
             missing = [field for field in REQUIRED_FIELDS if not values[field]]
             if missing:
                 errors.append(
@@ -84,12 +88,12 @@ class ImportVendorsUseCase:
                 command = CreateBusinessVendorCommand(
                     business_id=business_id,
                     legal_name=legal_name,
-                    contact_email=values["contact_email"] or "",
-                    tax_id=values["tax_id"] or "",
-                    street=values["street"] or "",
-                    city=values["city"] or "",
-                    state=values["state"] or "",
-                    postal_code=values["postal_code"] or "",
+                    contact_email=values["contact_email"],
+                    tax_id=values["tax_id"],
+                    street=values["street"],
+                    city=values["city"],
+                    state=values["state"],
+                    postal_code=values["postal_code"],
                     country=country or "US",
                 )
                 await CreateBusinessVendorUseCase(self._uow).execute(command)

@@ -57,17 +57,41 @@ async def test_import_vendors_skips_duplicates_by_legal_name() -> None:
 async def test_import_vendors_reports_missing_required_field() -> None:
     uow = FakeUnitOfWork()
     business_id = uuid.uuid4()
-    incomplete_row = dict(VALID_ROW)
-    incomplete_row["Tax ID"] = ""
+    nameless = dict(VALID_ROW)
+    nameless["Legal Name"] = ""
 
     summary = await ImportVendorsUseCase(uow).execute(
-        business_id=business_id, rows=[incomplete_row], column_mapping=MAPPING
+        business_id=business_id, rows=[nameless], column_mapping=MAPPING
     )
 
     assert summary.created == 0
     assert len(summary.errors) == 1
     assert summary.errors[0].row_number == 1
-    assert "tax_id" in summary.errors[0].message
+    assert "legal_name" in summary.errors[0].message
+
+
+async def test_import_vendors_accepts_a_row_with_only_a_name() -> None:
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+
+    summary = await ImportVendorsUseCase(uow).execute(
+        business_id=business_id, rows=[{"Legal Name": "Gupta Wholesale"}], column_mapping=MAPPING
+    )
+
+    assert summary.created == 1 and summary.errors == []
+
+
+async def test_import_vendors_reports_a_half_filled_address() -> None:
+    uow = FakeUnitOfWork()
+    business_id = uuid.uuid4()
+    half = {"Legal Name": "Gupta Wholesale", "City": "Pune"}
+
+    summary = await ImportVendorsUseCase(uow).execute(
+        business_id=business_id, rows=[half], column_mapping=MAPPING
+    )
+
+    assert summary.created == 0
+    assert "whole address" in summary.errors[0].message
 
 
 async def test_import_vendors_remaps_columns() -> None:

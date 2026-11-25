@@ -9,7 +9,7 @@ import { ApiError } from "@/lib/api/client";
 import { useLocalAuth } from "@/lib/auth/useLocalAuth";
 import { useSubmissionKey } from "@/lib/idempotency";
 import { useCurrentBusiness } from "@/lib/business/CurrentBusinessContext";
-import { CreateVendorRequest } from "@/types/vendor";
+import { CreateBusinessVendorRequest } from "@/types/vendor";
 import { useT } from "@/lib/i18n/LanguageProvider";
 
 export default function NewVendorPage() {
@@ -21,7 +21,7 @@ export default function NewVendorPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(data: CreateVendorRequest) {
+  async function handleSubmit(data: CreateBusinessVendorRequest) {
     if (!currentBusinessId) return;
     setIsSubmitting(true);
     setError(null);

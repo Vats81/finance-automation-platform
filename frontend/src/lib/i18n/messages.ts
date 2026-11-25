@@ -617,17 +617,13 @@ export const messages = {
   "s.new_vendor": ["New vendor", "नया सप्लायर"],
   "s.failed_to_load_vendors": ["Failed to load vendors", "सप्लायर लोड नहीं हो सके"],
   "s.failed_to_create_vendor": ["Failed to create vendor", "सप्लायर नहीं बन सका"],
-  "s.added_automatically_from_a_purchas": ["Added automatically from a purchase, so only the name is known. Contact details can be added later.", "खरीद से अपने आप जोड़ा गया, इसलिए सिर्फ़ नाम पता है। संपर्क की जानकारी बाद में जोड़ी जा सकती है।"],
   "s.address": ["Address:", "पता:"],
   "s.tax_id": ["Tax ID:", "टैक्स ID:"],
   "s.contact_email": ["Contact email:", "संपर्क ईमेल:"],
-  "s.from_a_purchase": ["from a purchase", "खरीद से"],
   "s.failed_to_load_vendor": ["Failed to load vendor", "सप्लायर लोड नहीं हो सका"],
   "s.creating": ["Creating…", "बन रहा है…"],
   "s.create_vendor": ["Create vendor", "सप्लायर बनाएँ"],
-  "s.tax_id_ein": ["Tax ID (EIN, ##-#######)", "टैक्स ID (EIN, ##-#######)"],
   "s.contact_email_2": ["Contact email", "संपर्क ईमेल"],
-  "s.legal_name": ["Legal name", "कानूनी नाम"],
   "s.no_vendors_yet": ["No vendors yet.", "अभी कोई सप्लायर नहीं है।"],
   "s.accounts_payable": ["Accounts Payable", "देना बाकी (Accounts Payable)"],
   "s.accounts_receivable": ["Accounts Receivable", "लेना बाकी (Accounts Receivable)"],
@@ -1050,6 +1046,13 @@ export const messages = {
   "bucket.no_due_date": ["No due date", "कोई देय तारीख नहीं"],
   "share.opening": ["Opening your invoice…", "आपका बिल खुल रहा है…"],
   "share.tap": ["Tap here if it does not open", "न खुले तो यहाँ दबाएँ"],
+
+  // ---- the supplier form
+  "vendor.optional": ["Everything except the name is optional.", "नाम के सिवा बाकी सब ज़रूरी नहीं।"],
+  "vendor.email": ["Email (optional)", "ईमेल (ज़रूरी नहीं)"],
+  "vendor.taxIn": ["GSTIN or PAN (optional)", "GSTIN या PAN (ज़रूरी नहीं)"],
+  "vendor.taxOther": ["Tax ID (optional)", "टैक्स ID (ज़रूरी नहीं)"],
+  "vendor.nameOnly": ["Only the name is saved for this supplier.", "इस सप्लायर का सिर्फ़ नाम सेव है।"],
   // <<more messages>>
 } as const satisfies Record<string, readonly [string, string]>;
 

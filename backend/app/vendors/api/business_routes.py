@@ -11,7 +11,7 @@ from app.config.settings import get_settings
 from app.identity.domain.entities import User
 from app.shared.application.pagination import PageRequest
 from app.vendors.api.schemas import (
-    CreateVendorRequest,
+    CreateBusinessVendorRequest,
     PagedVendorsResponse,
     UpdateVendorRequest,
     VendorResponse,
@@ -47,7 +47,7 @@ _can_write = CAN_WRITE
 async def create_business_vendor(
     request: Request,
     business_id: uuid.UUID,
-    body: CreateVendorRequest,
+    body: CreateBusinessVendorRequest,
     _actor: User = Depends(require_business_role(*_can_write)),
     uow: AppUnitOfWork = Depends(get_uow),
 ) -> VendorResponse:
@@ -58,11 +58,11 @@ async def create_business_vendor(
             legal_name=body.legal_name,
             contact_email=body.contact_email,
             tax_id=body.tax_id,
-            street=body.address.street,
-            city=body.address.city,
-            state=body.address.state,
-            postal_code=body.address.postal_code,
-            country=body.address.country,
+            street=body.address.street if body.address else None,
+            city=body.address.city if body.address else None,
+            state=body.address.state if body.address else None,
+            postal_code=body.address.postal_code if body.address else None,
+            country=body.address.country if body.address else "US",
         )
     )
     return VendorResponse.from_domain(vendor)

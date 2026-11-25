@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.shared.domain.base_value_object import ValueObject
 from app.shared.domain.exceptions import ValidationException
+from app.shared.domain.gst import clean_gstin
 
 # Bounded contexts intentionally define their own primitives (EmailAddress,
 # TaxId, Address) rather than importing from identity/other contexts, even
@@ -14,6 +15,8 @@ from app.shared.domain.exceptions import ValidationException
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _EIN_RE = re.compile(r"^\d{2}-?\d{7}$")
+_PAN_RE = re.compile(r"^[A-Z]{5}\d{4}[A-Z]$")  # India's Permanent Account Number
+_GSTIN_LENGTH = 15
 
 
 class VendorStatus(str, enum.Enum):
@@ -43,15 +46,22 @@ class VendorEmailAddress(ValueObject):
 
 @dataclass(frozen=True)
 class TaxId(ValueObject):
-    """US EIN (##-#######). Masked in string representation since this is
-    sensitive PII that should never land unmasked in logs or generic UI.
+    """A supplier's tax number: an Indian GSTIN or PAN, or a US EIN (##-#######). An EIN or PAN is masked in
+    string representation since it is sensitive and should never land unmasked in logs or generic UI; a GSTIN
+    is printed on every invoice the supplier issues, so it is shown as it is.
     """
 
     value: str
 
     def __post_init__(self) -> None:
-        if not _EIN_RE.match(self.value):
-            raise ValidationException(f"'{self.value}' is not a valid EIN (expected ##-#######)")
+        if _EIN_RE.match(self.value) or _PAN_RE.match(self.value):
+            return
+        # clean_gstin also checks the GSTIN's last character, so a mistyped one is refused
+        if len(self.value) == _GSTIN_LENGTH and clean_gstin(self.value) == self.value:
+            return
+        raise ValidationException(
+            f"'{self.value}' is not a valid tax ID. Enter a GSTIN, a PAN, or a US EIN (##-#######)."
+        )
 
     @classmethod
     def not_provided(cls) -> "TaxId":
@@ -66,8 +76,12 @@ class TaxId(ValueObject):
     def masked(self) -> str:
         if not self.value:
             return ""
-        digits = self.value.replace("-", "")
-        return f"**-***{digits[-4:]}"
+        if _EIN_RE.match(self.value):
+            digits = self.value.replace("-", "")
+            return f"**-***{digits[-4:]}"
+        if _PAN_RE.match(self.value):
+            return f"******{self.value[-4:]}"
+        return self.value
 
     def __str__(self) -> str:
         return self.masked()

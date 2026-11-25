@@ -1,6 +1,11 @@
 import { apiFetch } from "@/lib/api/client";
 import { IdempotencyOptions, idempotencyHeaders } from "@/lib/idempotency";
-import { CreateVendorRequest, PagedVendorsResponse, UpdateVendorRequest, VendorResponse } from "@/types/vendor";
+import {
+  CreateBusinessVendorRequest,
+  PagedVendorsResponse,
+  UpdateVendorRequest,
+  VendorResponse,
+} from "@/types/vendor";
 
 // Hits the SMB product's tenant-scoped /businesses/{businessId}/vendors
 // routes (backend/app/vendors/api/business_routes.py) — same VendorResponse
@@ -22,7 +27,7 @@ export function getBusinessVendor(
 export function createBusinessVendor(
   token: string | null,
   businessId: string,
-  body: CreateVendorRequest,
+  body: CreateBusinessVendorRequest,
   options?: IdempotencyOptions
 ): Promise<VendorResponse> {
   return apiFetch<VendorResponse>(`/businesses/${businessId}/vendors`, token, {

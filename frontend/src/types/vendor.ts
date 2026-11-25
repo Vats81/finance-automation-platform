@@ -33,6 +33,14 @@ export interface CreateVendorRequest {
   address: Address;
 }
 
+/** A small business's supplier: only the name is required. */
+export interface CreateBusinessVendorRequest {
+  legal_name: string;
+  contact_email?: string;
+  tax_id?: string;
+  address?: Address;
+}
+
 export interface UpdateVendorRequest {
   legal_name?: string;
   contact_email?: string;
